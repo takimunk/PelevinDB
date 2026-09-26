@@ -1,10 +1,11 @@
 import JSZip from "jszip";
-import { normalize, type Book } from "./model";
-const MAX_TEXT = 5_000_000;
+import { normalize } from "../domain/text.ts";
+export const MAX_TEXT = 20_000_000;
+export type ImportedBook = { title: string; author: string; text: string; format: string };
 function parseXml(raw: string) {
   const doc = new DOMParser().parseFromString(raw, "application/xml");
   if (doc.querySelector("parsererror"))
-    throw new Error("Не удалось прочитать XML книги. Проверьте файл.");
+    throw new Error("Could not parse the book XML. Check the file.");
   return doc;
 }
 const nodes = (root: Document | Element, name: string) =>
@@ -17,6 +18,12 @@ function plain(root: Element | Document): string {
     .forEach((n) => n.append("\n\n"));
   return copy.textContent ?? "";
 }
+/** EPUB chapters are XHTML: the HTML parser treats `<title/>` as an open tag and swallows the body. */
+function chapterBody(raw: string): Element {
+  const xml = new DOMParser().parseFromString(raw, "application/xhtml+xml");
+  const body = xml.querySelector("parsererror") ? null : nodes(xml, "body")[0];
+  return body ?? new DOMParser().parseFromString(raw, "text/html").body;
+}
 function decoded(data: ArrayBuffer): string {
   const head = new TextDecoder().decode(data.slice(0, 200));
   const encoding = head.match(/encoding=["']([^"']+)/i)?.[1] ?? "utf-8";
@@ -24,16 +31,16 @@ function decoded(data: ArrayBuffer): string {
     return new TextDecoder(encoding).decode(data);
   } catch {
     throw new Error(
-      "Кодировка файла не поддерживается. Сохраните его в UTF-8.",
+      "Unsupported text encoding. Save the file as UTF-8.",
     );
   }
 }
-export async function importBook(file: File): Promise<Book> {
+export async function importBook(file: File): Promise<ImportedBook> {
   if (file.size > 20 * 1024 * 1024)
-    throw new Error("Максимальный размер файла — 20 МБ.");
+    throw new Error("File too large: 20 MB max.");
   const ext = file.name.split(".").pop()?.toLowerCase();
   let title = file.name.replace(/\.[^.]+$/, ""),
-    author = "Автор не указан",
+    author = "Unknown author",
     text = "";
   const data = await file.arrayBuffer();
   if (ext === "txt" || ext === "md") text = decoded(data);
@@ -56,7 +63,7 @@ export async function importBook(file: File): Promise<Book> {
     let expanded = 0;
     async function read(path: string) {
       const entry = zip.file(path);
-      if (!entry) throw new Error(`В EPUB отсутствует файл: ${path}`);
+      if (!entry) throw new Error(`EPUB is missing a file: ${path}`);
       // Bound expansion before decompressing untrusted archive entries.
       const declared = (
         entry as unknown as { _data?: { uncompressedSize?: number } }
@@ -64,15 +71,15 @@ export async function importBook(file: File): Promise<Book> {
       if (
         typeof declared !== "number" ||
         declared > 10_000_000 ||
-        expanded + declared > 30_000_000
+        expanded + declared > 80_000_000
       )
-        throw new Error("Распакованная книга слишком большая.");
+        throw new Error("Unpacked book is too large.");
       expanded += declared;
       return await entry.async("string");
     }
     const container = parseXml(await read("META-INF/container.xml"));
     const opfPath = nodes(container, "rootfile")[0]?.getAttribute("full-path");
-    if (!opfPath) throw new Error("В EPUB не найдено оглавление.");
+    if (!opfPath) throw new Error("EPUB has no package document.");
     const opf = parseXml(await read(opfPath));
     title = nodes(opf, "title")[0]?.textContent || title;
     author = nodes(opf, "creator")[0]?.textContent || author;
@@ -86,23 +93,22 @@ export async function importBook(file: File): Promise<Book> {
     for (const ref of nodes(opf, "itemref")) {
       if (ref.getAttribute("linear") === "no") continue;
       const href = manifest.get(ref.getAttribute("idref"));
-      if (!href) throw new Error("Повреждён порядок глав EPUB.");
+      if (!href) throw new Error("EPUB spine is broken.");
       const url = new URL(href, `https://epub.local/${opfPath}`);
       if (url.origin !== "https://epub.local")
-        throw new Error("Внешние главы EPUB не поддерживаются.");
+        throw new Error("External EPUB chapters are not supported.");
       const raw = await read(decodeURIComponent(url.pathname.slice(1)));
-      const html = new DOMParser().parseFromString(raw, "text/html");
-      chunks.push(plain(html.body));
+      chunks.push(plain(chapterBody(raw)));
     }
     text = chunks.join("\n\n");
-  } else throw new Error("Поддерживаются EPUB, FB2, TXT и Markdown.");
+  } else throw new Error("Supported formats: EPUB, FB2, TXT, Markdown.");
   text = normalize(text);
   if (!text)
     throw new Error(
-      "В книге не найден текст. Возможно, файл защищён или содержит только изображения.",
+      "No text found. The file may be DRM-protected or contain only images.",
     );
   if (text.length > MAX_TEXT)
-    throw new Error("Для прототипа доступно до 5 млн символов.");
+    throw new Error(`Book too long: ${(text.length / 1e6).toFixed(1)}M chars, limit is ${MAX_TEXT / 1e6}M.`);
   return {
     title: title.trim(),
     author: author.trim(),

@@ -1,0 +1,114 @@
+.search {
+  position: relative;
+  width: 100%;
+}
+.search-field {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 46px;
+  padding: 0 14px;
+  border: 1px solid var(--line-2);
+  background: rgba(8, 8, 8, 0.85);
+  font-size: 15px;
+}
+.search-field:focus-within {
+  border-color: var(--ink-2);
+}
+.search-prompt {
+  color: var(--muted);
+  font-weight: 400;
+}
+.search-field input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  caret-color: var(--accent);
+  font-size: 15px;
+}
+.search-field input::placeholder {
+  color: var(--faint);
+}
+.search-results {
+  position: absolute;
+  top: calc(100% - 1px);
+  left: 0;
+  right: 0;
+  z-index: 40;
+  max-height: min(60vh, 520px);
+  overflow: auto;
+  border: 1px solid var(--line-2);
+  background: #04060c;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.8);
+}
+.palette .search-results {
+  position: static;
+  border-top: 0;
+}
+.search-item {
+  display: grid;
+  grid-template-columns: 2ch 4ch minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 14px;
+  text-align: left;
+  font-size: 13px;
+}
+.search-item.active {
+  background: var(--ink);
+  color: var(--bg);
+}
+.search-cursor {
+  color: var(--accent);
+}
+.search-item.active .search-cursor,
+.search-item.active .search-tag,
+.search-item.active small,
+.search-item.active .search-note {
+  color: var(--bg);
+}
+.search-tag {
+  color: var(--muted);
+  font-size: 11px;
+}
+.search-item.catalog .search-tag {
+  color: var(--amber);
+}
+.search-item.library .search-tag,
+.search-item.canon .search-tag {
+  color: var(--accent);
+}
+.search-text {
+  display: flex;
+  gap: 12px;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.search-text b {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.search-text small {
+  color: var(--muted);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.search-note {
+  color: var(--muted);
+  font-size: 11px;
+}
+.search-status {
+  padding: 8px 14px;
+  border-top: 1px dashed var(--line);
+  color: var(--muted);
+  font-size: 11px;
+}
+.search-status::before {
+  content: "-- ";
+}

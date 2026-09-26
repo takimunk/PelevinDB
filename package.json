@@ -1,32 +1,39 @@
 {
   "name": "xbook",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
-    "dev": "node --env-file-if-exists=.env server.mjs",
+    "dev": "node --env-file-if-exists=.env server/index.ts",
     "build": "tsc --noEmit && vite build",
-    "start": "NODE_ENV=production node --env-file-if-exists=.env server.mjs",
+    "start": "NODE_ENV=production node --env-file-if-exists=.env server/index.ts",
     "test": "tsx --test tests/*.test.ts",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "atlas": "node --env-file-if-exists=.env scripts/build-atlas.ts",
+    "greatest": "node scripts/fetch-greatest.ts",
+    "corpus": "node --env-file-if-exists=.env scripts/analyze-corpus.ts"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^6.0.0",
     "express": "^5.1.0",
     "jszip": "^3.10.1",
-    "lucide-react": "^0.577.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "recharts": "^3.8.0",
+    "three": "^0.186.1",
     "vite": "^8.0.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.0",
+    "@types/express": "^5.0.6",
     "@types/node": "^25.0.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
+    "@types/three": "^0.186.0",
     "prettier": "^3.9.9",
     "tsx": "^4.21.0",
     "typescript": "^5.9.0"
+  },
+  "engines": {
+    "node": ">=22.18"
   }
 }
