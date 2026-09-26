@@ -22,6 +22,11 @@ npm run build && npm start   # production, loopback only
 
 This is a single-user prototype. Exposing a server that holds an API key needs authentication, spend quotas and server-side storage.
 
+## Deployment and analytics
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for the Coolify container, CI deployment gate,
+`xbookx.xyz` DNS, persistent corpus storage and runtime OpenPanel setup.
+
 ## Interface
 
 The whole UI is monospace text: a tmux-style top bar, a status line, `[ bracket ]` buttons, `ls -l` tables, `less`-style reader. Keys: `/` or `⌘K` to find, `u` to upload, `1` `2` `3` to switch views, `←` `→` `q` in the reader.

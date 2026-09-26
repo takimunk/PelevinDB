@@ -7,6 +7,6 @@ dist/
 artifacts/
 test-results/
 playwright-report/
-library/
+/library/
 data/*.db
 data/*.db-*
