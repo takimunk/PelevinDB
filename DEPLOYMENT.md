@@ -2,8 +2,10 @@
 
 ## Application
 
-Use this repository as a Coolify Git application, branch `main`, Dockerfile build pack,
-Dockerfile `/Dockerfile`, build context `/`, exposed port `5173`.
+Use a Coolify **Docker Image** application with image `ghcr.io/takimunk/xbook`,
+tag `latest`, exposed port `5173`. A separate preview application uses tag `preview`
+and its own domain and volume. Configure GHCR read access on the Coolify server if
+the package is private. CircleCI publishes images; Coolify only pulls and runs them.
 Set the domain to `https://xbookx.xyz`. Do not publish port 5173 on the host.
 The image binds to `0.0.0.0` and runs as the unprivileged `node` user.
 Set the Coolify health check to Container command: `node /app/server/healthcheck.ts`.
@@ -27,23 +29,31 @@ Search, import, local reading, maps and the precomputed corpus do not need those
 
 ## CI and deployment
 
-The Checks workflow runs TypeScript/build, unit and browser tests, and a production
-Docker build/start/HTTP check on every PR and main push. Browser failures retain
-artifacts for seven days. PRs build the app but do not trigger production deployment.
+CircleCI runs TypeScript/build, unit and browser tests on each branch. On `codex/`
+branches it builds and deploys a preview; on `main` it deploys production. The deploy
+job builds a production image and checks its health before publishing to GHCR.
+GitHub Actions is removed to avoid duplicate checks and account billing failures.
 
-For CI-controlled deployments, disable Coolify's independent automatic deployment
-for main. In GitHub repository Actions settings add:
+Add these **project environment variables** in CircleCI (never commit secrets):
 
-- Secret `COOLIFY_WEBHOOK`: the application's authenticated deploy webhook
-- Secret `COOLIFY_TOKEN`: a Coolify token with deployment permission
-- Variable `COOLIFY_DEPLOY_ENABLED=true`
+- `GHCR_USERNAME`, `GHCR_TOKEN`: a publisher with package write permission
+- `COOLIFY_TOKEN`: a Coolify token with deploy permission
+- `COOLIFY_WEBHOOK`: production authenticated deploy URL, including `uuid`
+- `COOLIFY_WEBHOOK_PREVIEW`: deploy URL for a different preview application
+- `DEPLOY_URL=https://xbookx.xyz`
+- `DEPLOY_URL_PREVIEW`: HTTPS URL of the preview application
 
-Only successful main checks call that webhook. Coolify builds the repository's
-Dockerfile and handles HTTPS. The workflow reports whether the deployment request
-was accepted; confirm the final deployment and container health in Coolify.
-Before these settings exist, the deployment job deliberately stays disabled.
-Coolify GitHub preview deployments can be enabled separately for PRs; use a distinct
-preview domain, no paid API keys, and no production OpenPanel client ID.
+The Coolify origin is restricted to `https://flcl.stickies.fun`. Keep secrets limited
+to trusted project branches; do not enable passing secrets to forked PRs. Disable
+Coolify's independent Git auto-deployments. Merging a PR to main enables production
+publishing, so review and authorize the merge first.
+
+Like Sticky, images have immutable commit tags and a moving `preview`/`latest` tag.
+CircleCI serializes deployment jobs per target, covering publishing and deployment
+together. After Coolify accepts the request, CI waits up to ten minutes for the
+public health endpoint to return the **expected commit SHA**, so an old healthy
+container cannot make a failed rollout pass. Missing credentials, shared preview
+and production UUIDs, or a production run from a PR fail before publishing.
 
 ## Domain
 

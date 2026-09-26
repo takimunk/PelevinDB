@@ -18,7 +18,8 @@ app.disable("x-powered-by");
 app.use(express.json({ limit: "96kb" }));
 
 app.get("/api/health", (_req, res) => {
-  res.json({ status: "ok" });
+  res.set("Cache-Control", "no-store");
+  res.json({ status: "ok", revision: process.env.APP_REVISION || "unknown" });
 });
 
 app.get("/api/analytics-config", (_req, res) => {
