@@ -65,7 +65,7 @@ test("sends passage as state and keeps API credential in the authorization heade
     assert.equal((init!.headers as Record<string, string>).Authorization, "Bearer test-secret");
     const body = JSON.parse(init!.body as string);
     assert.deepEqual(body.state, { passage: "A quiet morning." });
-    assert.equal(body.model, "jev-latest");
+    assert.equal(body.model, "jev-1.13.0");
     assert.ok(!JSON.stringify(body).includes("test-secret"));
     return new Response(JSON.stringify(segmentResponse()), { status: 200 });
   });

@@ -23,9 +23,34 @@ checkpointed copy into `xbook.db`; the container user (UID 1000) needs read acce
 The app starts without the corpus, but the canon will be empty. The bundled atlas
 remains available. Never place the database in `public/` or the Docker image.
 
-Keep `TYPESAFE_API_KEY` and `OPENROUTER_API_KEY` unset for the public deployment:
-the current paid-analysis endpoints have no user authentication or per-user quotas.
-Search, import, local reading, maps and the precomputed corpus do not need those keys.
+Set `TYPESAFE_API_KEY` and `OPENROUTER_API_KEY` only in Coolify runtime variables.
+Each provider has a separate, application-wide **$10 lifetime budget**. The paid
+endpoints are public: visitors share this allowance. Search, reading, maps and saved
+results continue to work when the allowance is exhausted.
+
+Set `XBOOK_BUDGET_DB=/app/data/spending.db` on the persistent volume and keep
+`XBOOK_BUDGET_PERIOD=lifetime`. The directory must be writable by UID 1000.
+Never delete or replace this ledger during deployments. Every HTTP attempt reserves
+its maximum cost atomically before contacting the provider; successful responses
+refund unused reservations from reported usage. Failed or interrupted requests keep
+their reservation because their billing is uncertain. Consequently, analysis may
+stop before actual charges reach $10. Concurrent workers share the same SQLite
+ledger. A missing/unwritable ledger fails closed. `/api/status` reports used,
+reserved and remaining amounts without exposing keys or book text.
+
+TypeSafe uses pinned `jev-1.13.0` at $0.042 per million input tokens and free output,
+reserving its full 64K context. OpenRouter verifies the model catalog and enforces
+provider price ceilings of $1/M input and $10/M output, zero per-request fees,
+and 2,000 output tokens. It reserves the model's entire context plus output.
+Unknown models/pricing and unexpectedly excessive reported charges block spending.
+These bounds cover requests made by this deployment after activation; historical
+usage and other applications using the same keys are outside this ledger.
+
+There is no public reset endpoint. To reset deliberately: stop the application,
+back up `spending.db` together with its SQLite journal, archive the ledger, then
+restart with a new ledger at the same path. This grants a new $10 allowance for
+both providers; do it only with the owner's explicit authorization. Keep paid keys
+unset in previews, or give previews an independently approved allowance.
 
 ## CI and deployment
 
