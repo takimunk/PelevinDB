@@ -1,0 +1,205 @@
+import express, { type Request, type Response } from "express";
+import { fileURLToPath } from "node:url";
+import path from "node:path";
+import { DEFAULT_BRIEF_MODEL, writeBrief } from "./brief.ts";
+import { AnalysisError, analyzeProfile, analyzeSegment } from "./jev.ts";
+import { corpusETag, corpusList, corpusStore, packCorpusBook, type Encoding } from "./corpus.ts";
+import { fetchCatalogText, searchCatalog } from "./gutenberg.ts";
+import { corpusStats } from "./stats.ts";
+import { corpusId, dossierInput, excerptsInput, pageInput, type Parsed } from "./validate.ts";
+
+const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+const port = Number(process.env.PORT || 5173);
+const host = process.env.HOST || "127.0.0.1";
+const MAX_ACTIVE = 6;
+
+const app = express();
+app.disable("x-powered-by");
+app.use(express.json({ limit: "96kb" }));
+
+app.get("/api/status", (_req, res) => {
+  res.json({ configured: !!process.env.TYPESAFE_API_KEY, brief: !!process.env.OPENROUTER_API_KEY });
+});
+
+let active = 0;
+
+/** Wraps a paid upstream call: same-origin check, key presence, validation, concurrency and client aborts. */
+function guardedRoute<T>(
+  keyName: "TYPESAFE_API_KEY" | "OPENROUTER_API_KEY",
+  validate: (body: unknown) => Parsed<T>,
+  run: (input: T, key: string, signal: AbortSignal) => Promise<unknown>,
+) {
+  return async (req: Request, res: Response) => {
+    const origin = req.headers.origin;
+    if (origin && origin !== `${req.protocol}://${req.headers.host}`) {
+      res.status(403).json({ error: "Request origin not allowed." });
+      return;
+    }
+    const key = process.env[keyName];
+    if (!key) {
+      res.status(503).json({ error: `Add ${keyName} to .env and restart the server.` });
+      return;
+    }
+    const input = validate(req.body);
+    if ("error" in input) {
+      res.status(400).json({ error: input.error });
+      return;
+    }
+    if (active >= MAX_ACTIVE) {
+      res.status(429).json({ error: "The server is busy. Analysis will resume automatically." });
+      return;
+    }
+    active++;
+    const controller = new AbortController();
+    res.on("close", () => {
+      if (!res.writableEnded) controller.abort();
+    });
+    try {
+      res.json(await run(input.value, key, controller.signal));
+    } catch (error) {
+      if (!res.destroyed)
+        res.status(error instanceof AnalysisError ? error.status : 502).json({
+          error:
+            error instanceof AnalysisError
+              ? error.message
+              : "The model did not respond. Finished work is saved; try again.",
+        });
+    } finally {
+      active--;
+    }
+  };
+}
+
+app.post(
+  "/api/analyze",
+  guardedRoute(
+    "TYPESAFE_API_KEY",
+    pageInput,
+    (text, key, signal) => analyzeSegment(text, key, signal),
+  ),
+);
+
+app.post(
+  "/api/profile",
+  guardedRoute(
+    "TYPESAFE_API_KEY",
+    excerptsInput,
+    (excerpts, key, signal) => analyzeProfile(excerpts, key, signal),
+  ),
+);
+
+app.post(
+  "/api/brief",
+  guardedRoute("OPENROUTER_API_KEY", dossierInput, (dossier, key, signal) =>
+    writeBrief(dossier, key, process.env.OPENROUTER_MODEL || DEFAULT_BRIEF_MODEL, signal),
+  ),
+);
+
+function abortOnClose(res: Response) {
+  const controller = new AbortController();
+  res.on("close", () => {
+    if (!res.writableEnded) controller.abort();
+  });
+  return controller.signal;
+}
+
+app.get("/api/catalog/search", async (req, res) => {
+  const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
+  if (q.length < 2 || q.length > 120) {
+    res.status(400).json({ error: "Query must be 2 to 120 chars." });
+    return;
+  }
+  try {
+    res.json({ hits: await searchCatalog(q, abortOnClose(res)) });
+  } catch {
+    if (!res.destroyed)
+      res.status(502).json({ error: "Project Gutenberg catalog is unavailable." });
+  }
+});
+
+app.get("/api/catalog/:id", async (req, res) => {
+  try {
+    res.json(await fetchCatalogText(req.params.id, abortOnClose(res)));
+  } catch (error) {
+    if (!res.destroyed)
+      res.status(502).json({
+        error:
+          error instanceof Error && /^(Book is too large|Invalid book id)/.test(error.message)
+            ? error.message
+            : "Could not download the book from Project Gutenberg.",
+      });
+  }
+});
+
+app.get("/api/corpus", (_req, res) => {
+  const store = corpusStore();
+  res.set("Cache-Control", "no-cache");
+  res.json({ available: !!store, books: store ? corpusList(store) : [] });
+});
+
+app.get("/api/corpus-stats", (_req, res) => {
+  const store = corpusStore();
+  if (!store) {
+    res.status(404).json({ error: "No corpus yet: run npm run corpus." });
+    return;
+  }
+  res.set("Cache-Control", "no-cache");
+  res.json(corpusStats(store));
+});
+
+app.get("/api/corpus/:id", async (req, res) => {
+  const id = corpusId(req.params.id);
+  if ("error" in id) {
+    res.status(400).json({ error: id.error });
+    return;
+  }
+  const store = corpusStore();
+  const etag = store && corpusETag(store, id.value);
+  if (!store || !etag) {
+    res.status(404).json({ error: store ? "This book is not in the corpus." : "No corpus yet: run npm run corpus." });
+    return;
+  }
+  res.set({ ETag: etag, "Cache-Control": "no-cache", Vary: "Accept-Encoding" });
+  if (req.fresh) {
+    res.status(304).end();
+    return;
+  }
+  const encoding = (req.acceptsEncodings("br", "gzip") || "identity") as Encoding;
+  try {
+    const body = await packCorpusBook(store, id.value, etag, encoding);
+    if (!body) {
+      res.status(404).json({ error: "This book is not in the corpus." });
+      return;
+    }
+    if (encoding !== "identity") res.set("Content-Encoding", encoding);
+    res.type("json").send(body);
+  } catch {
+    if (!res.headersSent) res.status(500).json({ error: "Could not read the book from the corpus." });
+  }
+});
+
+app.use("/api", (_req, res) => {
+  res.status(404).json({ error: "Unknown API endpoint." });
+});
+
+app.use(
+  (error: unknown, _req: Request, res: Response, next: (e?: unknown) => void) => {
+    if (error) res.status(400).json({ error: "Malformed or oversized request." });
+    else next();
+  },
+);
+
+if (process.env.NODE_ENV === "production") {
+  app.use(express.static(path.join(root, "dist")));
+  app.get("/{*path}", (_req, res) => res.sendFile(path.join(root, "dist/index.html")));
+} else {
+  const { createServer } = await import("vite");
+  const vite = await createServer({
+    root,
+    server: { middlewareMode: true },
+    appType: "spa",
+  });
+  app.use(vite.middlewares);
+}
+
+app.listen(port, host, () => console.log(`xbook running at http://${host}:${port}`));

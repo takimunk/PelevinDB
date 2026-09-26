@@ -1,0 +1,24 @@
+{
+  "name": "xbook-film",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "analyze": "cd .. && node video/scripts/analyze.ts",
+    "music": "node scripts/music.ts",
+    "studio": "remotion studio src/index.ts",
+    "render": "remotion render src/index.ts XbookFilm out/xbook-film.mp4 --codec=h264 --crf=16 --audio-bitrate=320k",
+    "still": "remotion still src/index.ts XbookFilm out/still.png"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.529",
+    "@remotion/google-fonts": "4.0.529",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "remotion": "4.0.529"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.0",
+    "@types/react": "^19.2.0",
+    "typescript": "^5.9.0"
+  }
+}

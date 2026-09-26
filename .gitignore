@@ -5,3 +5,8 @@ dist/
 !.env.example
 .DS_Store
 artifacts/
+test-results/
+playwright-report/
+library/
+data/*.db
+data/*.db-*
