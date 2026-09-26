@@ -1,3 +1,4 @@
+import { JEV_MODEL, meteredFetch } from "./budget.ts";
 import {
   EMOTIONS,
   ERAS,
@@ -254,7 +255,7 @@ export async function systemOne(
   questions: Record<string, Question>,
   apiKey: string,
   signal: AbortSignal,
-  fetcher: Fetcher = fetch,
+  fetcher: Fetcher = meteredFetch("typesafe"),
 ): Promise<RawResult> {
   for (let attempt = 0; ; attempt++) {
     const response = await fetcher("https://api.typesafe.ai/v1/systemone", {
@@ -263,7 +264,7 @@ export async function systemOne(
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ model: "jev-latest", state, questions }),
+      body: JSON.stringify({ model: JEV_MODEL, state, questions }),
       signal: AbortSignal.any([signal, AbortSignal.timeout(60_000)]),
     });
     if ([429, 503, 529].includes(response.status) && attempt < 2) {

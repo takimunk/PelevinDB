@@ -1,3 +1,4 @@
+import { BudgetError, budgetStore } from "./budget.ts";
 import express, { type Request, type Response } from "express";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
@@ -31,7 +32,13 @@ app.get("/api/analytics-config", (_req, res) => {
 });
 
 app.get("/api/status", (_req, res) => {
-  res.json({ configured: !!process.env.TYPESAFE_API_KEY, brief: !!process.env.OPENROUTER_API_KEY });
+  res.set("Cache-Control", "no-store");
+  try {
+    const budgets = { typesafe: budgetStore().summary("typesafe"), openrouter: budgetStore().summary("openrouter") };
+    res.json({ configured: !!process.env.TYPESAFE_API_KEY && budgets.typesafe.remaining > 0, brief: !!process.env.OPENROUTER_API_KEY && budgets.openrouter.remaining > 0, budgets });
+  } catch {
+    res.status(503).json({ configured: false, brief: false, error: "Spending protection is unavailable. Analysis is paused." });
+  }
 });
 
 let active = 0;
@@ -71,9 +78,9 @@ function guardedRoute<T>(
       res.json(await run(input.value, key, controller.signal));
     } catch (error) {
       if (!res.destroyed)
-        res.status(error instanceof AnalysisError ? error.status : 502).json({
+        res.status((error instanceof AnalysisError || error instanceof BudgetError) ? error.status : 502).json({
           error:
-            error instanceof AnalysisError
+            (error instanceof AnalysisError || error instanceof BudgetError)
               ? error.message
               : "The model did not respond. Finished work is saved; try again.",
         });

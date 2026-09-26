@@ -1,3 +1,4 @@
+import { meteredFetch } from "./budget.ts";
 import type { BookBrief, BriefDossier } from "../shared/types.ts";
 import { AnalysisError, type Fetcher } from "./jev.ts";
 
@@ -52,7 +53,7 @@ export function parseBrief(raw: Completion, requested: string): BookBrief {
   };
 }
 
-export async function writeBrief(dossier: BriefDossier, apiKey: string, model: string, signal: AbortSignal, fetcher: Fetcher = fetch): Promise<BookBrief> {
+export async function writeBrief(dossier: BriefDossier, apiKey: string, model: string, signal: AbortSignal, fetcher: Fetcher = meteredFetch("openrouter")): Promise<BookBrief> {
   const response = await fetcher("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json", "X-Title": "xbook" },
