@@ -1,0 +1,202 @@
+.library-page {
+  display: grid;
+  gap: 16px;
+  width: min(1480px, 100%);
+  margin: 0 auto;
+  padding: 26px 22px 60px;
+}
+.page-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+}
+.page-head h1 {
+  margin-top: 6px;
+  font: 700 18px/1.3 var(--mono);
+}
+.shelf-tabs {
+  width: fit-content;
+}
+.shelf-tabs button {
+  flex: 0 0 auto;
+  padding: 7px 18px;
+  white-space: nowrap;
+}
+.library-tools,
+.shelf-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  align-items: center;
+}
+.library-grep {
+  display: flex;
+  flex: 1 1 280px;
+  align-items: center;
+  gap: 10px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  font-size: 12px;
+}
+.library-grep:focus-within {
+  border-color: var(--line-2);
+}
+.library-grep span {
+  color: var(--muted);
+}
+.library-grep input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+}
+.shelf-views {
+  flex: 0 1 auto;
+}
+.shelf-views button {
+  flex: 0 0 auto;
+}
+.shelf-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.shelf-filters label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+  padding: 0 4px 0 10px;
+  border: 1px solid var(--line);
+  font-size: 11px;
+  color: var(--muted);
+}
+.shelf-filters label.on {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.shelf-filters select {
+  max-width: 22ch;
+  border: 0;
+  outline: none;
+  background: transparent;
+  font: 400 11px var(--mono);
+  color: var(--ink);
+}
+.shelf-filters option {
+  background: var(--bg-2);
+}
+.shelf-lenses {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+.shelf-lenses > button {
+  padding: 3px 9px;
+  border: 1px dashed var(--line-2);
+  color: var(--ink-2);
+}
+.shelf-lenses > button small {
+  color: var(--faint);
+  font-size: 10px;
+}
+.shelf-lenses > button:hover {
+  color: var(--ink);
+  border-color: var(--ink-2);
+}
+.shelf-lenses > button.on {
+  border-style: solid;
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.shelf-lenses > button.on small {
+  color: var(--accent);
+}
+.shelf-count {
+  display: flex;
+  gap: 12px;
+  margin-left: auto;
+  color: var(--muted);
+}
+.shelf-note {
+  max-width: 110ch;
+  font-size: 11px;
+}
+.shelf-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.library-empty {
+  display: grid;
+  gap: 14px;
+  max-width: 720px;
+}
+.canon-table {
+  min-width: max-content;
+}
+.canon-table .bt-row {
+  gap: 0 12px;
+}
+.canon-table .bt-row > .bt-title {
+  position: sticky;
+  left: 0;
+  background: var(--bg);
+  box-shadow:
+    -8px 0 0 var(--bg),
+    12px 0 0 var(--bg);
+}
+/* Column widths are in ch, so every row keeps the same font size. */
+.canon-table .bt-head,
+.canon-table .bt-foot {
+  font-size: 12px;
+}
+.canon-table .bt-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--bg);
+}
+.canon-table .bt-head button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.canon-table .bt-head .tint-r {
+  box-shadow: inset 0 -2px 0 var(--r);
+}
+.canon-table .bt-head .tint-g {
+  box-shadow: inset 0 -2px 0 var(--g);
+}
+.canon-table .bt-head .tint-b {
+  box-shadow: inset 0 -2px 0 var(--b);
+}
+.canon-table .bt-head button:hover,
+.canon-table .bt-head [aria-sort] button {
+  color: var(--ink);
+}
+.bt-score {
+  padding: 0 4px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.bt-tag {
+  color: var(--ink-2);
+}
+.bt-foot {
+  color: var(--muted);
+  border-bottom: 0;
+}
+@media (max-width: 760px) {
+  .shelf-count {
+    margin-left: 0;
+  }
+}

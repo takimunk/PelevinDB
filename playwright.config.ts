@@ -1,11 +1,12 @@
 import { defineConfig } from "@playwright/test";
+const baseURL = `http://127.0.0.1:${process.env.PORT || 5173}`;
 export default defineConfig({
   testDir: "./tests",
   testMatch: "**/*.spec.ts",
-  use: { baseURL: "http://127.0.0.1:5173", headless: true },
+  use: { baseURL, headless: true },
   webServer: {
-    command: "npm run dev",
-    url: "http://127.0.0.1:5173",
+    command: "npm run build && npm start",
+    url: baseURL,
     reuseExistingServer: !process.env.CI,
   },
   reporter: "list",

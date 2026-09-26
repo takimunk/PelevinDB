@@ -17,6 +17,19 @@ const app = express();
 app.disable("x-powered-by");
 app.use(express.json({ limit: "96kb" }));
 
+app.get("/api/health", (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({ status: "ok", revision: process.env.APP_REVISION || "unknown" });
+});
+
+app.get("/api/analytics-config", (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({
+    clientId: process.env.OPENPANEL_CLIENT_ID || null,
+    apiUrl: process.env.OPENPANEL_API_URL || "https://api.openpanel.dev",
+  });
+});
+
 app.get("/api/status", (_req, res) => {
   res.json({ configured: !!process.env.TYPESAFE_API_KEY, brief: !!process.env.OPENROUTER_API_KEY });
 });
@@ -31,7 +44,7 @@ function guardedRoute<T>(
 ) {
   return async (req: Request, res: Response) => {
     const origin = req.headers.origin;
-    if (origin && origin !== `${req.protocol}://${req.headers.host}`) {
+    if (origin && origin !== (process.env.APP_ORIGIN || `${req.protocol}://${req.headers.host}`)) {
       res.status(403).json({ error: "Request origin not allowed." });
       return;
     }
