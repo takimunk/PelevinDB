@@ -6,7 +6,8 @@ Use this repository as a Coolify Git application, branch `main`, Dockerfile buil
 Dockerfile `/Dockerfile`, build context `/`, exposed port `5173`.
 Set the domain to `https://xbookx.xyz`. Do not publish port 5173 on the host.
 The image binds to `0.0.0.0` and runs as the unprivileged `node` user.
-Set the Coolify health check to GET `/api/health`, port 5173, expected status 200.
+Set the Coolify health check to Container command: `node /app/server/healthcheck.ts`.
+It checks GET `/api/health` and uses the Node runtime already in the image.
 
 Runtime environment:
 

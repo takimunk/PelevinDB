@@ -17,5 +17,5 @@ RUN mkdir -p /app/data && chown node:node /app/data
 USER node
 EXPOSE 5173
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-  CMD node -e "fetch('http://127.0.0.1:5173/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+  CMD ["node", "server/healthcheck.ts"]
 CMD ["node", "server/index.ts"]
