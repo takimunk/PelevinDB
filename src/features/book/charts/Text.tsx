@@ -1,6 +1,6 @@
 // The book's charts, drawn as SVG: emotion DNA, ridgelines, pulse, story shape, bars and bipolar scales.
 // Chrome (axes, grid, labels) uses ink tokens; colour encodes data only.
-import { useState, type MouseEvent, type ReactNode } from "react";
+import { useLayoutEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { EMOTIONS, labelOf, MODES, MOODS, THEMES, type EmotionId, type ThemeId } from "../../../../shared/catalog.ts";
 import type { Distribution, SegmentAnalysis } from "../../../../shared/types.ts";
 import { ARC_SHAPES, argmax, dominantEmotion, emotionColor, intensity, isParatext, modeColor, moodColor, series, smooth, type Analyses, type ArcId, type Moment } from "../../../domain/analysis.ts";
@@ -9,6 +9,7 @@ import { useLang, useT, type Lang } from "../../../i18n/index.ts";
 import { Meter, Swatch, Track } from "../../../ui/term.tsx";
 import { useSize } from "../../../ui/useSize.ts";
 import { num, pageRef, pct } from "../i18n.ts";
+import { usePreview } from "../preview.tsx";
 
 const CALM = "#5aa6d6";
 const INTENSE = "#d93b30";
@@ -171,6 +172,37 @@ export function Dna({ analyses, insights, onPick }: { analyses: Analyses; insigh
     return c >= 0 && c < bins ? c : null;
   };
   const h = hover != null ? cols[hover] : null;
+  const preview = usePreview();
+  const dnaMetric = (c: (typeof cols)[number]) =>
+    c.best ? (
+      <>
+        <Emo id={dominantEmotion(c.best)} /> {num(lang, intensity(c.best), 2)} ·{" "}
+        {labelOf(
+          MOODS.find((m) => m.id === argmax(c.best!.mood))!,
+          lang,
+        ).toLowerCase()}{" "}
+        ·{" "}
+        {labelOf(
+          MODES.find((m) => m.id === argmax(c.best!.mode))!,
+          lang,
+        ).toLowerCase()}
+      </>
+    ) : c.paratext ? (
+      t.paratext
+    ) : (
+      t.pending
+    );
+  const showCol = (c: number | null, e: { clientX: number; clientY: number }) => {
+    setHover(c);
+    if (c == null) preview.hide();
+    else preview.show(e, cols[c].from, dnaMetric(cols[c]));
+  };
+  // Keyboard: arrows move along the columns and show the preview, Enter opens the page.
+  const svgRef = useRef<SVGSVGElement>(null);
+  const keyShow = (c: number) => {
+    const r = svgRef.current!.getBoundingClientRect();
+    showCol(c, { clientX: r.left + gutter + (c + 0.5) * cw, clientY: r.top + TOP + H / 2 });
+  };
   const pageLink = (s: Stretch, children: ReactNode) => (
     <button className="link-u" onClick={() => onPick(s.from)}>
       {children}
@@ -189,11 +221,20 @@ export function Dna({ analyses, insights, onPick }: { analyses: Analyses; insigh
         width={width}
         height={height}
         viewBox={`0 0 ${width} ${height}`}
+        ref={svgRef}
         role="img"
         aria-label={t.dnaLabel}
         className="chart-svg"
-        onMouseMove={(e) => setHover(at(e))}
-        onMouseLeave={() => setHover(null)}
+        tabIndex={0}
+        onMouseMove={(e) => showCol(at(e), e)}
+        onMouseLeave={() => showCol(null, { clientX: 0, clientY: 0 })}
+        onBlur={() => showCol(null, { clientX: 0, clientY: 0 })}
+        onKeyDown={(e) => {
+          if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+            e.preventDefault();
+            keyShow(Math.max(0, Math.min(bins - 1, (hover ?? -1) + (e.key === "ArrowRight" ? 1 : -1))));
+          } else if (e.key === "Enter" && hover != null) onPick(cols[hover].from);
+        }}
         onClick={(e) => {
           const c = at(e);
           if (c != null) onPick(cols[c].from);
@@ -313,29 +354,7 @@ export function Dna({ analyses, insights, onPick }: { analyses: Analyses; insigh
         </p>
       )}
       <div className="readout">
-        {h ? (
-          h.best ? (
-            <>
-              {pageRef(lang, h.from + 1)} · <Emo id={dominantEmotion(h.best)} /> <b>{num(lang, intensity(h.best), 2)}</b> · <Swatch color={moodColor(argmax(h.best.mood))} round />
-              {labelOf(
-                MOODS.find((m) => m.id === argmax(h.best!.mood))!,
-                lang,
-              ).toLowerCase()}{" "}
-              ·{" "}
-              {labelOf(
-                MODES.find((m) => m.id === argmax(h.best!.mode))!,
-                lang,
-              ).toLowerCase()}{" "}
-              <span className="dim">· {t.click}</span>
-            </>
-          ) : (
-            <span className="dim">
-              {pageRef(lang, h.from + 1)} · {h.paratext ? t.paratext : t.pending}
-            </span>
-          )
-        ) : (
-          <span className="dim">{t.dnaIdle(n, bins)}</span>
-        )}
+        <span className="dim">{t.dnaIdle(n, bins)}</span>
       </div>
     </div>
   );
@@ -375,22 +394,53 @@ function Ridgeline({
   const t = useT(T);
   const lang = useLang();
   const [hover, setHover] = useState<{ k: number; p: number } | null>(null);
-  const n = Math.max(2, Math.min(analyses.length, 160));
-  const W = 1000;
-  const data = ridges.map((r) => (smoothing ? smooth(series(analyses, r.pick, n), Math.max(0.8, n / 70)) : series(analyses, r.pick, n)).map((v) => v ?? 0));
-  const bands = markBands(marks, W);
-  const path = (values: number[], close: boolean) => {
-    const pts = values.map((v, i) => `${((i / (values.length - 1)) * W).toFixed(1)},${(1 - Math.min(1, v)).toFixed(3)}`);
-    return close ? `M0,1 L${pts.join(" L")} L${W},1 Z` : `M${pts.join(" L")}`;
-  };
+  // Thin bars, one per page or per page bin: about 2 px bars with 1 px gaps at the plot's real pixel width.
+  const [ref, { width }] = useSize<HTMLDivElement>();
+  // The plot column's real width, so bars land on whole pixels (crisp at any devicePixelRatio).
+  const [svgW, setSvgW] = useState(0);
+  useLayoutEffect(() => {
+    const svg = ref.current?.querySelector(".ridge-row svg");
+    if (!svg) return;
+    const measure = () => setSvgW(Math.round(svg.getBoundingClientRect().width));
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(svg);
+    return () => ro.disconnect();
+  }, [ref, ridges.length]);
+  const plotW = Math.max(40, svgW || Math.round(width * 0.7));
+  const H = compact ? 20 : 30;
+  const n = Math.max(1, Math.min(analyses.length, Math.floor(plotW / 3)));
+  const step = plotW / n;
+  const barW = step >= 2 ? Math.max(1, step - 1) : step;
+  const data = ridges.map((r) => {
+    const raw = series(analyses, r.pick, n);
+    return (smoothing ? smooth(raw, 1.2) : raw).map((v) => v);
+  });
+  // A bin is highlighted when any of its pages matches; the others dim.
+  const binMarks =
+    marks && marks.some(Boolean)
+      ? Array.from({ length: n }, (_, b) => {
+          const from = Math.floor((b / n) * marks.length),
+            to = Math.max(from + 1, Math.floor(((b + 1) / n) * marks.length));
+          return marks.slice(from, to).some(Boolean);
+        })
+      : null;
   const at = (e: MouseEvent<SVGSVGElement>) => {
     const r = e.currentTarget.getBoundingClientRect();
     return Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
   };
-  const cur = hover ? { r: ridges[hover.k], v: data[hover.k][Math.round(hover.p * (n - 1))] } : null;
+  const preview = usePreview();
   return (
-    <div>
-      <div className={`ridges ${compact ? "compact" : ""}`} role="group" aria-label={name} onMouseLeave={() => setHover(null)}>
+    <div ref={ref}>
+      <div
+        className={`ridges bars ${compact ? "compact" : ""}`}
+        role="group"
+        aria-label={name}
+        onMouseLeave={() => {
+          setHover(null);
+          preview.hide();
+        }}
+      >
         {ridges.map((r, k) => (
           <div key={r.id} className={`ridge-row ${hover && hover.k !== k ? "faded" : ""}`}>
             <span className="ridge-label">
@@ -398,20 +448,35 @@ function Ridgeline({
               {r.label.toLowerCase()}
             </span>
             <svg
-              viewBox={`0 0 ${W} 1`}
+              viewBox={`0 0 ${plotW} ${H}`}
               preserveAspectRatio="none"
-              onMouseMove={(e) => setHover({ k, p: at(e) })}
+              shapeRendering="crispEdges"
+              style={{ height: H }}
+              onMouseMove={(e) => {
+                const p = at(e);
+                setHover({ k, p });
+                const b = Math.min(n - 1, Math.floor(p * n));
+                preview.show(
+                  e,
+                  Math.round(p * Math.max(0, analyses.length - 1)),
+                  <>
+                    {r.label.toLowerCase()} <b>{value(data[k][b] ?? 0)}</b>
+                  </>,
+                );
+              }}
               onClick={(e) => onPick(at(e))}
               role="img"
               aria-label={`${r.label}: ${t.bookMean} ${share(r.share).trim()}`}
             >
-              {bands.map(([x, w]) => (
-                <rect key={x} x={x} y={0} width={w} height={1} className="hl-band" />
-              ))}
-              <line x1={0} x2={W} y1={0.5} y2={0.5} className="threshold" vectorEffect="non-scaling-stroke" />
-              <path d={path(data[k], true)} style={{ fill: r.color }} className="area" />
-              <path d={path(data[k], false)} style={{ stroke: r.color }} className="edge" vectorEffect="non-scaling-stroke" />
-              {hover && <line x1={hover.p * W} x2={hover.p * W} y1={0} y2={1} className="cursor-line" vectorEffect="non-scaling-stroke" />}
+              <line x1={0} x2={plotW} y1={H / 2} y2={H / 2} className="threshold" vectorEffect="non-scaling-stroke" />
+              <g style={{ fill: r.color }}>
+                {data[k].map((v, b) =>
+                  v == null ? null : (
+                    <rect key={b} x={b * step} y={H - Math.max(0.5, Math.min(1, v) * H)} width={barW} height={Math.max(0.5, Math.min(1, v) * H)} opacity={binMarks && !binMarks[b] ? 0.22 : 1} />
+                  ),
+                )}
+              </g>
+              {hover && <line x1={hover.p * plotW} x2={hover.p * plotW} y1={0} y2={H} className="cursor-line" vectorEffect="non-scaling-stroke" />}
             </svg>
             <span className="ridge-share">
               <span className="num">{share(r.share)}</span>
@@ -426,17 +491,7 @@ function Ridgeline({
         </div>
       </div>
       <div className="readout">
-        {cur && hover ? (
-          <>
-            <Swatch color={cur.r.color} />
-            {cur.r.label.toLowerCase()} · {pct(lang, hover.p)} {t.ofBook} · <b>{value(cur.v)}</b>{" "}
-            <span className="dim">
-              · {t.bookMean} {share(cur.r.share).trim()} · {t.click}
-            </span>
-          </>
-        ) : (
-          <span className="dim">{idle}</span>
-        )}
+        <span className="dim">{idle}</span>
       </div>
     </div>
   );
@@ -601,7 +656,8 @@ export function PulsePlot({
     const r = e.currentTarget.getBoundingClientRect();
     return e.clientX - r.left;
   };
-  const cur = hover != null ? { m: near(hover), bin: Math.round(((hover - L) / plotW) * (bins - 1)), page: Math.round(((hover - L) / plotW) * last) } : null;
+  const cur = hover != null ? { bin: Math.round(((hover - L) / plotW) * (bins - 1)) } : null;
+  const preview = usePreview();
   return (
     <div ref={ref}>
       <div className="toggles-row" role="group" aria-label={t.pulse}>
@@ -621,9 +677,33 @@ export function PulsePlot({
         className="chart-svg pulse"
         onMouseMove={(e) => {
           const x = pos(e);
-          setHover(x >= L && x <= L + plotW ? x : null);
+          const inside = x >= L && x <= L + plotW;
+          setHover(inside ? x : null);
+          if (!inside) return preview.hide();
+          const m = near(x);
+          const b = Math.round(((x - L) / plotW) * (bins - 1));
+          preview.show(
+            e,
+            m ? m.index : Math.round(((x - L) / plotW) * last),
+            m ? (
+              <>
+                <Swatch color={m.color} round />
+                {(lang === "ru" ? m.ru : m.label).toLowerCase()}
+              </>
+            ) : (
+              PULSE_LINES.map((l, k) => (
+                <span key={l.id}>
+                  {k > 0 && " "}
+                  {t.pulseLines[l.id]} <b>{data[k][b] != null ? num(lang, data[k][b]!, 2) : "—"}</b>
+                </span>
+              ))
+            ),
+          );
         }}
-        onMouseLeave={() => setHover(null)}
+        onMouseLeave={() => {
+          setHover(null);
+          preview.hide();
+        }}
         onClick={(e) => {
           const x = pos(e);
           if (x < L - 4 || x > L + plotW + 4) return;
@@ -673,47 +753,46 @@ export function PulsePlot({
         </text>
       </svg>
       <div className="readout">
-        {cur?.m ? (
-          <>
-            <Swatch color={cur.m.color} round />
-            {(lang === "ru" ? cur.m.ru : cur.m.label).toLowerCase()} · {pageRef(lang, cur.m.index + 1)} · {lang === "ru" ? cur.m.hintRu : cur.m.hint} <span className="dim">· {t.click}</span>
-          </>
-        ) : cur ? (
-          <>
-            {pageRef(lang, cur.page + 1)} ·{" "}
-            {PULSE_LINES.map((l, k) => (
-              <span key={l.id}>
-                {t.pulseLines[l.id]} <b>{data[k][cur.bin] != null ? num(lang, data[k][cur.bin]!, 2) : "—"}</b>{" "}
-              </span>
-            ))}
-            <span className="dim">· {t.click}</span>
-          </>
-        ) : (
-          <span className="dim">{t.pulseIdle}</span>
-        )}
+        <span className="dim">{t.pulseIdle}</span>
       </div>
       {!compact && (
-      <ol className="pulse-marks">
-        {moments.map((m) => (
-          <li key={m.id}>
-            <button onClick={() => onPick(m.index)}>
-              <span className="pm-label">
-                <Swatch color={m.color} round />
-                {lang === "ru" ? m.ru : m.label}
-              </span>
-              <span className="pm-page num">{pageRef(lang, m.index + 1)}</span>
-              <span className="pm-hint">{lang === "ru" ? m.hintRu : m.hint}</span>
-            </button>
-          </li>
-        ))}
-      </ol>
+        <ol className="pulse-marks">
+          {moments.map((m) => (
+            <li key={m.id}>
+              <button onClick={() => onPick(m.index)}>
+                <span className="pm-label">
+                  <Swatch color={m.color} round />
+                  {lang === "ru" ? m.ru : m.label}
+                </span>
+                <span className="pm-page num">{pageRef(lang, m.index + 1)}</span>
+                <span className="pm-hint">{lang === "ru" ? m.hintRu : m.hint}</span>
+              </button>
+            </li>
+          ))}
+        </ol>
       )}
     </div>
   );
 }
 
 /** The light curve against Vonnegut's six story shapes; the best match is drawn dashed behind it. */
-export function ArcPlot({ curve, shape, fits, compact = false }: { curve: number[]; shape: ArcId; fits: { id: ArcId; r: number }[]; compact?: boolean }) {
+export function ArcPlot({
+  curve,
+  shape,
+  fits,
+  compact = false,
+  pages = 0,
+  onPick,
+}: {
+  curve: number[];
+  shape: ArcId;
+  fits: { id: ArcId; r: number }[];
+  compact?: boolean;
+  /** Pages the curve spans; with it, hovering previews the page under the pointer and a click opens it. */
+  pages?: number;
+  onPick?: (index: number) => void;
+}) {
+  const preview = usePreview();
   const t = useT(T);
   const lang = useLang();
   const [ref, { width }] = useSize<HTMLDivElement>();
@@ -741,7 +820,27 @@ export function ArcPlot({ curve, shape, fits, compact = false }: { curve: number
         <span className="dim">{t.match}</span> <b>{best ? labelOfArc(best, lang) : t.flat}</b>{" "}
         <span className="dim">— {best ? (lang === "ru" ? best.hintRu : best.hint).toLowerCase() : t.noShape}</span>
       </p>
-      <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="img" aria-label={t.shape} className="chart-svg">
+      <svg
+        width={width}
+        height={height}
+        viewBox={`0 0 ${width} ${height}`}
+        role="img"
+        aria-label={t.shape}
+        className="chart-svg"
+        onMouseMove={(e) => {
+          if (!pages) return;
+          const r = e.currentTarget.getBoundingClientRect();
+          const p = clamp01((e.clientX - r.left - L) / plotW);
+          const i = Math.round(p * (norm.length - 1));
+          preview.show(e, Math.round(p * (pages - 1)), `${t.light} ${num(lang, norm[i] ?? 0, 2)}`);
+        }}
+        onMouseLeave={() => preview.hide()}
+        onClick={(e) => {
+          if (!pages || !onPick) return;
+          const r = e.currentTarget.getBoundingClientRect();
+          onPick(Math.round(clamp01((e.clientX - r.left - L) / plotW) * (pages - 1)));
+        }}
+      >
         <line x1={L} x2={L + plotW} y1={TOP} y2={TOP} className="chart-grid" />
         <line x1={L} x2={L + plotW} y1={TOP + H} y2={TOP + H} className="chart-axis" />
         <text x={L - 6} y={TOP + 4} textAnchor="end" className="chart-tick">

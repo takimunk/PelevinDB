@@ -115,15 +115,17 @@ const section = (page: Page, title: string) => page.getByRole("heading", { name:
 /** A dashboard cell by its tiny title (upper-cased only by CSS). */
 const cell = (page: Page, title: string) => page.locator(".cell").filter({ has: page.locator(".cell-head h3", { hasText: new RegExp(`^${title}$`) }) });
 
-/** The book page order: title and actions, compact fingerprint, facts, plot development, brief, one dashboard of cells, insights last. */
+/** The book page order: title and actions, compact fingerprint, facts, plot development, brief, extreme pages, one dashboard of cells, insights last. */
 async function expectBookLayout(page: Page) {
   await expect(page.locator(".hero-strip .pixels i")).toHaveCount(85);
-  const titles = ["emotions over the book", "star chart", "pulse", "extreme pages", "mood · narration", "story shape", "neighbours", "texture vs corpus", "whole book", "themes over the book"];
+  const titles = ["emotions over the book", "star chart", "pulse", "neighbours", "mood · narration", "story shape", "texture vs corpus", "whole book", "themes over the book"];
   await expect(page.locator(".cell-head h3")).toHaveText(titles);
   const y = async (sel: string) => (await page.locator(sel).first().boundingBox())!.y;
-  const order = [await y(".book-title"), await y(".title-actions"), await y(".hero-strip"), await y(".book-facts"), await y(".dna-panel"), await y(".brief-panel"), await y(".dash"), await y(".insights")];
+  const order = [await y(".book-title"), await y(".title-actions"), await y(".hero-strip"), await y(".book-facts"), await y(".dna-panel"), await y(".brief-panel"), await y(".extremes-panel"), await y(".dash"), await y(".insights")];
   expect(order).toEqual([...order].sort((a, b) => a - b));
-  await expect(page.locator(".panel-head h3")).toHaveText(["Plot development", "Brief", "Insights"]);
+  await expect(page.locator(".panel-head h3")).toHaveText(["Plot development", "Brief", "Extreme pages", "Insights"]);
+  await expect(page.locator(".extremes-panel .quotes li")).toHaveCount(6);
+  await expect(page.locator(".dash .quotes")).toHaveCount(0);
   const brief = (await page.locator(".brief-panel").boundingBox())!;
   const dash = (await page.locator(".dash").boundingBox())!;
   expect(Math.abs(brief.width - dash.width)).toBeLessThan(4);
@@ -317,6 +319,8 @@ test("analysed book shows cost, radar, brief, quotes, every chart, the reader an
   await expect(page.locator(".hero-strip .pixels i")).toHaveCount(85);
   await expect(page.locator(".ridge-themes .ridge-row svg")).toHaveCount(10);
   await expect(page.locator(".ridge-emotions .ridge-row svg")).toHaveCount(8);
+  // Thin bars, one per page or page bin, instead of areas.
+  expect(await page.locator(".ridge-emotions .ridge-row").first().locator("rect").count()).toBeGreaterThan(10);
   await expect(page.locator(".neighbours")).toContainText(/Walden|Meditations|Moby Dick|Emma|Dracula|Ulysses|Candide|Hamlet/);
   await expect(page.locator(".insights")).toContainText("dialogue");
   await expect(page.locator(".chart-caption")).toContainText("peaks on p.");
@@ -327,6 +331,24 @@ test("analysed book shows cost, radar, brief, quotes, every chart, the reader an
   expect(Math.abs(texture.y - whole.y)).toBeLessThan(4);
   expect(whole.x).toBeGreaterThan(texture.x + 300);
 
+  // Hovering a chart previews the page: number, position and its first sentence, without stealing the click.
+  await page.locator(".dna .chart-svg").scrollIntoViewIfNeeded();
+  const dnaBox = (await page.locator(".dna .chart-svg").boundingBox())!;
+  await page.mouse.move(dnaBox.x + dnaBox.width * 0.6, dnaBox.y + 60);
+  const tip = page.getByRole("tooltip");
+  await expect(tip).toBeVisible();
+  await expect(tip.locator(".page-tip-meta")).toContainText(/p\.\d+ · \d+%/);
+  await expect(tip.locator(".page-tip-text")).toContainText(/\w{3,}.*[.!?…]/);
+  await expect(tip).toHaveCSS("pointer-events", "none");
+  await page.mouse.move(dnaBox.x - 40, dnaBox.y - 40);
+  await expect(tip).toHaveCount(0);
+  await page.locator(".ridge-emotions").scrollIntoViewIfNeeded();
+  await page.waitForTimeout(150); // the preview hides on scroll; let that settle before hovering
+  const specRow = (await page.locator(".ridge-emotions .ridge-row svg").first().boundingBox())!;
+  await page.mouse.move(specRow.x + specRow.width / 3, specRow.y + specRow.height / 2);
+  await expect(page.getByRole("tooltip")).toContainText(/joy/);
+  await page.mouse.move(0, 0);
+
   // Dashboard controls live in the URL and drive every cell.
   const bar = page.getByRole("group", { name: "Dashboard filters" });
   await bar.getByRole("button", { name: "1st ⅓" }).click();
@@ -336,7 +358,7 @@ test("analysed book shows cost, radar, brief, quotes, every chart, the reader an
   await expect(page.locator(".ridge-emotions .ridge-row svg")).toHaveCount(1);
   await bar.getByLabel("highlight").selectOption("mood:meditative");
   await expect(page.locator(".chart-svg.pulse .hl-band").first()).toBeAttached();
-  await expect(page.locator(".ridge-themes .hl-band").first()).toBeAttached();
+  await expect(page.getByRole("group", { name: "Dashboard filters" })).toContainText(/\d+\/\d+ pages/);
   await cell(page, "neighbours").getByRole("button", { name: "year" }).click();
   await expect(page).toHaveURL(/ns=year/);
   await cell(page, "texture vs corpus").getByRole("button", { name: "Δ" }).click();
@@ -573,6 +595,10 @@ test("canon books open read-only from the library, the map and search with brief
   await expectBookLayout(page);
   await expect(page.locator(".cell-radar svg")).toBeVisible();
   await expect(page.locator(".hero-strip .pixels i")).toHaveCount(85);
+  // Highlighting a mood dims the other pages' bars in the ridgelines.
+  await page.getByRole("group", { name: "Dashboard filters" }).getByLabel("highlight").selectOption("mood:suspenseful");
+  await expect(page.locator('.ridge-emotions rect[opacity="0.22"]').first()).toBeAttached();
+  await page.getByRole("group", { name: "Dashboard filters" }).getByRole("button", { name: "reset" }).click();
   for (const label of ["analyze", "resume", "write brief"]) await expect(button(page, label)).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Delete book" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /rewrite/i })).toHaveCount(0);

@@ -24,6 +24,7 @@ import { ArcPlot, Bars, Dna, PulsePlot, Sliders, Spectrogram, ThemeLines } from 
 import { num, pageRef, pct } from "./i18n.ts";
 import { useDash, type DashState } from "./dash.ts";
 import { InsightList } from "./Insights.tsx";
+import { PreviewOffset, PreviewProvider } from "./preview.tsx";
 import { QuoteExplorer } from "./QuoteExplorer.tsx";
 import { Reader } from "./Reader.tsx";
 import "./book.css";
@@ -101,7 +102,7 @@ const T = {
     },
     s: {
       brief: "Brief",
-      quotes: "Quotes",
+      quotes: "Extreme pages",
       insights: "Insights",
       dna: "Plot development",
       spectrogram: "Spectrogram",
@@ -240,7 +241,7 @@ const T = {
     },
     s: {
       brief: "Коротко",
-      quotes: "Цитаты",
+      quotes: "Крайние страницы",
       insights: "Выводы",
       dna: "Развитие сюжета",
       spectrogram: "Спектрограмма",
@@ -528,201 +529,204 @@ export function BookPage({ id, page }: { id: string; page?: number }) {
   );
 
   return (
-    <div className="book-page">
-      {/* 1. Title block */}
-      <header className="book-hero">
-        <div className="eyebrow">
-          {source}
-        </div>
-        <div className="book-title-row">
-          <h1 className="book-title">
-            {name.main}
-            {year != null && <small className="book-year">{year}</small>}
-          </h1>
-          {actions}
-        </div>
-        {name.sub && <p className="book-subtitle">{name.sub}</p>}
-        {!canon && <p className="book-author">{meta.author}</p>}
-        {hasData ? (
-          <p className="book-character">
-            <span>
-              <Swatch color={lead.color} round />
-              {labelOf(lead, lang).toLowerCase()}
-            </span>
-            {topMood && (
+    <PreviewProvider segments={segments}>
+      <div className="book-page">
+        {/* 1. Title block */}
+        <header className="book-hero">
+          <div className="eyebrow">{source}</div>
+          <div className="book-title-row">
+            <h1 className="book-title">
+              {name.main}
+              {year != null && <small className="book-year">{year}</small>}
+            </h1>
+            {actions}
+          </div>
+          {name.sub && <p className="book-subtitle">{name.sub}</p>}
+          {!canon && <p className="book-author">{meta.author}</p>}
+          {hasData ? (
+            <p className="book-character">
               <span>
-                <Swatch color={topMood.color} round />
-                {labelOf(topMood, lang).toLowerCase()}
+                <Swatch color={lead.color} round />
+                {labelOf(lead, lang).toLowerCase()}
               </span>
-            )}
-            {topMode && <span>{labelOf(topMode, lang).toLowerCase()}</span>}
-            {topThemes.length > 0 && <span>{topThemes.join(", ")}</span>}
-            {arcShape && (
-              <span>
-                {t.arc}: {(lang === "ru" ? arcShape.ru : arcShape.label).toLowerCase()}
-              </span>
-            )}
-          </p>
-        ) : (
-          <p className="book-character placeholder">{t.noCharacter}</p>
-        )}
-
-        {/* 2. The 85-dimension fingerprint, compact */}
-        {meta.fingerprint && (
-          <div className="hero-strip">
-            <PixelStrip values={fingerprintValues(meta.fingerprint)} size={5} label={t.fingerprint} />
-            <GroupLegend />
-          </div>
-        )}
-
-        {/* 3. Facts */}
-        <dl className="book-facts">
-          <div>
-            <dt>{t.pages}</dt>
-            <dd className="num">{n2(segments.length)}</dd>
-          </div>
-          <div>
-            <dt>{t.chars}</dt>
-            <dd className="num">{n2(meta.chars)}</dd>
-          </div>
-          <div>
-            <dt>{t.reading}</dt>
-            <dd className="num">{minutes < 90 ? t.min(Math.round(minutes)) : t.hours(Math.round(minutes / 60))}</dd>
-          </div>
-          {!canon && (
-            <>
-          <div>
-            <dt>{t.jev}</dt>
-            <dd className="data-badge num">
-              <Meter value={coverage} className="thin" /> {complete ? t.complete : pct(lang, coverage)}
-            </dd>
-          </div>
-          <div title={t.tokensHint(n2(cost.jevTokens), n2(cost.jevRequests), cost.briefTokens ? n2(cost.briefTokens) : undefined)}>
-            <dt>{t.tokens}</dt>
-            <dd className="num">{tokens(cost.totalTokens)}</dd>
-          </div>
-          <div title={t.costHint(usd(cost.jevUsd), brief ? usd(cost.briefUsd) : undefined)}>
-            <dt>{t.cost}</dt>
-            <dd className="cost num">{usd(cost.totalUsd)}</dd>
-          </div>
-            </>
-          )}
-        </dl>
-        {running && (
-          <div className="progress-line" aria-live="polite">
-            <Meter value={coverage} />
-            <span className="num">{t.progress(done, segments.length)}</span>
-          </div>
-        )}
-        {!complete && !running && (
-          <p className="analysis-note" role={job?.status === "error" ? "alert" : undefined}>
-            {canon ? t.canonNote(n2(done), n2(segments.length)) : job?.status === "error" ? `${t.error}: ${job.error}` : configured === false ? t.noKey : t.howItWorks}
-          </p>
-        )}
-      </header>
-
-      {/* 4. Plot development (emotion columns per page range), full width */}
-      <Panel title={t.s.dna} note={t.n.dna} className="dna-panel">
-        <Dna analyses={analyses} insights={dna} onPick={openPage} />
-      </Panel>
-
-      {/* 5. Brief */}
-      <Panel title={t.s.brief} note={brief ? t.n.briefBy(brief.model) : t.n.brief} className="brief-panel">
-        {brief ? (
-          <div className="brief" lang={picked!.lang}>
-            {picked!.fallback && (
-              <p className="brief-lang dim" lang={lang}>
-                {t.briefOtherLang}
-                {editable && status?.brief && (
-                  <>
-                    {" "}
-                    <button className="link-u" onClick={() => void requestBrief(id, lang)} disabled={briefJob?.status === "running"}>
-                      {briefJob?.status === "running" ? t.writing : t.writeInLang}
-                    </button>
-                  </>
-                )}
-              </p>
-            )}
-            <p className="brief-logline">{brief.logline}</p>
-            <p className="brief-what">{brief.what}</p>
-            <div className="brief-cols">
-              <div>
-                <h4 className="eyebrow">{t.whyRead}</h4>
-                <ul>
-                  {brief.why.map((w) => (
-                    <li key={w}>{w}</li>
-                  ))}
-                </ul>
-              </div>
-              <div>
-                <h4 className="eyebrow">{t.whoSuits}</h4>
-                <ul>
-                  {brief.who.map((w) => (
-                    <li key={w}>{w}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-            <p className="brief-skip">
-              <span className="eyebrow">{t.skipIf}</span> {brief.skip}
-            </p>
-            <p className="brief-foot num">
-              {!canon && `${n2(brief.usage.prompt_tokens)} ${t.tokensIn} · ${n2(brief.usage.completion_tokens)} ${t.tokensOut} · ${usd(brief.usage.cost)}`}
-              {editable && status?.brief && !picked!.fallback && (
-                <button className="link-u" onClick={() => void requestBrief(id, lang)} disabled={briefJob?.status === "running"}>
-                  {briefJob?.status === "running" ? t.rewriting : t.rewrite}
-                </button>
+              {topMood && (
+                <span>
+                  <Swatch color={topMood.color} round />
+                  {labelOf(topMood, lang).toLowerCase()}
+                </span>
+              )}
+              {topMode && <span>{labelOf(topMode, lang).toLowerCase()}</span>}
+              {topThemes.length > 0 && <span>{topThemes.join(", ")}</span>}
+              {arcShape && (
+                <span>
+                  {t.arc}: {(lang === "ru" ? arcShape.ru : arcShape.label).toLowerCase()}
+                </span>
               )}
             </p>
-          </div>
-        ) : !hasData || !complete ? (
-          <p className="placeholder">{t.briefWait}</p>
-        ) : canon ? (
-          <p className="placeholder">{t.briefCanon}</p>
-        ) : status?.brief ? (
-          <div className="brief-empty">
-            <button className="btn primary" onClick={() => void requestBrief(id, lang)} disabled={briefJob?.status === "running"}>
-              {briefJob?.status === "running" ? t.writing : t.writeBrief}
-            </button>
-            <span className="dim">{t.briefCost}</span>
-          </div>
-        ) : (
-          <p className="placeholder">{t.briefKey}</p>
-        )}
-        {briefJob?.status === "error" && (
-          <p className="analysis-note" role="alert">
-            {t.error}: {briefJob.error}
-          </p>
-        )}
-      </Panel>
+          ) : (
+            <p className="book-character placeholder">{t.noCharacter}</p>
+          )}
 
-      {/* 6. One dense dashboard of everything else, with analyst controls in the URL */}
-      {hasData ? (
-        <section className="dash" aria-label={t.dashboard}>
-          <DashBar state={ds} set={setDash} matches={view.matches} pages={view.analyses.length} />
+          {/* 2. The 85-dimension fingerprint, compact */}
+          {meta.fingerprint && (
+            <div className="hero-strip">
+              <PixelStrip values={fingerprintValues(meta.fingerprint)} size={5} label={t.fingerprint} />
+              <GroupLegend />
+            </div>
+          )}
 
-          <Cell span={8} title={t.c.spectrogram} keyNote={`${labelOf(vLead, lang).toLowerCase()} ${num(lang, vs.emotions[vLead.id], 2)}`}>
-            <Spectrogram analyses={view.analyses} emotions={vs.emotions} onPick={atIn} compact only={ds.emo} smoothing={ds.smooth} marks={view.marks} />
-          </Cell>
-          <Cell span={4} title={t.c.radar} keyNote={others.length ? t.c.vs(others.length) : undefined} className="cell-radar">
-            {meta.fingerprint && <Radar axes={radarAxes(meta.fingerprint, mean, lang)} color={lead.color} refLabel={t.meanOf(others.length)} />}
-          </Cell>
-
-          <Cell span={8} title={t.c.pulse} keyNote={insights.tension != null && whole ? `${t.c.tension} ${insights.tension > 0 ? "↑" : "↓"} r=${num(lang, insights.tension, 2)}` : undefined}>
-            <PulsePlot analyses={view.analyses} moments={view.peaks} onPick={pickIn} compact smoothing={ds.smooth} highlight={view.marks} />
-          </Cell>
-          <Cell
-            span={quoteView === "explore" ? 12 : 4}
-            title={quoteView === "extremes" ? t.c.quotes : t.c.explore}
-            controls={
+          {/* 3. Facts */}
+          <dl className="book-facts">
+            <div>
+              <dt>{t.pages}</dt>
+              <dd className="num">{n2(segments.length)}</dd>
+            </div>
+            <div>
+              <dt>{t.chars}</dt>
+              <dd className="num">{n2(meta.chars)}</dd>
+            </div>
+            <div>
+              <dt>{t.reading}</dt>
+              <dd className="num">{minutes < 90 ? t.min(Math.round(minutes)) : t.hours(Math.round(minutes / 60))}</dd>
+            </div>
+            {!canon && (
               <>
-                <Tabs label={t.quotesView} value={quoteView} options={[["extremes", t.views.extremes], ["explore", t.views.explore]]} onChange={setQuoteView} />
-                {quoteView === "extremes" && <Tabs label={t.c.sortBy} value={ds.qs} options={[["score", t.c.byScore], ["page", t.c.byPage]]} onChange={(qs) => setDash({ qs })} />}
+                <div>
+                  <dt>{t.jev}</dt>
+                  <dd className="data-badge num">
+                    <Meter value={coverage} className="thin" /> {complete ? t.complete : pct(lang, coverage)}
+                  </dd>
+                </div>
+                <div title={t.tokensHint(n2(cost.jevTokens), n2(cost.jevRequests), cost.briefTokens ? n2(cost.briefTokens) : undefined)}>
+                  <dt>{t.tokens}</dt>
+                  <dd className="num">{tokens(cost.totalTokens)}</dd>
+                </div>
+                <div title={t.costHint(usd(cost.jevUsd), brief ? usd(cost.briefUsd) : undefined)}>
+                  <dt>{t.cost}</dt>
+                  <dd className="cost num">{usd(cost.totalUsd)}</dd>
+                </div>
               </>
-            }
-          >
+            )}
+          </dl>
+          {running && (
+            <div className="progress-line" aria-live="polite">
+              <Meter value={coverage} />
+              <span className="num">{t.progress(done, segments.length)}</span>
+            </div>
+          )}
+          {!complete && !running && (
+            <p className="analysis-note" role={job?.status === "error" ? "alert" : undefined}>
+              {canon ? t.canonNote(n2(done), n2(segments.length)) : job?.status === "error" ? `${t.error}: ${job.error}` : configured === false ? t.noKey : t.howItWorks}
+            </p>
+          )}
+        </header>
+
+        {/* 4. Plot development (emotion columns per page range), full width */}
+        <Panel title={t.s.dna} note={t.n.dna} className="dna-panel">
+          <Dna analyses={analyses} insights={dna} onPick={openPage} />
+        </Panel>
+
+        {/* 5. Brief */}
+        <Panel title={t.s.brief} note={brief ? t.n.briefBy(brief.model) : t.n.brief} className="brief-panel">
+          {brief ? (
+            <div className="brief" lang={picked!.lang}>
+              {picked!.fallback && (
+                <p className="brief-lang dim" lang={lang}>
+                  {t.briefOtherLang}
+                  {editable && status?.brief && (
+                    <>
+                      {" "}
+                      <button className="link-u" onClick={() => void requestBrief(id, lang)} disabled={briefJob?.status === "running"}>
+                        {briefJob?.status === "running" ? t.writing : t.writeInLang}
+                      </button>
+                    </>
+                  )}
+                </p>
+              )}
+              <p className="brief-logline">{brief.logline}</p>
+              <p className="brief-what">{brief.what}</p>
+              <div className="brief-cols">
+                <div>
+                  <h4 className="eyebrow">{t.whyRead}</h4>
+                  <ul>
+                    {brief.why.map((w) => (
+                      <li key={w}>{w}</li>
+                    ))}
+                  </ul>
+                </div>
+                <div>
+                  <h4 className="eyebrow">{t.whoSuits}</h4>
+                  <ul>
+                    {brief.who.map((w) => (
+                      <li key={w}>{w}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+              <p className="brief-skip">
+                <span className="eyebrow">{t.skipIf}</span> {brief.skip}
+              </p>
+              <p className="brief-foot num">
+                {!canon && `${n2(brief.usage.prompt_tokens)} ${t.tokensIn} · ${n2(brief.usage.completion_tokens)} ${t.tokensOut} · ${usd(brief.usage.cost)}`}
+                {editable && status?.brief && !picked!.fallback && (
+                  <button className="link-u" onClick={() => void requestBrief(id, lang)} disabled={briefJob?.status === "running"}>
+                    {briefJob?.status === "running" ? t.rewriting : t.rewrite}
+                  </button>
+                )}
+              </p>
+            </div>
+          ) : !hasData || !complete ? (
+            <p className="placeholder">{t.briefWait}</p>
+          ) : canon ? (
+            <p className="placeholder">{t.briefCanon}</p>
+          ) : status?.brief ? (
+            <div className="brief-empty">
+              <button className="btn primary" onClick={() => void requestBrief(id, lang)} disabled={briefJob?.status === "running"}>
+                {briefJob?.status === "running" ? t.writing : t.writeBrief}
+              </button>
+              <span className="dim">{t.briefCost}</span>
+            </div>
+          ) : (
+            <p className="placeholder">{t.briefKey}</p>
+          )}
+          {briefJob?.status === "error" && (
+            <p className="analysis-note" role="alert">
+              {t.error}: {briefJob.error}
+            </p>
+          )}
+        </Panel>
+
+        {/* 6a. Extreme pages (and explore), readable, above the dashboard */}
+        {hasData && view.peaks.length > 0 && (
+          <section className="panel extremes-panel">
+            <header className="panel-head">
+              <h3>{t.s.quotes}</h3>
+              <p>{quoteView === "extremes" ? t.n.extremes : t.n.explore}</p>
+              <span className="cell-controls">
+                <Tabs
+                  label={t.quotesView}
+                  value={quoteView}
+                  options={[
+                    ["extremes", t.views.extremes],
+                    ["explore", t.views.explore],
+                  ]}
+                  onChange={setQuoteView}
+                />
+                {quoteView === "extremes" && (
+                  <Tabs
+                    label={t.c.sortBy}
+                    value={ds.qs}
+                    options={[
+                      ["score", t.c.byScore],
+                      ["page", t.c.byPage],
+                    ]}
+                    onChange={(qs) => setDash({ qs })}
+                  />
+                )}
+              </span>
+            </header>
             {quoteView === "extremes" ? (
-              <ol className="quotes compact">
+              <ol className="quotes">
                 {peaksShown.map((m) => (
                   <li key={m.id}>
                     <button onClick={() => pickIn(m.index)}>
@@ -730,8 +734,10 @@ export function BookPage({ id, page }: { id: string; page?: number }) {
                         <Swatch color={m.color} round />
                         {lang === "ru" ? m.ru : m.label}
                       </span>
-                      <span className="quote-page num">{pageRef(lang, view.from + m.index + 1)}</span>
-                      <q>{firstSentence(view.segments[m.index].text, 140)}</q>
+                      <q>{firstSentence(view.segments[m.index].text, 220)}</q>
+                      <span className="quote-page num">
+                        {pageRef(lang, view.from + m.index + 1)} · {pct(lang, (view.from + m.index) / Math.max(1, segments.length - 1))}
+                      </span>
                     </button>
                   </li>
                 ))}
@@ -739,141 +745,224 @@ export function BookPage({ id, page }: { id: string; page?: number }) {
             ) : (
               <QuoteExplorer segments={view.segments} analyses={view.analyses} onPick={pickIn} offset={view.from} />
             )}
-          </Cell>
+          </section>
+        )}
 
-          <Cell span={4} title={t.c.moodMode} keyNote={vMood ? `${labelOf(vMood, lang).toLowerCase()} ${pct(lang, vs.mood[vMood.id])}` : undefined}>
-            <Strip
-              label={t.c.mood}
-              active={ds.hl}
-              onPick={(hl) => setDash({ hl })}
-              group="mood"
-              items={MOODS.map((m) => ({ id: m.id, label: labelOf(m, lang), value: vs.mood[m.id] ?? 0, color: m.color }))}
-            />
-            <Strip
-              label={t.c.narration}
-              active={ds.hl}
-              onPick={(hl) => setDash({ hl })}
-              group="mode"
-              items={MODES.filter((m) => m.id !== "paratext").map((m) => ({ id: m.id, label: labelOf(m, lang), value: vs.mode[m.id] ?? 0, color: m.color }))}
-            />
-            {vMode && (
-              <p className="cell-foot">
-                {t.c.narration}: {labelOf(vMode, lang).toLowerCase()} {pct(lang, vs.mode[vMode.id])} · {t.c.clickHighlight}
-              </p>
-            )}
-          </Cell>
-          <Cell span={4} title={t.c.shape} keyNote={bestFit ? `r=${num(lang, bestFit.r, 2)}` : undefined}>
-            <ArcPlot curve={view.arc.curve} shape={view.arc.shape} fits={view.arc.fits} compact />
-          </Cell>
-          <Cell
-            span={4}
-            title={t.c.neighbours}
-            controls={<Tabs label={t.c.sortBy} value={ds.ns} options={[["similarity", "cos"], ["year", t.c.byYear]]} onChange={(ns) => setDash({ ns })} />}
-          >
-            {similarShown.length ? (
-              <ul className="neighbours compact">
-                {similarShown.map(({ id: nid, similarity, star }) => (
-                  <li key={nid}>
-                    <button onClick={() => navigate(starPath(star))}>
-                      <span className="nb-sim num">{Math.round(Math.max(0, similarity) * 100)}</span>
-                      <span className="nb-name">
-                        <b>{lang === "ru" || !star.titleEn ? star.title : star.titleEn}</b>
-                        <small className="num">
-                          {star.year ?? ""}
-                          {star.kind === "library" ? ` · ${t.library}` : ""}
-                        </small>
-                      </span>
-                      <PixelStrip values={fingerprintValues(star.fingerprint)} size={2} idle=" " />
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="placeholder">{meta.fingerprint ? t.noNeighbours : t.noFingerprint}</p>
-            )}
-          </Cell>
+        {/* 6. One dense dashboard of everything else, with analyst controls in the URL */}
+        {hasData ? (
+          <PreviewOffset offset={view.from}>
+            <section className="dash" aria-label={t.dashboard}>
+              <DashBar state={ds} set={setDash} matches={view.matches} pages={view.analyses.length} />
 
-          <Cell
-            span={6}
-            title={t.c.texture}
-            keyNote={textureGap ? `${labelOf(textureGap.tx, lang).toLowerCase()} ${signed(textureGap.d)}` : undefined}
-            controls={mean && <Tabs label={t.c.sortBy} value={ds.xs} options={[["value", t.c.byOrder], ["diff", "Δ"]]} onChange={(xs) => setDash({ xs })} />}
-          >
-            <Sliders
-              items={textureShown.map(({ tx, v }) => ({
-                id: tx.id,
-                low: lowOf(tx, lang),
-                high: highOf(tx, lang),
-                value: rel(v, mean?.texture[tx.id]),
-                label: labelOf(tx, lang),
-                reference: ds.rel ? 0.5 : mean?.texture[tx.id],
-              }))}
-            />
-            {mean && <p className="cell-foot">{ds.rel ? t.c.relNote : t.c.corpusMean}</p>}
-          </Cell>
-          <Cell span={6} title={t.c.whole} keyNote={topGenre ? `${labelOf(GENRES.find((g) => g.id === topGenre[0])!, lang).toLowerCase()} ${pct(lang, topGenre[1])}` : undefined}>
-            {content.profile ? (
-              <>
-                <Bars
-                  items={topEntries(content.profile.genre, 3).map(([gid, p]) => ({ id: gid, label: labelOf(GENRES.find((g) => g.id === gid)!, lang), value: p, color: "var(--d1)" }))}
-                  sort={false}
+              <Cell span={8} title={t.c.spectrogram} keyNote={`${labelOf(vLead, lang).toLowerCase()} ${num(lang, vs.emotions[vLead.id], 2)}`}>
+                <Spectrogram analyses={view.analyses} emotions={vs.emotions} onPick={atIn} compact only={ds.emo} smoothing={ds.smooth} marks={view.marks} />
+              </Cell>
+              <Cell span={4} title={t.c.radar} keyNote={others.length ? t.c.vs(others.length) : undefined} className="cell-radar">
+                {meta.fingerprint && <Radar axes={radarAxes(meta.fingerprint, mean, lang)} color={lead.color} refLabel={t.meanOf(others.length)} />}
+              </Cell>
+
+              <Cell span={8} title={t.c.pulse} keyNote={insights.tension != null && whole ? `${t.c.tension} ${insights.tension > 0 ? "↑" : "↓"} r=${num(lang, insights.tension, 2)}` : undefined}>
+                <PulsePlot analyses={view.analyses} moments={view.peaks} onPick={pickIn} compact smoothing={ds.smooth} highlight={view.marks} />
+              </Cell>
+              <Cell
+                span={4}
+                title={t.c.neighbours}
+                controls={
+                  <Tabs
+                    label={t.c.sortBy}
+                    value={ds.ns}
+                    options={[
+                      ["similarity", "cos"],
+                      ["year", t.c.byYear],
+                    ]}
+                    onChange={(ns) => setDash({ ns })}
+                  />
+                }
+              >
+                {similarShown.length ? (
+                  <ul className="neighbours compact">
+                    {similarShown.map(({ id: nid, similarity, star }) => (
+                      <li key={nid}>
+                        <button onClick={() => navigate(starPath(star))}>
+                          <span className="nb-sim num">{Math.round(Math.max(0, similarity) * 100)}</span>
+                          <span className="nb-name">
+                            <b>{lang === "ru" || !star.titleEn ? star.title : star.titleEn}</b>
+                            <small className="num">
+                              {star.year ?? ""}
+                              {star.kind === "library" ? ` · ${t.library}` : ""}
+                            </small>
+                          </span>
+                          <PixelStrip values={fingerprintValues(star.fingerprint)} size={2} idle=" " />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="placeholder">{meta.fingerprint ? t.noNeighbours : t.noFingerprint}</p>
+                )}
+              </Cell>
+
+              <Cell span={6} title={t.c.moodMode} keyNote={vMood ? `${labelOf(vMood, lang).toLowerCase()} ${pct(lang, vs.mood[vMood.id])}` : undefined}>
+                <Strip
+                  label={t.c.mood}
+                  active={ds.hl}
+                  onPick={(hl) => setDash({ hl })}
+                  group="mood"
+                  items={MOODS.map((m) => ({ id: m.id, label: labelOf(m, lang), value: vs.mood[m.id] ?? 0, color: m.color }))}
                 />
-                <p className="profile-era">
-                  <span className="eyebrow">{t.era}</span> <b>{labelOf(ERAS.find((e) => e.id === argmax(content.profile!.era))!, lang)}</b>
-                </p>
+                <Strip
+                  label={t.c.narration}
+                  active={ds.hl}
+                  onPick={(hl) => setDash({ hl })}
+                  group="mode"
+                  items={MODES.filter((m) => m.id !== "paratext").map((m) => ({ id: m.id, label: labelOf(m, lang), value: vs.mode[m.id] ?? 0, color: m.color }))}
+                />
+                {vMode && (
+                  <p className="cell-foot">
+                    {t.c.narration}: {labelOf(vMode, lang).toLowerCase()} {pct(lang, vs.mode[vMode.id])} · {t.c.clickHighlight}
+                  </p>
+                )}
+              </Cell>
+              <Cell span={6} title={t.c.shape} keyNote={bestFit ? `r=${num(lang, bestFit.r, 2)}` : undefined}>
+                <ArcPlot curve={view.arc.curve} shape={view.arc.shape} fits={view.arc.fits} compact pages={view.analyses.length} onPick={pickIn} />
+              </Cell>
+              <Cell
+                span={6}
+                title={t.c.texture}
+                keyNote={textureGap ? `${labelOf(textureGap.tx, lang).toLowerCase()} ${signed(textureGap.d)}` : undefined}
+                controls={
+                  mean && (
+                    <Tabs
+                      label={t.c.sortBy}
+                      value={ds.xs}
+                      options={[
+                        ["value", t.c.byOrder],
+                        ["diff", "Δ"],
+                      ]}
+                      onChange={(xs) => setDash({ xs })}
+                    />
+                  )
+                }
+              >
                 <Sliders
-                  items={PROFILE_SCALES.map((ps) => ({
-                    id: ps.id,
-                    low: lowOf(ps, lang),
-                    high: highOf(ps, lang),
-                    value: rel(content.profile!.scales[ps.id], mean?.profile?.scales[ps.id]),
-                    label: `${t.confidence} ${pct(lang, content.profile!.scaleConfidence[ps.id])}`,
-                    reference: ds.rel ? 0.5 : mean?.profile?.scales[ps.id],
+                  items={textureShown.map(({ tx, v }) => ({
+                    id: tx.id,
+                    low: lowOf(tx, lang),
+                    high: highOf(tx, lang),
+                    value: rel(v, mean?.texture[tx.id]),
+                    label: labelOf(tx, lang),
+                    reference: ds.rel ? 0.5 : mean?.texture[tx.id],
                   }))}
                 />
-              </>
-            ) : (
-              <p className="placeholder">{t.profileWait}</p>
-            )}
-          </Cell>
+                {mean && <p className="cell-foot">{ds.rel ? t.c.relNote : t.c.corpusMean}</p>}
+              </Cell>
+              <Cell
+                span={6}
+                title={t.c.whole}
+                keyNote={
+                  topGenre
+                    ? `${labelOf(
+                        GENRES.find((g) => g.id === topGenre[0])!,
+                        lang,
+                      ).toLowerCase()} ${pct(lang, topGenre[1])}`
+                    : undefined
+                }
+              >
+                {content.profile ? (
+                  <>
+                    <Bars
+                      items={topEntries(content.profile.genre, 3).map(([gid, p]) => ({
+                        id: gid,
+                        label: labelOf(
+                          GENRES.find((g) => g.id === gid)!,
+                          lang,
+                        ),
+                        value: p,
+                        color: "var(--d1)",
+                      }))}
+                      sort={false}
+                    />
+                    <p className="profile-era">
+                      <span className="eyebrow">{t.era}</span>{" "}
+                      <b>
+                        {labelOf(
+                          ERAS.find((e) => e.id === argmax(content.profile!.era))!,
+                          lang,
+                        )}
+                      </b>
+                    </p>
+                    <Sliders
+                      items={PROFILE_SCALES.map((ps) => ({
+                        id: ps.id,
+                        low: lowOf(ps, lang),
+                        high: highOf(ps, lang),
+                        value: rel(content.profile!.scales[ps.id], mean?.profile?.scales[ps.id]),
+                        label: `${t.confidence} ${pct(lang, content.profile!.scaleConfidence[ps.id])}`,
+                        reference: ds.rel ? 0.5 : mean?.profile?.scales[ps.id],
+                      }))}
+                    />
+                  </>
+                ) : (
+                  <p className="placeholder">{t.profileWait}</p>
+                )}
+              </Cell>
 
-          <Cell
-            span={12}
-            title={t.c.themes}
-            keyNote={topTheme ? `${labelOf(THEMES.find((th) => th.id === topTheme[0])!, lang).toLowerCase()} ${pct(lang, topTheme[1])}` : undefined}
-            controls={<Tabs label={t.c.sortBy} value={ds.ts} options={[["strength", t.c.byStrength], ["appearance", t.c.byAppearance]]} onChange={(ts) => setDash({ ts })} />}
-          >
-            <ThemeLines analyses={view.analyses} themes={vs.themes} onPick={atIn} compact order={ds.ts} smoothing={ds.smooth} marks={view.marks} />
-          </Cell>
-          {!complete && <p className="coverage-note">{t.coverage(n2(done), n2(segments.length))}</p>}
-        </section>
-      ) : (
-        <section className="preview panel">
-          <p className="eyebrow">{t.measures}</p>
-          <dl>
-            {t.preview.map(([k, n, what]) => (
-              <div key={k}>
-                <dt>{k}</dt>
-                <dd className="num">{n}</dd>
-                <dd>{what}</dd>
-              </div>
-            ))}
-          </dl>
-          <p className="dim">{canon ? t.previewCanon : t.previewLocal}</p>
-        </section>
-      )}
+              <Cell
+                span={12}
+                title={t.c.themes}
+                keyNote={
+                  topTheme
+                    ? `${labelOf(
+                        THEMES.find((th) => th.id === topTheme[0])!,
+                        lang,
+                      ).toLowerCase()} ${pct(lang, topTheme[1])}`
+                    : undefined
+                }
+                controls={
+                  <Tabs
+                    label={t.c.sortBy}
+                    value={ds.ts}
+                    options={[
+                      ["strength", t.c.byStrength],
+                      ["appearance", t.c.byAppearance],
+                    ]}
+                    onChange={(ts) => setDash({ ts })}
+                  />
+                }
+              >
+                <ThemeLines analyses={view.analyses} themes={vs.themes} onPick={atIn} compact order={ds.ts} smoothing={ds.smooth} marks={view.marks} />
+              </Cell>
+              {!complete && <p className="coverage-note">{t.coverage(n2(done), n2(segments.length))}</p>}
+            </section>
+          </PreviewOffset>
+        ) : (
+          <section className="preview panel">
+            <p className="eyebrow">{t.measures}</p>
+            <dl>
+              {t.preview.map(([k, n, what]) => (
+                <div key={k}>
+                  <dt>{k}</dt>
+                  <dd className="num">{n}</dd>
+                  <dd>{what}</dd>
+                </div>
+              ))}
+            </dl>
+            <p className="dim">{canon ? t.previewCanon : t.previewLocal}</p>
+          </section>
+        )}
 
-      {/* 7. Insights at the end */}
-      {hasData && (
-        <Panel title={t.s.insights} note={t.n.insights}>
-          <InsightList insights={insights} pages={segments.length} onPick={openPage} />
-        </Panel>
-      )}
+        {/* 7. Insights at the end */}
+        {hasData && (
+          <Panel title={t.s.insights} note={t.n.insights}>
+            <InsightList insights={insights} pages={segments.length} onPick={openPage} />
+          </Panel>
+        )}
 
-      {selected != null && segments[selected] && (
-        <Reader segment={segments[selected]} analysis={analyses[selected] ?? null} total={segments.length} onMove={move} onClose={closeReader} excerpt={excerpt} page={pageText} />
-      )}
-    </div>
+        {selected != null && segments[selected] && (
+          <Reader segment={segments[selected]} analysis={analyses[selected] ?? null} total={segments.length} onMove={move} onClose={closeReader} excerpt={excerpt} page={pageText} />
+        )}
+      </div>
+    </PreviewProvider>
   );
 }
 
@@ -1008,10 +1097,31 @@ function DashBar({ state, set, matches, pages }: { state: DashState; set: (p: Pa
     <div className="dash-bar" role="group" aria-label={t.label}>
       <span className="dash-field">
         <span className="dash-label">{t.range}</span>
-        <Tabs label={t.range} value={range} options={t.ranges.some(([v]) => v === range) ? t.ranges : [...t.ranges, [range, `${state.range[0]}–${state.range[1]}%`]]} onChange={(v) => set({ range: v.split("-").map(Number) as [number, number] })} />
-        <input className="dash-num" type="number" min={0} max={99} value={state.range[0]} aria-label={t.from} onChange={(e) => set({ range: [Math.min(clampPct(e.target.value, 0), state.range[1] - 1), state.range[1]] })} />
+        <Tabs
+          label={t.range}
+          value={range}
+          options={t.ranges.some(([v]) => v === range) ? t.ranges : [...t.ranges, [range, `${state.range[0]}–${state.range[1]}%`]]}
+          onChange={(v) => set({ range: v.split("-").map(Number) as [number, number] })}
+        />
+        <input
+          className="dash-num"
+          type="number"
+          min={0}
+          max={99}
+          value={state.range[0]}
+          aria-label={t.from}
+          onChange={(e) => set({ range: [Math.min(clampPct(e.target.value, 0), state.range[1] - 1), state.range[1]] })}
+        />
         <span className="dim">–</span>
-        <input className="dash-num" type="number" min={1} max={100} value={state.range[1]} aria-label={t.to} onChange={(e) => set({ range: [state.range[0], Math.max(clampPct(e.target.value, 100), state.range[0] + 1)] })} />
+        <input
+          className="dash-num"
+          type="number"
+          min={1}
+          max={100}
+          value={state.range[1]}
+          aria-label={t.to}
+          onChange={(e) => set({ range: [state.range[0], Math.max(clampPct(e.target.value, 100), state.range[0] + 1)] })}
+        />
       </span>
       <span className="dash-field">
         <span className="dash-label">{t.emotions}</span>
@@ -1051,9 +1161,25 @@ function DashBar({ state, set, matches, pages }: { state: DashState; set: (p: Pa
         {state.hl && <span className="dash-count num">{t.matches(matches, pages)}</span>}
       </span>
       <span className="dash-field">
-        <Tabs label={t.smooth} value={state.smooth ? "on" : "off"} options={[["on", `${t.smooth} ✓`], ["off", `${t.smooth} ✗`]]} onChange={(v) => set({ smooth: v === "on" })} />
+        <Tabs
+          label={t.smooth}
+          value={state.smooth ? "on" : "off"}
+          options={[
+            ["on", `${t.smooth} ✓`],
+            ["off", `${t.smooth} ✗`],
+          ]}
+          onChange={(v) => set({ smooth: v === "on" })}
+        />
         <span className="dash-label">{t.scale}</span>
-        <Tabs label={t.scale} value={state.rel ? "rel" : "abs"} options={[["abs", t.abs], ["rel", t.rel]]} onChange={(v) => set({ rel: v === "rel" })} />
+        <Tabs
+          label={t.scale}
+          value={state.rel ? "rel" : "abs"}
+          options={[
+            ["abs", t.abs],
+            ["rel", t.rel],
+          ]}
+          onChange={(v) => set({ rel: v === "rel" })}
+        />
       </span>
       {changed ? (
         <button className="link-u dash-reset" onClick={() => set({ range: [0, 100], emo: [], hl: null, smooth: true, rel: false })}>

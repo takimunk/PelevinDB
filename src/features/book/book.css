@@ -1632,3 +1632,73 @@
     margin-top: 0;
   }
 }
+
+/* Extreme pages: their own block above the dashboard, 3 × 2 on desktop. */
+.book-page > .extremes-panel {
+  margin-top: 28px;
+}
+.extremes-panel .panel-head .cell-controls {
+  margin-left: auto;
+}
+.extremes-panel .quotes {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.ridges.bars .ridge-row svg {
+  border-bottom: 1px solid var(--line);
+}
+@media (max-width: 1080px) {
+  .extremes-panel .quotes {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 640px) {
+  .extremes-panel .quotes {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Shared page preview: follows the pointer, never takes clicks. */
+.page-tip {
+  position: fixed;
+  z-index: 70;
+  max-width: 320px;
+  padding: 8px 10px 9px;
+  pointer-events: none;
+  background: var(--paper);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 1px 2px rgba(20, 20, 19, 0.06), 0 8px 24px -8px rgba(20, 20, 19, 0.22);
+}
+:root[data-theme="dark"] .page-tip {
+  background: var(--paper-2);
+  box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.7);
+}
+.page-tip-meta {
+  font: 500 10.5px/1.4 var(--mono);
+  color: var(--muted);
+}
+.page-tip-metric {
+  color: var(--ink-2);
+}
+.page-tip-metric b {
+  font-weight: 500;
+  color: var(--ink);
+}
+.page-tip-metric .key-swatch {
+  margin-right: 4px;
+}
+.page-tip-text {
+  margin-top: 4px;
+  font: italic 400 13.5px/1.45 var(--serif);
+  color: var(--ink);
+}
+.dna .chart-svg:focus-visible {
+  outline: 1px solid var(--ink);
+  outline-offset: 3px;
+}
+/* Touch has no hover: a tap opens the reader directly, so the preview never lingers. */
+@media (hover: none) {
+  .page-tip {
+    display: none;
+  }
+}
