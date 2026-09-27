@@ -297,7 +297,8 @@ test("analysis survives a partial failure and resumes without recomputing finish
   await button(page, "resume").click();
   await expect(page.locator(".data-badge")).toContainText("complete");
   expect(count).toBe(before + 1);
-  expect(profiles).toBe(1);
+  // Page completion can render before the subsequent whole-book profile request.
+  await expect.poll(() => profiles).toBe(1);
   await expect(page.getByRole("heading", { name: "SPECTROGRAM" })).toBeVisible();
   await expect(button(page, "map")).toBeEnabled();
 });
