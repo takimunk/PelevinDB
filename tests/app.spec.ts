@@ -304,6 +304,7 @@ test("TXT import has no invented scores; blank and unsupported files fail clearl
 });
 
 test("FB2 extracts metadata and excludes notes", async ({ page }) => {
+  await page.route("**/api/status", (route) => route.fulfill({ json: { localMode: true, configured: false } }));
   await page.goto("/");
   await upload(
     page,
@@ -318,6 +319,7 @@ test("FB2 extracts metadata and excludes notes", async ({ page }) => {
 });
 
 test("EPUB follows spine order and reads XHTML chapters with self-closing tags", async ({ page }) => {
+  await page.route("**/api/status", (route) => route.fulfill({ json: { localMode: true, configured: false } }));
   const zip = new JSZip();
   zip.file("META-INF/container.xml", '<container><rootfiles><rootfile full-path="OPS/book.opf"/></rootfiles></container>');
   zip.file(
