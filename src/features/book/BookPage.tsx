@@ -1007,14 +1007,14 @@ function DashBar({ state, set, matches, pages }: { state: DashState; set: (p: Pa
       </span>
       <span className="dash-field">
         <span className="dash-label">{t.emotions}</span>
-        <span className="cell-tabs" role="group" aria-label={t.emotions}>
+        <span className="cell-tabs dash-emos" role="group" aria-label={t.emotions}>
           <button className={!state.emo.length ? "on" : ""} aria-pressed={!state.emo.length} onClick={() => set({ emo: [] })}>
             {t.allEmotions}
           </button>
           {EMOTIONS.map((e) => (
             <button key={e.id} className={state.emo.includes(e.id) ? "on" : ""} aria-pressed={state.emo.includes(e.id)} onClick={() => toggleEmo(e.id)} title={labelOf(e, lang)}>
               <Swatch color={e.color} round />
-              {labelOf(e, lang).slice(0, 4).toLowerCase()}
+              {labelOf(e, lang).toLowerCase()}
             </button>
           ))}
         </span>

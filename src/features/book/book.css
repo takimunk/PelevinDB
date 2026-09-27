@@ -1573,3 +1573,18 @@
   min-width: 0;
   max-width: 100%;
 }
+
+/* Emotion toggles: full names in two rows ("all" + 8 emotions → 5 columns). */
+.cell-tabs.dash-emos {
+  display: inline-grid;
+  grid-template-columns: repeat(5, auto);
+  gap: 2px;
+}
+.dash-emos button {
+  white-space: nowrap;
+}
+@media (max-width: 560px) {
+  .cell-tabs.dash-emos {
+    grid-template-columns: repeat(3, auto);
+  }
+}
