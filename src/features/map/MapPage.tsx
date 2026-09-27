@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import { EMOTIONS, labelOf, MOODS, THEMES } from "../../../shared/catalog.ts";
 import { BOOK_KINDS } from "../../../shared/types.ts";
 import { ARC_SHAPES, argmax, topEntries } from "../../domain/analysis.ts";
-import { ALL_FEATURES, DEFAULT_WEIGHTS, FEATURE_GROUPS, fingerprintValues, WEIGHT_PRESETS, type Weights } from "../../domain/fingerprint.ts";
+import { DEFAULT_WEIGHTS, FEATURE_GROUPS, fingerprintValues, WEIGHT_PRESETS, type Weights } from "../../domain/fingerprint.ts";
 import { findRegions } from "../../domain/clusters.ts";
 import { neighbours } from "../../domain/pca.ts";
 import { navigate } from "../../app/router.ts";
@@ -21,9 +21,8 @@ import "./map.css";
 const T = {
   en: {
     eyebrow: "Map",
-    title: (n: number, d: number) => `${n} dimensions in ${d}`,
-    intro: (n: number) =>
-      `Every book is a vector of ${n} Jev answers. Pick a question below, or put principal components or any single answer on the axes. Edges link each book to its three nearest neighbours across all dimensions.`,
+    title: "Map of the works",
+    intro: "The closer two books are, the more alike they read: in feeling, pace, themes and how they are told. Pick a view below, or put any single score on an axis. Lines join each book to the three most like it.",
     views: "Views",
     custom: "Custom view.",
     view: "View",
@@ -72,9 +71,8 @@ const T = {
   },
   ru: {
     eyebrow: "Карта",
-    title: (n: number, d: number) => `${n} измерений в ${d}D`,
-    intro: (n: number) =>
-      `Каждая книга — вектор из ${n} ответов Jev. Выберите вопрос ниже или поставьте на оси главные компоненты либо любой отдельный ответ. Связи соединяют каждую книгу с тремя ближайшими соседями по всем измерениям.`,
+    title: "Карта произведений",
+    intro: "Чем ближе книги, тем больше они похожи: по чувствам, темпу, темам и манере рассказа. Выберите вид ниже или поставьте на ось любую отдельную оценку. Линии соединяют каждую книгу с тремя самыми похожими.",
     views: "Виды",
     custom: "Свой вид.",
     view: "Вид",
@@ -310,8 +308,8 @@ export function MapPage({ focus }: { focus?: string }) {
     <div className="map-page">
       <aside className="map-rail">
         <div className="eyebrow">{t.eyebrow}</div>
-        <h1>{t.title(ALL_FEATURES.length, dims)}</h1>
-        <p className="map-intro">{t.intro(ALL_FEATURES.length)}</p>
+        <h1>{t.title}</h1>
+        <p className="map-intro">{t.intro}</p>
         <div className="map-views" role="group" aria-label={t.views}>
           {MAP_PRESETS.map((p) => (
             <button key={p.id} className={view === p.id ? "on" : ""} aria-pressed={view === p.id} title={lang === "ru" ? p.ru.question : p.question} onClick={() => applyView(p)}>

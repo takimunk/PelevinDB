@@ -497,7 +497,8 @@ test("map switches 2D/3D, takes any answer as an axis, shows coordinates on hove
   await page.route("**/atlas.json", (route) => route.fulfill({ json: atlas }));
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/#/map");
-  await expect(page.getByRole("heading", { name: "85 dimensions in 3" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Map of the works" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "3d", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator(".graph canvas")).toBeVisible();
   await expect(page.locator(".node-label")).toHaveCount(8);
   await expect(page.getByRole("group", { name: "Regions" }).getByRole("button")).toHaveCount(2);
@@ -521,7 +522,7 @@ test("map switches 2D/3D, takes any answer as an axis, shows coordinates on hove
   expect(await where()).not.toEqual(at);
 
   await page.getByRole("button", { name: "2d", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "85 dimensions in 2" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "2d", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("combobox", { name: "z axis" })).toHaveCount(0);
   const flat = await where();
   await page.getByRole("combobox", { name: "x axis" }).selectOption("texture:tension");

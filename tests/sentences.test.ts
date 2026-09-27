@@ -10,7 +10,7 @@ import type { FocusAnalysis, SegmentAnalysis, SentenceAnalysis } from "../shared
 import { focusQuestions, parseFocus, parseSentence, sentenceQuestions } from "../server/jev.ts";
 import { corpusBook, pageResponse } from "../server/corpus.ts";
 import { MIGRATIONS, openStore } from "../server/store.ts";
-import { linesQuery, MAX_RESULT_PAGES, peakQuote, queryLines, sentenceQuote } from "../server/sentences.ts";
+import { linesQuery, MAX_RESULT_PAGES, peakQuote, peek, queryLines, sentenceQuote } from "../server/sentences.ts";
 import { queryPages, pagesQuery } from "../server/pages.ts";
 import { focusWeights, peakSentence } from "../shared/focus.ts";
 import { demoAnalyses } from "./fixtures/synthetic.ts";
@@ -132,6 +132,17 @@ test("store v4 keeps sentence boundaries, focus and sentence answers; the page r
   assert.equal(peakQuote(store, "pv-x", 1, "humor"), null, "too short to quote");
   const lines = corpusBook(store, "pv-x", false)!.lines!;
   assert.deepEqual(lines.find((l) => l.dim === "quotable"), { dim: "quotable", page: 2, n: 1, text: "Жизнь есть сон, а сон есть пустота, которую мы продаём друг другу.", weight: 0.8, read: null });
+  store.close();
+});
+
+test("peek returns one page's peak sentence for a dimension, or its leading emotion's", () => {
+  const { store } = sentenceFixture();
+  assert.deepEqual(peek(store, "pv-x", 0, "tension"), { text: "Страшная тень метнулась к окну и исчезла.", dim: "tension" });
+  // Page 1 leads with fear (0.9), so no dimension means fear.
+  assert.deepEqual(peek(store, "pv-x", 0, null), { text: "Страшная тень метнулась к окну и исчезла.", dim: "fear" });
+  // No sentence carries joy on page 1: the leading emotion's sentence stands in.
+  assert.deepEqual(peek(store, "pv-x", 0, "joy"), { text: "Страшная тень метнулась к окну и исчезла.", dim: "fear" });
+  assert.equal(peek(store, "pv-x", 9, "fear"), null);
   store.close();
 });
 

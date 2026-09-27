@@ -8,9 +8,10 @@ import { corpusETag, corpusList, corpusStore, fullTextEnabled, packCorpusBook, p
 import { localMode } from "./mode.ts";
 import { corpusStats, topPages, topPagesStamp } from "./stats.ts";
 import { pagesETag, pagesQuery, queryPages } from "./pages.ts";
-import { linesETag, linesQuery, queryLines } from "./sentences.ts";
+import { linesETag, linesQuery, peek, queryLines } from "./sentences.ts";
+import { FOCUS, FOCUS_RUBRIC, RUBRIC_VERSION, type FocusId } from "../shared/catalog.ts";
 import { createHash as hashOf } from "node:crypto";
-import { briefInput, corpusId, excerptsInput, pageInput, type Parsed } from "./validate.ts";
+import { briefInput, corpusId, excerptsInput, pageInput, pageNumber, type Parsed } from "./validate.ts";
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const port = Number(process.env.PORT || 5173);
@@ -231,6 +232,42 @@ app.get("/api/corpus/:id/page/:n", (req, res) => {
     return;
   }
   res.json(out.body);
+});
+
+// One sentence of a page for chart previews: the sentence that carries the hovered dimension most. Charts ask as the
+// pointer rests on a page, so the limit is looser than full pages; a response is one sentence.
+const peekLimit = rateLimiter(Number(process.env.CORPUS_PEEKS_PER_MINUTE) || 300);
+app.get("/api/corpus/:id/peek/:n", (req, res) => {
+  res.set("Cache-Control", "no-cache");
+  const id = corpusId(req.params.id);
+  const n = pageNumber(req.params.n);
+  const rawDim = typeof req.query.dim === "string" ? req.query.dim : null;
+  if ("error" in id || "error" in n || (rawDim != null && !FOCUS.some((f) => f.id === rawDim))) {
+    res.status(400).json({ error: "Expected a corpus book id, a page number from 1 and an optional focus dimension." });
+    return;
+  }
+  const limit = peekLimit(req.ip || "unknown");
+  if (!limit.ok) {
+    res.set("Retry-After", String(limit.retryAfter)).status(429).json({ error: "Too many previews at once." });
+    return;
+  }
+  const store = corpusStore();
+  const stamp = store?.stamp(id.value, RUBRIC_VERSION);
+  if (!store || stamp == null) {
+    res.status(404).json({ error: "This book is not in the corpus." });
+    return;
+  }
+  res.set("ETag", `W/"${hashOf("sha1").update(`peek2|${id.value}|${n.value}|${rawDim}|${stamp}|${store.stamp(id.value, FOCUS_RUBRIC)}`).digest("base64url")}"`);
+  if (req.fresh) {
+    res.status(304).end();
+    return;
+  }
+  const out = peek(store, id.value, n.value - 1, rawDim as FocusId | null);
+  if (!out) {
+    res.status(404).json({ error: "This page is not in the corpus." });
+    return;
+  }
+  res.json(out);
 });
 
 app.get("/api/corpus/:id", async (req, res) => {

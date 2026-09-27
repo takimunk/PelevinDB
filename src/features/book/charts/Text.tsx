@@ -9,7 +9,7 @@ import { useLang, useT, type Lang } from "../../../i18n/index.ts";
 import { Meter, Swatch, Track } from "../../../ui/term.tsx";
 import { useSize } from "../../../ui/useSize.ts";
 import { num, pageRef, pct } from "../i18n.ts";
-import { usePreview } from "../preview.tsx";
+import { asFocus, MOMENT_FOCUS, usePreview } from "../preview.tsx";
 
 const CALM = "#5aa6d6";
 const INTENSE = "#d93b30";
@@ -462,6 +462,7 @@ function Ridgeline({
                   <>
                     {r.label.toLowerCase()} <b>{value(data[k][b] ?? 0)}</b>
                   </>,
+                  asFocus(r.id),
                 );
               }}
               onClick={(e) => onPick(at(e))}
@@ -698,6 +699,7 @@ export function PulsePlot({
                 </span>
               ))
             ),
+            m ? MOMENT_FOCUS[m.id] : "tension",
           );
         }}
         onMouseLeave={() => {
@@ -832,7 +834,7 @@ export function ArcPlot({
           const r = e.currentTarget.getBoundingClientRect();
           const p = clamp01((e.clientX - r.left - L) / plotW);
           const i = Math.round(p * (norm.length - 1));
-          preview.show(e, Math.round(p * (pages - 1)), `${t.light} ${num(lang, norm[i] ?? 0, 2)}`);
+          preview.show(e, Math.round(p * (pages - 1)), `${t.light} ${num(lang, norm[i] ?? 0, 2)}`, (norm[i] ?? 0.5) >= 0.5 ? "light" : "dark");
         }}
         onMouseLeave={() => preview.hide()}
         onClick={(e) => {

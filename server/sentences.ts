@@ -117,6 +117,26 @@ export function peakQuote(store: Store, id: string, page: number, dim: FocusId):
   return sentenceQuote(text, peak === 0);
 }
 
+/**
+ * GET /api/corpus/:id/peek/:page?dim=…: the one sentence of a page that carries `dim` most, for chart previews and
+ * quotes; without `dim`, or when no sentence carries it, the sentence of the page's leading emotion. `dim` in the
+ * answer says which one was used. `text` is null when the page has no focus answer yet; the caller keeps its own
+ * opening line then. One sentence per request, never more.
+ */
+export function peek(store: Store, id: string, page: number, dim: FocusId | null): { text: string | null; dim: FocusId | null } | null {
+  const b = bookData(store, id);
+  if (!b) return store.book(id) && page >= 0 && page < store.book(id)!.pages ? { text: null, dim } : null;
+  if (!b.sentences.has(page)) return null;
+  const leading = b.pages.get(page) ? argmax(b.pages.get(page)!.emotions) : null;
+  const fallback = FOCUS.some((f) => f.id === leading) ? (leading as FocusId) : null;
+  // A page with no sentence carrying `dim` (low fear, say) is quoted by its leading emotion's sentence instead.
+  for (const use of [dim, fallback]) {
+    const text = use ? peakQuote(store, id, page, use) : null;
+    if (text) return { text, dim: use };
+  }
+  return { text: null, dim: null };
+}
+
 // ───────── Book lines: the strongest few sentences of one book ─────────
 
 export const BOOK_LINES = { quotable: 5, humor: 3, ideas: 3 } as const satisfies Partial<Record<FocusId, number>>;

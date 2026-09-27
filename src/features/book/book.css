@@ -1005,7 +1005,7 @@
   overflow-y: auto;
 }
 .reader-analysis-toggle {
-  display: none;
+  display: flex;
   justify-content: space-between;
   width: 100%;
   min-height: 48px;
@@ -1021,9 +1021,12 @@
   background: var(--surface);
 }
 .reader-analysis {
-  display: grid;
+  display: none;
   gap: 16px;
-  padding: 18px 28px 20px;
+  padding: 4px 28px 20px;
+}
+.reader-analysis.expanded {
+  display: grid;
 }
 .reader-tags {
   display: flex;
@@ -1043,13 +1046,34 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px 28px;
 }
-.reader-emotions > div {
+.reader-emotions > div,
+.reader-emotions > button {
   display: grid;
   grid-template-columns: 100px minmax(0, 1fr) 28px;
   gap: 10px;
   align-items: center;
   font-size: 12.5px;
   color: var(--ink-2);
+}
+.reader-emotions > button {
+  width: 100%;
+  margin: 0 -6px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+  box-sizing: content-box;
+}
+.reader-emotions > button:hover,
+.reader-emotions > button:focus-visible {
+  outline: none;
+  color: var(--ink);
+  background: var(--surface-2);
+}
+.reader-emotions > button.on {
+  color: var(--ink);
+  background: var(--surface-2);
 }
 .reader-emotions .num {
   text-align: right;
@@ -1177,15 +1201,8 @@
     max-height: 45dvh;
     overscroll-behavior: contain;
   }
-  .reader-analysis-toggle {
-    display: flex;
-  }
   .reader-analysis {
-    display: none;
     padding: 4px 20px 18px;
-  }
-  .reader-analysis.expanded {
-    display: grid;
   }
 }
 
@@ -1808,6 +1825,9 @@
 }
 .page-tip-metric .key-swatch {
   margin-right: 4px;
+}
+.page-tip-text.pending {
+  opacity: 0.45;
 }
 .page-tip-text {
   margin-top: 4px;

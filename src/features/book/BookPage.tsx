@@ -24,7 +24,7 @@ import { ArcPlot, Bars, Dna, PulsePlot, Sliders, Spectrogram, ThemeLines } from 
 import { num, pageRef, pct } from "./i18n.ts";
 import { useDash, type DashState } from "./dash.ts";
 import { InsightList } from "./Insights.tsx";
-import { PreviewOffset, PreviewProvider } from "./preview.tsx";
+import { MOMENT_FOCUS, PeakQuote, PreviewOffset, PreviewProvider } from "./preview.tsx";
 import { QuoteExplorer } from "./QuoteExplorer.tsx";
 import { rememberLens } from "./SentenceText.tsx";
 import { Reader } from "./Reader.tsx";
@@ -532,7 +532,7 @@ export function BookPage({ id, page }: { id: string; page?: number }) {
   );
 
   return (
-    <PreviewProvider segments={segments}>
+    <PreviewProvider segments={segments} bookId={canon && excerpt ? id : null}>
       <div className="book-page">
         {/* 1. Title block */}
         <header className="book-hero">
@@ -738,7 +738,7 @@ export function BookPage({ id, page }: { id: string; page?: number }) {
                         <Swatch color={m.color} round />
                         {lang === "ru" ? m.ru : m.label}
                       </span>
-                      <q>{firstSentence(view.segments[m.index].text, 220)}</q>
+                      <PeakQuote bookId={canon && excerpt ? id : null} page={view.from + m.index + 1} dim={MOMENT_FOCUS[m.id]} fallback={firstSentence(view.segments[m.index].text, 220)} />
                       <span className="quote-page num">
                         {pageRef(lang, view.from + m.index + 1)} · {pct(lang, (view.from + m.index) / Math.max(1, segments.length - 1))}
                       </span>

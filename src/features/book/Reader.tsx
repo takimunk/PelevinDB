@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { EMOTIONS, highOf, labelOf, lowOf, MODES, MOODS, TEXTURES, THEMES } from "../../../shared/catalog.ts";
+import { EMOTIONS, FOCUS, type FocusId, highOf, labelOf, lowOf, MODES, MOODS, TEXTURES, THEMES } from "../../../shared/catalog.ts";
 import type { PageSentences, SegmentAnalysis } from "../../../shared/types.ts";
 import { argmax, isParatext, modeColor, moodColor } from "../../domain/analysis.ts";
 import { pageValues } from "../../domain/fingerprint.ts";
@@ -10,6 +10,30 @@ import { Meter, Swatch } from "../../ui/term.tsx";
 import { Sliders } from "./charts/Text.tsx";
 import { num, pageRef } from "./i18n.ts";
 import { LensBar, SentenceText, useLens } from "./SentenceText.tsx";
+
+const STATS = "pelevindb.reader.stats";
+
+/** Whether the page stats are open: remembered for this viewer; by default open on desktop, closed on phones. */
+function useStatsOpen() {
+  const [open, setOpen] = useState(() => {
+    try {
+      const v = localStorage.getItem(STATS);
+      if (v === "open" || v === "closed") return v === "open";
+    } catch {
+      /* storage is a convenience only */
+    }
+    return typeof window !== "undefined" && window.matchMedia("(min-width: 961px)").matches;
+  });
+  const set = (next: boolean) => {
+    setOpen(next);
+    try {
+      localStorage.setItem(STATS, next ? "open" : "closed");
+    } catch {
+      /* storage is a convenience only */
+    }
+  };
+  return [open, set] as const;
+}
 
 const T = {
   en: {
@@ -34,6 +58,7 @@ const T = {
     loadingPage: "Loading the page…",
     pageError: (e: string) => `Could not load the page: ${e}. Showing its opening lines.`,
     onePage: "One page at a time",
+    pointAt: (e: string) => `Show the sentence with the most ${e}`,
   },
   ru: {
     page: (n: number) => `Страница ${n}`,
@@ -57,6 +82,7 @@ const T = {
     loadingPage: "Загружаем страницу…",
     pageError: (e: string) => `Не удалось загрузить страницу: ${e}. Показано её начало.`,
     onePage: "По одной странице",
+    pointAt: (e: string) => `Показать фразу, где больше всего: ${e}`,
   },
 };
 
@@ -86,9 +112,15 @@ export function Reader({
   const lang = useLang();
   const closeRef = useRef<HTMLButtonElement>(null);
   const textRef = useRef<HTMLDivElement>(null);
-  const [showAnalysis, setShowAnalysis] = useState(false);
+  const [showAnalysis, setShowAnalysis] = useStatsOpen();
   const [lens, setLens] = useLens();
+  // Bumped on each click on an emotion, so the same emotion clicked twice still brings its sentence back.
+  const [jump, setJump] = useState(0);
   const sentences = excerpt && page?.text ? (page.sentences ?? null) : null;
+  const pointAt = (id: FocusId) => {
+    setLens(id);
+    setJump((n) => n + 1);
+  };
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
     const overflow = document.body.style.overflow;
@@ -141,7 +173,7 @@ export function Reader({
       <div className="reader-text" ref={textRef}>
         {excerpt && page?.text ? (
           <>
-            {sentences ? <SentenceText text={page.text} sentences={sentences} analysis={analysis} lens={lens} /> : page.text}
+            {sentences ? <SentenceText text={page.text} sentences={sentences} analysis={analysis} lens={lens} jump={jump} /> : page.text}
             <span className="reader-one-page" role="note">
               {t.onePage}
             </span>
@@ -184,13 +216,24 @@ export function Reader({
                   ))}
                 </div>
                 <div className="reader-emotions">
-                  {EMOTIONS.map((e) => (
-                    <div key={e.id}>
-                      <span>{labelOf(e, lang).toLowerCase()}</span>
-                      <Meter value={analysis.emotions[e.id]} color={e.color} />
-                      <span className="num">{Math.round(analysis.emotions[e.id] * 100)}</span>
-                    </div>
-                  ))}
+                  {EMOTIONS.map((e) => {
+                    const row = (
+                      <>
+                        <span>{labelOf(e, lang).toLowerCase()}</span>
+                        <Meter value={analysis.emotions[e.id]} color={e.color} />
+                        <span className="num">{Math.round(analysis.emotions[e.id] * 100)}</span>
+                      </>
+                    );
+                    // With focus answers, an emotion points at the sentence that carries it most.
+                    const focusable = sentences?.focus && FOCUS.some((f) => f.id === e.id);
+                    return focusable ? (
+                      <button key={e.id} className={lens === e.id ? "on" : ""} aria-pressed={lens === e.id} title={t.pointAt(labelOf(e, lang).toLowerCase())} onClick={() => pointAt(e.id as FocusId)}>
+                        {row}
+                      </button>
+                    ) : (
+                      <div key={e.id}>{row}</div>
+                    );
+                  })}
                 </div>
                 <Sliders
                   items={TEXTURES.map((tx) => ({

@@ -133,23 +133,29 @@ export function SentenceText({
   sentences,
   analysis,
   lens,
+  jump = 0,
 }: {
   text: string;
   sentences: PageSentences;
   analysis: SegmentAnalysis | null;
   lens: FocusId | null;
+  /** Bumped when the reader points at a dimension: scrolls to its peak sentence again and flashes it. */
+  jump?: number;
 }) {
   const t = useT(T);
   const lang = useLang();
   const [open, setOpen] = useState<number | null>(null);
   const root = useRef<HTMLSpanElement>(null);
   useEffect(() => setOpen(null), [text]);
-  // Opening a page with a highlight on brings its peak sentence into view.
+  // Opening a page with a highlight on, or pointing at an emotion, brings the peak sentence into view; a pointed
+  // sentence flashes once so the eye finds it.
   useEffect(() => {
-    root.current
-      ?.querySelector<HTMLElement>(".sent.peak")
-      ?.scrollIntoView({ block: "center" });
-  }, [text, lens]);
+    const peak = root.current?.querySelector<HTMLElement>(".sent.peak");
+    if (!peak) return;
+    peak.scrollIntoView({ block: "center", behavior: jump ? "smooth" : "auto" });
+    if (jump && !matchMedia("(prefers-reduced-motion: reduce)").matches)
+      peak.animate([{ outline: "2px solid var(--c)", outlineOffset: "3px" }, { outline: "2px solid transparent", outlineOffset: "3px" }], { duration: 1400, easing: "ease-out" });
+  }, [text, lens, jump]);
   const color = lens ? FOCUS.find((f) => f.id === lens)!.color : undefined;
   const lensed = lens ? lensWeights(sentences, analysis, lens) : null;
   const parts: React.ReactNode[] = [];
