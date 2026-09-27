@@ -8,6 +8,7 @@ import { useLibrary } from "../../storage/library.ts";
 import { fmt, pct } from "../../ui/format.ts";
 import { BookTable } from "./BookTable.tsx";
 import { PagesShelf } from "./PagesShelf.tsx";
+import { LinesShelf } from "./LinesShelf.tsx";
 import type { LibraryTab } from "../../app/router.ts";
 import { CanonTable } from "./CanonTable.tsx";
 import { applyShelf, column, FACETS, facetCounts, LENSES, ranges, readState, VIEWS, writeState, type ShelfState, type ViewId } from "./shelf.ts";
@@ -25,6 +26,9 @@ const T = {
     tabWorks: "Pelevin’s works",
     tabMine: "Your books",
     tabPages: "Pages",
+    tabLines: "Lines",
+    linesTitle: "Lines",
+    linesSub: "The strongest sentences of the corpus: the most quotable, the funniest, the darkest. Open one to read it on its page, highlighted.",
     pagesTitle: "Pages",
     pagesSub: "Every story page of the corpus, one sentence from each. Filter, sort, open any page in the reader.",
     find: "Find",
@@ -63,6 +67,9 @@ const T = {
     tabWorks: "Произведения Пелевина",
     tabMine: "Ваши книги",
     tabPages: "Страницы",
+    tabLines: "Фразы",
+    linesTitle: "Фразы",
+    linesSub: "Самые сильные фразы корпуса: самые цитируемые, смешные, тёмные. Откройте любую, чтобы прочитать её на странице с подсветкой.",
     pagesTitle: "Страницы",
     pagesSub: "Каждая страница корпуса, по одной фразе с каждой. Фильтруйте, сортируйте, открывайте любую страницу в читалке.",
     find: "Найти",
@@ -223,8 +230,16 @@ export function LibraryPage({ tab: requested = "canon", params = {} }: { tab?: L
   const pages = rows?.reduce((s, r) => s + r.pages, 0) ?? 0;
   const read = rows?.reduce((s, r) => s + r.analysed, 0) ?? 0;
   const works = tab === "canon";
-  const title = works ? t.worksTitle : tab === "pages" ? t.pagesTitle : t.mineTitle;
-  const sub = works ? (rows?.length ? t.worksSub(rows.length, pages, pct(pages ? read / pages : 0)) : "\u00a0") : tab === "pages" ? t.pagesSub : t.mineSub(books.length, chars);
+  const title = works ? t.worksTitle : tab === "pages" ? t.pagesTitle : tab === "lines" ? t.linesTitle : t.mineTitle;
+  const sub = works
+    ? rows?.length
+      ? t.worksSub(rows.length, pages, pct(pages ? read / pages : 0))
+      : "\u00a0"
+    : tab === "pages"
+      ? t.pagesSub
+      : tab === "lines"
+        ? t.linesSub
+        : t.mineSub(books.length, chars);
   const go = (next: LibraryTab) => navigate(next === "canon" ? "/library" : `/library?tab=${next}`, { replace: true });
   return (
     <div className="library-page">
@@ -249,6 +264,9 @@ export function LibraryPage({ tab: requested = "canon", params = {} }: { tab?: L
           {t.tabPages}
           {read ? <small>{fmt(read)}</small> : null}
         </button>
+        <button className={tab === "lines" ? "on" : ""} aria-pressed={tab === "lines"} onClick={() => go("lines")}>
+          {t.tabLines}
+        </button>
         {/* Uploaded books live only in local mode; a quiet link, not a peer tab. */}
         {local && (
           <button className={`shelf-tab-aside ${tab === "mine" ? "on" : ""}`} aria-pressed={tab === "mine"} onClick={() => go("mine")}>
@@ -259,6 +277,8 @@ export function LibraryPage({ tab: requested = "canon", params = {} }: { tab?: L
       </div>
       {tab === "pages" ? (
         <PagesShelf params={params} />
+      ) : tab === "lines" ? (
+        <LinesShelf params={params} />
       ) : works ? (
         <WorksShelf params={params} t={t} />
       ) : ready && !books.length ? (

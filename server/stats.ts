@@ -1,6 +1,7 @@
 // Canon-wide aggregates over every stored page. Derived on read from the raw answers, cached until the store changes.
 import { argmax, isParatext } from "../shared/analysis.ts";
-import { EMOTIONS, RUBRIC_VERSION, type EmotionId } from "../shared/catalog.ts";
+import { EMOTIONS, FOCUS, RUBRIC_VERSION, type EmotionId, type FocusId } from "../shared/catalog.ts";
+import { peakQuote } from "./sentences.ts";
 import type { CorpusStats, PageRef, SegmentAnalysis } from "../shared/types.ts";
 import type { Store } from "./store.ts";
 
@@ -137,7 +138,7 @@ export function pageQuote(page: string): string {
 const topCache = new WeakMap<Store, Map<string, TopPages>>();
 
 /** The version of the top-pages payload, part of its ETag. */
-export const topPagesStamp = (store: Store, per: number) => `top1|${per}|${store.totals().stamp}`;
+export const topPagesStamp = (store: Store, per: number) => `top2|${per}|${store.totals().stamp}`;
 
 /**
  * For every Plutchik emotion, the `per` story pages of the whole corpus with the highest Jev score, highest first.
@@ -209,7 +210,7 @@ export function topPages(store: Store, per = 3): TopPages {
           year: b?.year ?? null,
           page: c.idx + 1,
           score: Math.round(c.score * 1000) / 1000,
-          quote: pageQuote(pageText(c.bookId, c.idx)),
+          quote: (FOCUS.some((f) => f.id === e.id) && peakQuote(store, c.bookId, c.idx, e.id as FocusId)) || pageQuote(pageText(c.bookId, c.idx)),
         };
       }),
   }));

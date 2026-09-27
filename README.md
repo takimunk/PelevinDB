@@ -72,6 +72,24 @@ Anything that can be computed is computed in code, not asked: length-weighted me
 
 All dimensions live in one place, `shared/catalog.ts`. The Jev questions, the response parser, the charts and the map all read from it. Changing wording bumps `RUBRIC_VERSION`.
 
+## Sentence level
+
+Pages are split into 201,657 sentences (`shared/sentences.ts`: Russian punctuation, initials and abbreviations; a short dialogue line stays whole). Boundaries are stored once, like page boundaries, and two more requests work below the page:
+
+- **Focus**, one request per story page. The page goes once as numbered sentences, and 15 Choice questions ask which sentence carries each dimension most, or none: seven Plutchik emotions, tension, humour, ideas, imagery, interiority, brightest, darkest and quotable. Anticipation is left out, because in the pilot Jev could not place it on a sentence. A sentence's weight is the page score × its probability, so the strongest sentences of the strongest pages lead. Each numbered option costs about 17.5 tokens per question, so a page costs about 8,200 tokens; all 8,611 story pages cost $2.94.
+- **Sentence**, one request per sentence, read with the two sentences before it and the one after: the leading emotion, voice (narration, speech, thought, comment, quotation), five scales (light, intensity, irony, abstraction, imagery) and seven flags (aphorism, punchline, wordplay, allusion, illusion, market, turn). It costs about 2,250 tokens, and it runs on the sentences focus ranks highest plus an even sample, not on all 200,000.
+
+A pilot on three works checked focus against the sentence request on 30 pages read sentence by sentence (`scripts/sentence-agreement.ts`). The sentence focus names as the peak ranks at the 0.71–0.98 percentile of the sentence scores in every dimension. Joy, ideas, imagery, brightest and quotable reach 0.93 or higher. The chance level is 0.5.
+
+```sh
+npm run sentences -- --pilot                              # three short works: focus, every sentence of 10 pages each, agreement table
+npm run sentences -- --dry                                # request counts and cost, nothing sent
+npm run sentences -- --max-usd=3.5                        # focus for every story page still missing it
+npm run sentences -- --no-focus --candidates=400 --sample=5000   # the sentence request for the 400 strongest per dimension plus an even sample
+```
+
+In the interface, the reader has a highlight bar: choose a dimension and each sentence is tinted by its weight, with the peak underlined. Click a sentence to see what Jev answered about it on its own. The library's **Lines** tab (`GET /api/corpus/lines`) ranks the corpus's strongest sentences per dimension, with the same caps as Pages. The book page's quotes gain a **lines** view, and quotes on Home and in the Pages tab now show the page's peak sentence for the emotion or score in question, not its first sentence.
+
 ## The map
 
 Each book has an 85-dimensional fingerprint of named coordinates: emotions, texture, mood, narration, themes, arc and profile. Because every axis has a meaning, the map's axis labels come straight from the principal-component loadings.
@@ -120,19 +138,22 @@ The store keeps the source of truth and nothing derived:
 | `analyses` | raw Jev answer per page and rubric, with input tokens |
 | `profiles` | whole-book request |
 | `briefs` | OpenRouter answer per language (ru/en), tokens and cost |
+| `sentences` | exact sentence boundaries within each page (schema v4) |
+| `sentence_analyses` | raw Jev answer per sentence and rubric, with input tokens |
 | `runs` | spend per run |
 
 Fingerprints, maps and charts are recomputed from these rows, so a rubric change or a new chart never requires migrating data. Answers are keyed by `RUBRIC_VERSION`, so old and new rubrics can coexist. The schema is plain SQL with JSON in `TEXT` columns and is versioned with `PRAGMA user_version`. To deploy, the file can ship as is on a persistent volume, or it can move to libSQL/Turso or to Postgres (JSON becomes `JSONB`) without changes to the model. All SQL is in `server/store.ts`.
 
 ### Corpus in the UI
 
-The web server opens the store read-only, once and only when it is first needed. It never creates, migrates or writes the file, so `npm run corpus` can keep writing while the app is running. If there is no file, the list is empty and book requests return 404.
+The web server opens the store read-only, once and only when it is first needed. It never creates, migrates or writes the file, so `npm run corpus` can keep writing while the app is running. If there is no file, the list is empty and book requests return 404. A file from schema v3 still opens, but it has no sentence views; `npm run sentences` (or any writable open) migrates it to v4.
 
 | Route | Returns |
 | --- | --- |
 | `GET /api/corpus` | `{ available, books }`: for each work, id, title, English title, year, form, rank, pages, chars, pages analysed, `complete` and `briefed` / `briefedLangs` |
 | `GET /api/corpus/pv-{slug}` | metadata, a short excerpt per page, page boundaries, analyses in page order, profile and the latest brief per language |
-| `GET /api/corpus/pv-{slug}/page/{n}` | the full text of one page |
+| `GET /api/corpus/pv-{slug}/page/{n}` | the full text of one page, with its sentence offsets, focus probabilities and sentence answers |
+| `GET /api/corpus/lines?dim=quotable` | the strongest sentences per focus dimension, one per row, 25 per result page and at most 5 result pages |
 | `GET /api/corpus/top-pages?per=5` | the strongest pages per Plutchik emotion, with a one-sentence quote each |
 | `GET /api/corpus-stats` | corpus-wide totals and distributions |
 
@@ -151,7 +172,7 @@ Uploading your own books (EPUB, FB2, TXT, Markdown), analysing them in the brows
 ```
 shared/          dimension catalog (en/ru labels) and types shared by server and client
 server/          Express: Jev adapter, OpenRouter brief, SQLite store, read-only corpus API, local mode, validation, Vite middleware
-scripts/         ingest-pelevin.ts (EPUBs → store), analyze-corpus.ts (full reads → SQLite, briefs, atlas), eda-pelevin.py (blog dataset)
+scripts/         ingest-pelevin.ts (EPUBs → store), analyze-corpus.ts (full reads → SQLite, briefs, atlas), analyze-sentences.ts (focus and sentence requests), eda-pelevin.py (blog dataset)
 data/            pelevin.json (curated works), xbook.db (corpus store, git-ignored)
 public/          atlas.json (fingerprints), blog/ (EDA dataset)
 src/i18n/        language and theme

@@ -344,3 +344,108 @@ export const highOf = (item: Bipolar, lang: CatalogLang) => (lang === "ru" && it
 export const RUBRIC_VERSION = "xbook-rubric-v2";
 export const SEGMENT_QUESTION_COUNT =
   EMOTIONS.length + TEXTURES.length + 2 + THEMES.length;
+
+// ── Sentence level ──────────────────────────────────────────────────────────────────────────────────────────────
+// Two requests work below the page. The focus request sends a page once with numbered sentences and asks, for each
+// dimension, which sentence carries it most (a Choice over the numbers): one request per page places every page score
+// on its sentences. The sentence request reads one sentence with its neighbours and asks what only makes sense for a
+// single line (is it a maxim, a punchline, an allusion).
+
+/** Page score a focus dimension distributes over the page's sentences (null: it has no page score). */
+export type FocusSource =
+  | { group: "emotion"; id: EmotionId }
+  | { group: "texture"; id: TextureId; invert?: boolean }
+  | null;
+
+/** Anticipation is left out: in the pilot Jev could not place it on a sentence (top-1 agreement at chance). */
+export const FOCUS = [
+  ...EMOTIONS.filter((e) => e.id !== "anticipation").map((e) => ({ id: e.id, label: e.label, ru: e.ru, color: e.color as string, asks: `conveys the most ${e.en}`, none: `No sentence conveys ${e.en}.`, source: { group: "emotion", id: e.id } as FocusSource })),
+  { id: "tension", label: "Tension", ru: "Напряжение", color: "#c0392b", asks: "carries the most tension, conflict or danger", none: "No sentence carries tension.", source: { group: "texture", id: "tension" } },
+  { id: "humor", label: "Humor", ru: "Юмор", color: "#e0a317", asks: "is the funniest or most ironic, such as a punchline", none: "No sentence is funny or ironic.", source: { group: "texture", id: "humor" } },
+  { id: "ideas", label: "Ideas", ru: "Идеи", color: "#9152c8", asks: "states the most abstract idea about philosophy, society, reality or faith", none: "No sentence states an abstract idea.", source: { group: "texture", id: "ideas" } },
+  { id: "imagery", label: "Imagery", ru: "Образность", color: "#3f9b4f", asks: "has the richest sensory or figurative imagery", none: "No sentence has sensory imagery.", source: { group: "texture", id: "imagery" } },
+  { id: "interiority", label: "Interiority", ru: "Внутренний мир", color: "#5c6bc0", asks: "goes deepest into a character's thoughts, memories or feelings", none: "No sentence shows inner life.", source: { group: "texture", id: "interiority" } },
+  { id: "light", label: "Brightest", ru: "Самое светлое", color: "#dba100", asks: "is the brightest: warm, hopeful or radiant", none: "No sentence is bright.", source: { group: "texture", id: "valence" } },
+  { id: "dark", label: "Darkest", ru: "Самое тёмное", color: "#6b5f86", asks: "is the darkest: bleak, cruel or despairing", none: "No sentence is dark.", source: { group: "texture", id: "valence", invert: true } },
+  { id: "quotable", label: "Quotable", ru: "Цитата", color: "#c2185b", asks: "would best stand alone as a quotable line: an aphorism, maxim or memorable phrase", none: "No sentence would stand alone as a quote.", source: null },
+] as const satisfies readonly { id: string; label: string; ru: string; color: string; asks: string; none: string; source: FocusSource }[];
+
+/** A sentence's pick for "none of them" in a focus Choice. */
+export const FOCUS_NONE = "none";
+
+export const SENTENCE_EMOTIONS = [
+  ...EMOTIONS.map((e) => ({ id: e.id, label: e.label, ru: e.ru, color: e.color as string, en: `${e.en[0].toUpperCase()}${e.en.slice(1)}.` })),
+  { id: "neutral", label: "Neutral", ru: "Нейтрально", color: "#9a9893", en: "Neutral: no particular emotion." },
+] as const;
+
+export const SENTENCE_SCALES = [
+  {
+    id: "valence",
+    label: "Light",
+    ru: "Свет",
+    instructions: "What is the emotional tone of `sentence`, from dark to light?",
+    levels: ["Bleak or cruel.", "Somber or troubled.", "Neutral or mixed.", "Warm or hopeful.", "Radiant or joyful."] as Levels,
+  },
+  {
+    id: "arousal",
+    label: "Intensity",
+    ru: "Накал",
+    instructions: "How emotionally intense or agitated is `sentence`?",
+    levels: ["Flat: a neutral statement.", "Calm.", "Noticeable feeling.", "Strong feeling or agitation.", "Overwhelming: a cry, an outburst or terror."] as Levels,
+  },
+  {
+    id: "irony",
+    label: "Irony",
+    ru: "Ирония",
+    instructions: "How ironic, sarcastic or mocking is `sentence`: does it mean more or other than it says?",
+    levels: ["Entirely sincere.", "A faint ironic shade.", "Clearly ironic.", "Sarcastic or mocking.", "Biting satire or grotesque mockery."] as Levels,
+  },
+  {
+    id: "abstraction",
+    label: "Abstraction",
+    ru: "Абстрактность",
+    instructions: "How abstract is `sentence`, from concrete things and events to metaphysics?",
+    levels: [
+      "Concrete: a physical action, object or plain fact.",
+      "Mostly concrete with a general remark.",
+      "A general observation about people or life.",
+      "An idea about society, history, mind or faith.",
+      "Metaphysics: the nature of reality, the self, emptiness or God.",
+    ] as Levels,
+  },
+  {
+    id: "imagery",
+    label: "Imagery",
+    ru: "Образность",
+    instructions: "How rich is the sensory or figurative imagery of `sentence`?",
+    levels: ["None: functional or abstract.", "A single concrete detail.", "A clear image.", "Vivid description or a striking metaphor.", "Lush, painterly imagery."] as Levels,
+  },
+] as const;
+
+export const SENTENCE_FLAGS = [
+  { id: "aphorism", label: "Aphorism", ru: "Афоризм", true: "`sentence` would stand alone as an aphorism, maxim or memorable quotable line, meaningful out of context.", false: "`sentence` depends on its context or is an ordinary line." },
+  { id: "punchline", label: "Punchline", ru: "Пуант", true: "`sentence` is the punchline of a joke or the comic payoff of what came before.", false: "`sentence` is not a comic payoff." },
+  { id: "wordplay", label: "Wordplay", ru: "Игра слов", true: "`sentence` plays on words: a pun, a double meaning, a coinage or a twisted idiom.", false: "`sentence` has no wordplay." },
+  { id: "allusion", label: "Allusion", ru: "Аллюзия", true: "`sentence` refers to a specific text, myth, religion, thinker, film, song or public figure.", false: "`sentence` makes no such reference." },
+  { id: "illusion", label: "Illusion", ru: "Иллюзорность", true: "`sentence` claims or implies that reality, the self or the world is an illusion, a dream, emptiness or a construct.", false: "`sentence` makes no such claim." },
+  { id: "market", label: "Market", ru: "Рынок", true: "`sentence` is about money, brands, advertising, marketing or consumption.", false: "`sentence` is not about money or consumption." },
+  { id: "turn", label: "Turn", ru: "Поворот", true: "`sentence` overturns or reframes what `before` set up: a twist, a reversal or a sudden shift of tone.", false: "`sentence` continues what came before." },
+] as const;
+
+export const SENTENCE_ACTS = [
+  { id: "narration", label: "Narration", ru: "Повествование", color: "#8a929e", en: "Narration: events or description told by the narrator." },
+  { id: "speech", label: "Speech", ru: "Реплика", color: "#dba100", en: "Speech: a character's spoken line." },
+  { id: "thought", label: "Thought", ru: "Мысль", color: "#5c6bc0", en: "Thought: a character's inner speech, memory or feeling." },
+  { id: "comment", label: "Comment", ru: "Комментарий", color: "#9152c8", en: "Comment: the narrator generalises, argues or addresses the reader." },
+  { id: "quotation", label: "Quotation", ru: "Цитата", color: "#2f8fd8", en: "Quotation: a document, sign, slogan, verse or text quoted within the story." },
+] as const;
+
+export type FocusId = (typeof FOCUS)[number]["id"];
+export type SentenceEmotionId = (typeof SENTENCE_EMOTIONS)[number]["id"];
+export type SentenceScaleId = (typeof SENTENCE_SCALES)[number]["id"];
+export type SentenceFlagId = (typeof SENTENCE_FLAGS)[number]["id"];
+export type SentenceActId = (typeof SENTENCE_ACTS)[number]["id"];
+
+export const FOCUS_RUBRIC = "xbook-focus-v1";
+export const SENTENCE_RUBRIC = "xbook-sentence-v1";
+export const SENTENCE_QUESTION_COUNT = 1 + SENTENCE_SCALES.length + SENTENCE_FLAGS.length + 1;

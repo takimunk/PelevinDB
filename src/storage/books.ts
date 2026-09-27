@@ -13,7 +13,7 @@ export type BookOrigin = "library" | "corpus";
  */
 export type BookView = { meta?: BookMeta; content?: BookContent; segments: Segment[]; missing: boolean; origin: BookOrigin; rank: number | null } & CorpusExtra;
 
-const NO_EXTRA: CorpusExtra = { excerpt: false, year: null, kind: null, titleEn: null };
+const NO_EXTRA: CorpusExtra = { excerpt: false, year: null, kind: null, titleEn: null, lines: [] };
 
 /** One book shape for BookPage regardless of source; both hooks always run, the unused one stays idle. */
 export function useBookView(id: string): BookView {

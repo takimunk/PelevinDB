@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 
-export type LibraryTab = "canon" | "pages" | "mine";
+export type LibraryTab = "canon" | "pages" | "lines" | "mine";
 
 export type Route =
   | { name: "home" }
@@ -16,7 +16,7 @@ export function parseRoute(hash: string): Route {
   const parts = path.split("/").filter(Boolean);
   if (parts[0] === "library") {
     const tab = params.get("tab");
-    return { name: "library", tab: tab === "mine" || tab === "pages" ? tab : "canon", params: Object.fromEntries(params) };
+    return { name: "library", tab: tab === "mine" || tab === "pages" || tab === "lines" ? tab : "canon", params: Object.fromEntries(params) };
   }
   if (parts[0] === "blog") return { name: "blog", slug: parts[1] ? decodeURIComponent(parts[1]) : undefined };
   if (parts[0] === "about") return { name: "about" };

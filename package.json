@@ -11,7 +11,8 @@
     "test:e2e": "playwright test",
     "pelevin:ingest": "node scripts/ingest-pelevin.ts",
     "pelevin:eda": "python3 scripts/eda-pelevin.py",
-    "corpus": "node --env-file-if-exists=.env scripts/analyze-corpus.ts"
+    "corpus": "node --env-file-if-exists=.env scripts/analyze-corpus.ts",
+    "sentences": "node --env-file-if-exists=.env scripts/analyze-sentences.ts"
   },
   "dependencies": {
     "@openpanel/web": "^1.4.1",

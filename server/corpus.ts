@@ -3,12 +3,19 @@ import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { promisify } from "node:util";
 import { brotliCompress, constants, gzip } from "node:zlib";
-import { RUBRIC_VERSION } from "../shared/catalog.ts";
-import { BOOK_KINDS, type BookKind, type CorpusBook, type CorpusEntry } from "../shared/types.ts";
+import { FOCUS_RUBRIC, RUBRIC_VERSION } from "../shared/catalog.ts";
+import { BOOK_KINDS, type BookKind, type CorpusBook, type CorpusEntry, type PageSentences } from "../shared/types.ts";
+import { bookLines, pageSentences } from "./sentences.ts";
 import { DEFAULT_DB, openStore, type Store } from "./store.ts";
 import { corpusId, pageNumber } from "./validate.ts";
 
-const PAYLOAD_VERSION = 3;
+const PAYLOAD_VERSION = 4;
+
+/** Every stored answer a book payload or a page depends on: pages, focus and single sentences. */
+const answersStamp = (store: Store, id: string) => {
+  const stamp = store.stamp(id, RUBRIC_VERSION);
+  return stamp == null ? null : `${stamp}|${store.stamp(id, FOCUS_RUBRIC)}|${store.sentenceStamp(id)}`;
+};
 /** Longest per-page excerpt the public site sends instead of the text. */
 export const EXCERPT_CHARS = 220;
 
@@ -75,7 +82,7 @@ export function corpusList(store: Store): CorpusEntry[] {
 }
 
 export function corpusETag(store: Store, id: string, full = fullTextEnabled()): string | null {
-  const stamp = store.stamp(id, RUBRIC_VERSION);
+  const stamp = answersStamp(store, id);
   if (stamp == null) return null;
   return `W/"${createHash("sha1")
     .update(`${PAYLOAD_VERSION}|${full ? "full" : "excerpt"}|${RUBRIC_VERSION}|${id}|${stamp}`)
@@ -104,11 +111,12 @@ export function corpusBook(store: Store, id: string, full = fullTextEnabled()): 
     profile: store.profile(id, RUBRIC_VERSION),
     briefs: store.briefs(id),
     brief: store.brief(id, "en"),
+    lines: bookLines(store, id),
   };
 }
 
-/** GET /api/corpus/:id/page/:n: the full text of exactly one page (1-based), never more. */
-export type CorpusPage = { page: number; text: string; start: number; end: number };
+/** GET /api/corpus/:id/page/:n: the full text of exactly one page (1-based), never more, and its sentences. */
+export type CorpusPage = { page: number; text: string; start: number; end: number; sentences: PageSentences | null };
 
 export function corpusPage(store: Store, id: string, page: number): CorpusPage | null {
   if (!Number.isInteger(page) || page < 1) return null;
@@ -116,11 +124,11 @@ export function corpusPage(store: Store, id: string, page: number): CorpusPage |
   if (!segment) return null;
   const text = store.text(id);
   if (text == null) return null;
-  return { page, text: text.slice(segment.start, segment.end), start: segment.start, end: segment.end };
+  return { page, text: text.slice(segment.start, segment.end), start: segment.start, end: segment.end, sentences: pageSentences(store, id, segment.idx, segment.start) };
 }
 
 export function corpusPageETag(store: Store, id: string, page: number): string | null {
-  const stamp = store.stamp(id, RUBRIC_VERSION);
+  const stamp = answersStamp(store, id);
   if (stamp == null) return null;
   return `W/"${createHash("sha1").update(`page|${id}|${page}|${stamp}`).digest("base64url")}"`;
 }

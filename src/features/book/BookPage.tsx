@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { EMOTIONS, ERAS, GENRES, type EmotionId, highOf, labelOf, lowOf, MODES, MOODS, PROFILE_SCALES, SEGMENT_QUESTION_COUNT, TEXTURES, THEMES } from "../../../shared/catalog.ts";
+import { EMOTIONS, ERAS, FOCUS, GENRES, type EmotionId, highOf, labelOf, lowOf, MODES, MOODS, PROFILE_SCALES, SEGMENT_QUESTION_COUNT, TEXTURES, THEMES } from "../../../shared/catalog.ts";
 import { ARC_SHAPES, argmax, bookStats, moments, series, storyArc, topEntries } from "../../domain/analysis.ts";
 import { spend, tokens, usd } from "../../domain/cost.ts";
 import { buildCsv, buildExport } from "../../domain/export.ts";
@@ -26,6 +26,7 @@ import { useDash, type DashState } from "./dash.ts";
 import { InsightList } from "./Insights.tsx";
 import { PreviewOffset, PreviewProvider } from "./preview.tsx";
 import { QuoteExplorer } from "./QuoteExplorer.tsx";
+import { rememberLens } from "./SentenceText.tsx";
 import { Reader } from "./Reader.tsx";
 import "./book.css";
 
@@ -119,6 +120,7 @@ const T = {
       briefBy: (m: string) => `written by ${m} from the data below`,
       brief: "a reader’s brief written from everything measured here",
       extremes: "the most extreme pages, found in code from Jev answers · click to read",
+      lines: "the book’s most quotable, funniest and most abstract sentences · click to read it highlighted",
       explore: "filter every page by a Jev answer and rank by any score · click to read",
       insights: "computed from Jev answers · click a page to read",
       dna: "one column per page range · height = emotional intensity · colour = leading emotion · click to read",
@@ -132,7 +134,7 @@ const T = {
       themes: "top 10 of 19 · how likely each page is about the theme · click to read",
       neighbours: "nearest fingerprints · cosine similarity",
     },
-    views: { extremes: "extremes", explore: "explore" },
+    views: { extremes: "extremes", lines: "lines", explore: "explore" },
     quotesView: "Quotes view",
     whyRead: "Why read it",
     whoSuits: "Who it suits",
@@ -258,6 +260,7 @@ const T = {
       briefBy: (m: string) => `написано ${m} по данным ниже`,
       brief: "аннотация для читателя по всем измерениям на этой странице",
       extremes: "самые крайние страницы, найденные в коде по ответам Jev · нажмите, чтобы читать",
+      lines: "самые цитируемые, смешные и отвлечённые фразы книги · нажмите, чтобы прочитать с подсветкой",
       explore: "отберите страницы по любому ответу Jev и отсортируйте по любой оценке",
       insights: "вычислено по ответам Jev · нажмите на страницу, чтобы читать",
       dna: "столбец — диапазон страниц · высота — сила эмоции · цвет — ведущая эмоция",
@@ -271,7 +274,7 @@ const T = {
       themes: "10 из 19 · вероятность, что страница об этой теме",
       neighbours: "ближайшие отпечатки · косинусное сходство",
     },
-    views: { extremes: "крайние", explore: "поиск" },
+    views: { extremes: "крайние", lines: "фразы", explore: "поиск" },
     quotesView: "Вид цитат",
     whyRead: "Зачем читать",
     whoSuits: "Кому подойдёт",
@@ -340,7 +343,7 @@ export function titles(title: string, titleEn: string | null | undefined, lang: 
 export function BookPage({ id, page }: { id: string; page?: number }) {
   const t = useT(T);
   const lang = useLang();
-  const { meta, content, segments, missing, origin, rank, excerpt, year, kind, titleEn } = useBookView(id);
+  const { meta, content, segments, missing, origin, rank, excerpt, year, kind, titleEn, lines } = useBookView(id);
   const canon = origin === "corpus";
   // Analysing, rewriting briefs and deleting exist only for your own books in local mode.
   const local = useLocalMode();
@@ -366,7 +369,7 @@ export function BookPage({ id, page }: { id: string; page?: number }) {
   const peaks = useMemo(() => moments(analyses), [analyses]);
   const dna = useMemo(() => dnaInsights(analyses), [analyses]);
   const insights = useMemo(() => bookInsights(analyses), [analyses]);
-  const [quoteView, setQuoteView] = useState<"extremes" | "explore">("extremes");
+  const [quoteView, setQuoteView] = useState<"extremes" | "lines" | "explore">("extremes");
   const similar = useMemo(() => {
     const byId = new Map(corpus.map((s) => [s.id, s]));
     return neighbours(embedding.rows, id, 6).flatMap((n) => (byId.has(n.id) ? [{ ...n, star: byId.get(n.id)! }] : []));
@@ -701,13 +704,14 @@ export function BookPage({ id, page }: { id: string; page?: number }) {
           <section className="panel extremes-panel">
             <header className="panel-head">
               <h3>{t.s.quotes}</h3>
-              <p>{quoteView === "extremes" ? t.n.extremes : t.n.explore}</p>
+              <p>{quoteView === "extremes" ? t.n.extremes : quoteView === "lines" ? t.n.lines : t.n.explore}</p>
               <span className="cell-controls">
                 <Tabs
                   label={t.quotesView}
                   value={quoteView}
                   options={[
                     ["extremes", t.views.extremes],
+                    ...(lines.length ? [["lines", t.views.lines] as ["lines", string]] : []),
                     ["explore", t.views.explore],
                   ]}
                   onChange={setQuoteView}
@@ -741,6 +745,31 @@ export function BookPage({ id, page }: { id: string; page?: number }) {
                     </button>
                   </li>
                 ))}
+              </ol>
+            ) : quoteView === "lines" ? (
+              <ol className="quotes book-lines">
+                {lines.map((l) => {
+                  const dim = FOCUS.find((f) => f.id === l.dim)!;
+                  return (
+                    <li key={`${l.dim}:${l.page}:${l.n}`}>
+                      <button
+                        onClick={() => {
+                          rememberLens(l.dim);
+                          openPage(l.page - 1);
+                        }}
+                      >
+                        <span className="quote-label">
+                          <Swatch color={dim.color} round />
+                          {labelOf(dim, lang)}
+                        </span>
+                        <q>{l.text}</q>
+                        <span className="quote-page num">
+                          {pageRef(lang, l.page)} · {pct(lang, (l.page - 1) / Math.max(1, segments.length - 1))}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
               </ol>
             ) : (
               <QuoteExplorer segments={view.segments} analyses={view.analyses} onPick={pickIn} offset={view.from} />

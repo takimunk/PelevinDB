@@ -4,7 +4,7 @@
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { BRIEF_LANGS, type BookBrief, type BookKind, type BookProfile, type BriefLang, type SegmentAnalysis } from "../shared/types.ts";
+import { BRIEF_LANGS, type BookBrief, type BookKind, type BookProfile, type BriefLang, type FocusAnalysis, type SegmentAnalysis, type SentenceAnalysis } from "../shared/types.ts";
 
 export const DEFAULT_DB = "data/xbook.db";
 
@@ -88,7 +88,33 @@ export const MIGRATIONS = [
     SELECT book_id, 'en', model, answer, prompt_tokens, completion_tokens, cost_usd, created_at FROM briefs;
   DROP TABLE briefs;
   ALTER TABLE briefs_v3 RENAME TO briefs;`,
+  // v4: sentence boundaries within each page (offsets into the book text) and the answers about single sentences.
+  // Focus answers (where on a page each dimension sits) are page answers and live in `analyses` under their rubric.
+  `CREATE TABLE sentences (
+    book_id  TEXT NOT NULL,
+    page     INTEGER NOT NULL,
+    idx      INTEGER NOT NULL,
+    start    INTEGER NOT NULL,
+    end      INTEGER NOT NULL,
+    PRIMARY KEY (book_id, page, idx),
+    FOREIGN KEY (book_id, page) REFERENCES segments(book_id, idx) ON DELETE CASCADE
+  ) STRICT;
+  CREATE TABLE sentence_analyses (
+    book_id       TEXT NOT NULL,
+    page          INTEGER NOT NULL,
+    idx           INTEGER NOT NULL,
+    rubric        TEXT NOT NULL,
+    model         TEXT NOT NULL,
+    answer        TEXT NOT NULL,
+    input_tokens  INTEGER NOT NULL DEFAULT 0,
+    created_at    TEXT NOT NULL,
+    PRIMARY KEY (book_id, page, idx, rubric),
+    FOREIGN KEY (book_id, page, idx) REFERENCES sentences(book_id, page, idx) ON DELETE CASCADE
+  ) STRICT;`,
 ];
+
+/** The oldest schema the read-only server still serves; newer tables are optional until the file is migrated. */
+export const MIN_READ_VERSION = 3;
 
 export type StoredBook = {
   id: string;
@@ -129,11 +155,13 @@ export function openStore(path = process.env.XBOOK_DB || DEFAULT_DB, { readOnly 
   const db = new DatabaseSync(path, { readOnly });
   db.exec(readOnly ? "PRAGMA busy_timeout = 5000;" : "PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;");
   const version = Number((db.prepare("PRAGMA user_version").get() as { user_version: number }).user_version);
-  if (readOnly && version !== MIGRATIONS.length) {
+  if (readOnly && (version < MIN_READ_VERSION || version > MIGRATIONS.length)) {
     db.close();
-    throw new Error(`Store schema v${version} does not match v${MIGRATIONS.length}.`);
+    throw new Error(`Store schema v${version} is outside v${MIN_READ_VERSION}–v${MIGRATIONS.length}.`);
   }
-  for (let v = version; v < MIGRATIONS.length; v++) {
+  /** Sentence tables exist (schema v4+). A read-only server on an older file serves pages without sentences. */
+  const hasSentences = version >= 4 || !readOnly;
+  for (let v = version; !readOnly && v < MIGRATIONS.length; v++) {
     db.exec("BEGIN");
     db.exec(MIGRATIONS[v]);
     db.exec(`PRAGMA user_version = ${v + 1}`);
@@ -166,6 +194,10 @@ export function openStore(path = process.env.XBOOK_DB || DEFAULT_DB, { readOnly 
     kind: r.kind == null ? null : (String(r.kind) as BookKind),
     titleEn: r.title_en == null ? null : String(r.title_en),
   });
+
+  const SENTENCE_TOKENS = hasSentences ? " + (SELECT COALESCE(SUM(input_tokens), 0) FROM sentence_analyses)" : "";
+  const SENTENCE_COUNT = hasSentences ? " + (SELECT COUNT(*) FROM sentence_analyses)" : "";
+  const SENTENCE_STAMP = hasSentences ? ` || '|' || (SELECT COUNT(*) || ':' || COALESCE(MAX(created_at), '') FROM sentence_analyses)` : "";
 
   const q = {
     book: db.prepare(`SELECT ${BOOK_COLUMNS} FROM books WHERE id = ?`),
@@ -205,22 +237,33 @@ export function openStore(path = process.env.XBOOK_DB || DEFAULT_DB, { readOnly 
        FROM books b WHERE b.id = :id`,
     ),
     spend: db.prepare(
-      `SELECT (SELECT COALESCE(SUM(input_tokens), 0) FROM analyses) + (SELECT COALESCE(SUM(input_tokens), 0) FROM profiles) AS jev,
+      `SELECT (SELECT COALESCE(SUM(input_tokens), 0) FROM analyses) + (SELECT COALESCE(SUM(input_tokens), 0) FROM profiles)${SENTENCE_TOKENS} AS jev,
               (SELECT COALESCE(SUM(prompt_tokens + completion_tokens), 0) FROM briefs) AS brief_tokens,
               (SELECT COALESCE(SUM(cost_usd), 0) FROM briefs) AS brief_usd`,
     ),
     everyAnalysis: db.prepare("SELECT book_id, idx, model, answer FROM analyses WHERE rubric = ? ORDER BY book_id, idx"),
     totals: db.prepare(
-      `SELECT (SELECT COUNT(*) FROM analyses) + (SELECT COUNT(*) FROM profiles) AS jev_requests,
+      `SELECT (SELECT COUNT(*) FROM analyses) + (SELECT COUNT(*) FROM profiles)${SENTENCE_COUNT} AS jev_requests,
               (SELECT model FROM analyses GROUP BY model ORDER BY COUNT(*) DESC LIMIT 1) AS jev_model,
               (SELECT COUNT(*) FROM briefs) AS briefs,
               (SELECT model FROM briefs GROUP BY model ORDER BY COUNT(*) DESC LIMIT 1) AS brief_model,
               (SELECT COALESCE(SUM(unixepoch(finished_at, 'subsec') - unixepoch(started_at, 'subsec')), 0) FROM runs WHERE finished_at IS NOT NULL) AS seconds,
               (SELECT COUNT(*) || ':' || COALESCE(MAX(created_at), '') FROM analyses)
                 || '|' || (SELECT COUNT(*) || ':' || COALESCE(MAX(created_at), '') FROM profiles)
-                || '|' || (SELECT COUNT(*) || ':' || COALESCE(MAX(created_at), '') FROM briefs) AS stamp`,
+                || '|' || (SELECT COUNT(*) || ':' || COALESCE(MAX(created_at), '') FROM briefs)${SENTENCE_STAMP} AS stamp`,
     ),
     startRun: db.prepare("INSERT INTO runs (command, started_at) VALUES (?, ?)"),
+    ...(hasSentences && {
+      insertSentence: db.prepare("INSERT INTO sentences (book_id, page, idx, start, end) VALUES (?, ?, ?, ?, ?)"),
+      sentences: db.prepare("SELECT page, idx, start, end FROM sentences WHERE book_id = ? ORDER BY page, idx"),
+      hasSplit: db.prepare("SELECT EXISTS (SELECT 1 FROM sentences WHERE book_id = ?) AS split"),
+      putSentence: db.prepare(
+        `INSERT OR REPLACE INTO sentence_analyses (book_id, page, idx, rubric, model, answer, input_tokens, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      ),
+      sentenceAnalyses: db.prepare("SELECT page, idx, answer FROM sentence_analyses WHERE book_id = ? AND rubric = ? ORDER BY page, idx"),
+      sentenceStamp: db.prepare("SELECT COUNT(*) || ':' || COALESCE(MAX(created_at), '') AS stamp FROM sentence_analyses WHERE book_id = ?"),
+      everySentenceAnalysis: db.prepare("SELECT book_id, page, idx, answer FROM sentence_analyses WHERE rubric = ? ORDER BY book_id, page, idx"),
+    }),
     finishRun: db.prepare("UPDATE runs SET finished_at = ?, jev_tokens = ?, brief_usd = ? WHERE id = ?"),
   };
 
@@ -327,6 +370,52 @@ export function openStore(path = process.env.XBOOK_DB || DEFAULT_DB, { readOnly 
         seconds: Number(r.seconds),
         stamp: String(r.stamp),
       };
+    },
+    hasSentences,
+    /** Stores a book's sentence boundaries once; answers about sentences refer to these rows. */
+    putSentences(id: string, rows: { page: number; start: number; end: number }[]) {
+      const counts = new Map<number, number>();
+      tx(() => {
+        for (const r of rows) {
+          const idx = counts.get(r.page) ?? 0;
+          counts.set(r.page, idx + 1);
+          q.insertSentence!.run(id, r.page, idx, r.start, r.end);
+        }
+      });
+    },
+    /** Sentence boundaries by page (offsets into the book text); empty when the book is not split or the file predates v4. */
+    sentences(id: string): Map<number, { start: number; end: number }[]> {
+      const out = new Map<number, { start: number; end: number }[]>();
+      if (!hasSentences) return out;
+      for (const r of q.sentences!.all(id) as { page: number; idx: number; start: number; end: number }[]) {
+        const list = out.get(r.page) ?? [];
+        list[r.idx] = { start: r.start, end: r.end };
+        out.set(r.page, list);
+      }
+      return out;
+    },
+    /** Changes whenever a sentence answer of the book is stored. */
+    sentenceStamp: (id: string) => (hasSentences ? String((q.sentenceStamp!.get(id) as { stamp: string }).stamp) : ""),
+    isSplit: (id: string) => hasSentences && Boolean((q.hasSplit!.get(id) as { split: number }).split),
+    /** Where each dimension sits on each page, keyed by page. */
+    focus(id: string, rubric: string): Map<number, FocusAnalysis> {
+      return new Map((q.analyses.all(id, rubric) as { idx: number; answer: string }[]).map((r) => [r.idx, JSON.parse(r.answer)]));
+    },
+    putFocus(id: string, page: number, f: FocusAnalysis) {
+      q.putAnalysis.run(id, page, f.rubric, f.model, JSON.stringify(f), f.usage?.input_tokens ?? 0, now());
+    },
+    putSentenceAnalysis(id: string, page: number, idx: number, a: SentenceAnalysis) {
+      q.putSentence!.run(id, page, idx, a.rubric, a.model, JSON.stringify(a), a.usage?.input_tokens ?? 0, now());
+    },
+    /** Sentence answers of a book, keyed "page:idx". */
+    sentenceAnalyses(id: string, rubric: string): Map<string, SentenceAnalysis> {
+      if (!hasSentences) return new Map();
+      return new Map((q.sentenceAnalyses!.all(id, rubric) as { page: number; idx: number; answer: string }[]).map((r) => [`${r.page}:${r.idx}`, JSON.parse(r.answer)]));
+    },
+    *everySentenceAnalysis(rubric: string): Generator<{ bookId: string; page: number; idx: number; answer: SentenceAnalysis }> {
+      if (!hasSentences) return;
+      for (const r of q.everySentenceAnalysis!.iterate(rubric) as Iterable<{ book_id: string; page: number; idx: number; answer: string }>)
+        yield { bookId: r.book_id, page: r.page, idx: r.idx, answer: JSON.parse(r.answer) };
     },
     startRun: (command: string) => Number(q.startRun.run(command, now()).lastInsertRowid),
     finishRun: (run: number, jevTokens: number, briefUsd: number) => void q.finishRun.run(now(), jevTokens, briefUsd, run),

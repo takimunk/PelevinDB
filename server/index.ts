@@ -8,6 +8,7 @@ import { corpusETag, corpusList, corpusStore, fullTextEnabled, packCorpusBook, p
 import { localMode } from "./mode.ts";
 import { corpusStats, topPages, topPagesStamp } from "./stats.ts";
 import { pagesETag, pagesQuery, queryPages } from "./pages.ts";
+import { linesETag, linesQuery, queryLines } from "./sentences.ts";
 import { createHash as hashOf } from "node:crypto";
 import { briefInput, corpusId, excerptsInput, pageInput, type Parsed } from "./validate.ts";
 
@@ -185,6 +186,32 @@ app.get("/api/corpus/pages", (req, res) => {
     return;
   }
   res.json(queryPages(store, parsed.query));
+});
+
+// The strongest sentences of the corpus per focus dimension: one sentence per row, the same caps as pages.
+app.get("/api/corpus/lines", (req, res) => {
+  res.set("Cache-Control", "no-cache");
+  const parsed = linesQuery(req.query as Record<string, unknown>);
+  if ("error" in parsed) {
+    res.status(400).json({ error: parsed.error });
+    return;
+  }
+  const limit = pagesLimit(req.ip || "unknown");
+  if (!limit.ok) {
+    res.set("Retry-After", String(limit.retryAfter)).status(429).json({ error: "Too many searches at once. Try again in a minute." });
+    return;
+  }
+  const store = corpusStore();
+  if (!store) {
+    res.status(404).json({ error: "No corpus yet: run npm run corpus." });
+    return;
+  }
+  res.set("ETag", linesETag(store, parsed.query));
+  if (req.fresh) {
+    res.status(304).end();
+    return;
+  }
+  res.json(queryLines(store, parsed.query));
 });
 
 // One page of full text at a time: the book payload carries only excerpts, and this route is rate limited

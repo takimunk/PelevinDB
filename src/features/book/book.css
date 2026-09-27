@@ -843,6 +843,112 @@
   min-width: 44px;
   min-height: 44px;
 }
+.reader.has-lens {
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+}
+/* Sentence lens: one focus dimension tints the sentences that carry it. */
+.reader-lens {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 4px;
+  padding: 6px 20px;
+  border-bottom: 1px solid var(--line);
+  font: 400 11.5px var(--mono);
+  white-space: nowrap;
+}
+.reader-lens::-webkit-scrollbar {
+  display: none;
+}
+.reader-lens-label {
+  margin-right: 6px;
+  font: 500 10.5px var(--sans);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.reader-lens button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 28px;
+  padding: 2px 8px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: var(--ink-2);
+}
+.reader-lens button:hover {
+  color: var(--ink);
+  background: var(--surface-2);
+}
+.reader-lens button.on {
+  color: var(--ink);
+  border-color: var(--line-2);
+}
+.reader-lens button i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--c);
+}
+.reader-lens-note {
+  display: block;
+  margin-bottom: 14px;
+  font: 400 13px/1.5 var(--sans);
+  color: var(--muted);
+}
+.sent {
+  cursor: pointer;
+  border-radius: 3px;
+  transition: background-color 0.15s var(--ease);
+}
+.sent:hover,
+.sent:focus-visible {
+  outline: none;
+  background: var(--surface-2);
+}
+.sent-text.lensed .sent {
+  background: color-mix(in oklab, var(--c) calc(var(--w) * 38%), transparent);
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+.sent-text.lensed .sent.peak {
+  text-decoration: underline 2px var(--c);
+  text-underline-offset: 4px;
+}
+.sent.open {
+  outline: 1px solid var(--line-2);
+}
+.sent-card {
+  display: block;
+  margin: 8px 0 12px;
+  padding: 10px 12px;
+  border-left: 2px solid var(--line-2);
+  background: var(--surface);
+  font: 400 12.5px/1.6 var(--sans);
+  color: var(--ink-2);
+  white-space: normal;
+}
+.sent-card .tag {
+  display: inline-block;
+  margin: 0 0 0 6px;
+  padding: 0 7px;
+  border: 1px solid var(--c, var(--line-2));
+  border-radius: 999px;
+  font-size: 11.5px;
+}
+.sent-peaks,
+.sent-read,
+.sent-scales {
+  display: block;
+}
+.sent-peaks .tag:first-child {
+  margin-left: 0;
+}
+.sent-scales {
+  font-size: 11px;
+  color: var(--muted);
+}
 .reader-text {
   overflow-y: auto;
   padding: 32px 48px 40px;
@@ -1045,6 +1151,12 @@
   }
   .reader-top {
     padding: 4px 12px 4px 16px;
+  }
+  .reader-lens {
+    flex-wrap: nowrap;
+    padding: 4px 16px;
+    overflow-x: auto;
+    scrollbar-width: none;
   }
   .reader-text {
     padding: 22px 20px 28px;

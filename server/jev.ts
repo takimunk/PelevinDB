@@ -2,15 +2,23 @@ import { JEV_MODEL, meteredFetch } from "./budget.ts";
 import {
   EMOTIONS,
   ERAS,
+  FOCUS,
+  FOCUS_NONE,
+  FOCUS_RUBRIC,
   GENRES,
   MODES,
   MOODS,
   PROFILE_SCALES,
   RUBRIC_VERSION,
+  SENTENCE_ACTS,
+  SENTENCE_EMOTIONS,
+  SENTENCE_FLAGS,
+  SENTENCE_RUBRIC,
+  SENTENCE_SCALES,
   TEXTURES,
   THEMES,
 } from "../shared/catalog.ts";
-import type { BookProfile, JevUsage, SegmentAnalysis } from "../shared/types.ts";
+import type { BookProfile, FocusAnalysis, JevUsage, SegmentAnalysis, SentenceAnalysis } from "../shared/types.ts";
 
 export class AnalysisError extends Error {
   status: number;
@@ -111,6 +119,59 @@ export const profileQuestions: Record<string, Question> = {
       } satisfies Question,
     ]),
   ),
+};
+
+/**
+ * The focus request for a page of `count` numbered sentences: per dimension, a Choice between the sentence numbers
+ * and "none". Options are the bare numbers, so the page text travels once, in `passage`.
+ */
+export function focusQuestions(count: number): Record<string, Question> {
+  const options: Record<string, string> = {};
+  for (let i = 1; i <= count; i++) options[String(i)] = `[${i}]`;
+  return Object.fromEntries(
+    FOCUS.map((f) => [
+      `focus_${f.id}`,
+      {
+        type: "choice",
+        instructions: `\`passage\` is a page of prose split into numbered sentences [1] to [${count}]. Which single sentence ${f.asks}? Answer "${FOCUS_NONE}" if none does. ${DATA_GUARD}`,
+        criteria: { ...options, [FOCUS_NONE]: f.none },
+      } satisfies Question,
+    ]),
+  );
+}
+
+/** One request per sentence, read with the sentences around it. */
+export const sentenceQuestions: Record<string, Question> = {
+  emotion: {
+    type: "choice",
+    instructions: `Which single emotion does \`sentence\` convey most? \`before\` and \`after\` are the neighbouring text, given only for context. ${DATA_GUARD}`,
+    criteria: optionMap(SENTENCE_EMOTIONS),
+  },
+  ...Object.fromEntries(
+    SENTENCE_SCALES.map((s) => [
+      `scale_${s.id}`,
+      {
+        type: "score",
+        instructions: `${s.instructions} \`before\` and \`after\` are context only. ${DATA_GUARD}`,
+        criteria: s.levels,
+      } satisfies Question,
+    ]),
+  ),
+  ...Object.fromEntries(
+    SENTENCE_FLAGS.map((f) => [
+      `flag_${f.id}`,
+      {
+        type: "noul",
+        instructions: `Is this true of \`sentence\`? ${f.true} \`before\` and \`after\` are context only. ${DATA_GUARD}`,
+        criteria: { true: f.true, false: f.false },
+      } satisfies Question,
+    ]),
+  ),
+  act: {
+    type: "choice",
+    instructions: `What kind of line is \`sentence\` within its text? \`before\` and \`after\` are context only. ${DATA_GUARD}`,
+    criteria: optionMap(SENTENCE_ACTS),
+  },
 };
 
 type Answer = {
@@ -233,6 +294,49 @@ export function parseProfile(raw: RawResult): BookProfile {
   };
 }
 
+export function parseFocus(raw: RawResult, count: number): FocusAnalysis {
+  const result = envelope(raw);
+  const ids = [...Array.from({ length: count }, (_, i) => String(i + 1)), FOCUS_NONE];
+  const focus = {} as FocusAnalysis["focus"];
+  const none = {} as FocusAnalysis["none"];
+  const confidence = {} as FocusAnalysis["confidence"];
+  for (const f of FOCUS) {
+    const c = choice(result.answers[`focus_${f.id}`], ids);
+    focus[f.id] = ids.slice(0, count).map((id) => c.probabilities[id]);
+    none[f.id] = c.probabilities[FOCUS_NONE];
+    confidence[f.id] = c.confidence;
+  }
+  return { sentences: count, focus, none, confidence, model: result.model, rubric: FOCUS_RUBRIC, usage: result.usage };
+}
+
+export function parseSentence(raw: RawResult): SentenceAnalysis {
+  const result = envelope(raw);
+  const a = result.answers;
+  const emotion = choice(a.emotion, SENTENCE_EMOTIONS.map((e) => e.id));
+  const scales = {} as SentenceAnalysis["scales"];
+  const scaleConfidence = {} as SentenceAnalysis["scaleConfidence"];
+  for (const s of SENTENCE_SCALES) {
+    const v = score(a[`scale_${s.id}`], s.levels.length);
+    scales[s.id] = v.value;
+    scaleConfidence[s.id] = v.confidence;
+  }
+  const flags = {} as SentenceAnalysis["flags"];
+  for (const f of SENTENCE_FLAGS) flags[f.id] = noul(a[`flag_${f.id}`]);
+  const act = choice(a.act, SENTENCE_ACTS.map((x) => x.id));
+  return {
+    emotion: emotion.probabilities,
+    emotionConfidence: emotion.confidence,
+    scales,
+    scaleConfidence,
+    flags,
+    act: act.probabilities,
+    actConfidence: act.confidence,
+    model: result.model,
+    rubric: SENTENCE_RUBRIC,
+    usage: result.usage,
+  };
+}
+
 export type Fetcher = typeof fetch;
 
 function wait(ms: number, signal: AbortSignal) {
@@ -311,3 +415,20 @@ export const analyzeProfile = async (
   parseProfile(
     await systemOne({ excerpts }, profileQuestions, apiKey, signal, fetcher),
   );
+
+/** Where each dimension sits on a page, given as "[1] … [2] …" with `count` sentences. */
+export const analyzeFocus = async (
+  numbered: string,
+  count: number,
+  apiKey: string,
+  signal: AbortSignal,
+  fetcher?: Fetcher,
+) => parseFocus(await systemOne({ passage: numbered }, focusQuestions(count), apiKey, signal, fetcher), count);
+
+/** One sentence with up to two sentences before and one after as context. */
+export const analyzeSentence = async (
+  context: { before: string; sentence: string; after: string },
+  apiKey: string,
+  signal: AbortSignal,
+  fetcher?: Fetcher,
+) => parseSentence(await systemOne(context, sentenceQuestions, apiKey, signal, fetcher));

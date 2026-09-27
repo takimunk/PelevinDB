@@ -1,4 +1,4 @@
-import type { EmotionId, EraId, GenreId, ModeId, MoodId, ProfileScaleId, TextureId, ThemeId } from "./catalog.ts";
+import type { EmotionId, EraId, FocusId, GenreId, ModeId, MoodId, ProfileScaleId, SentenceActId, SentenceEmotionId, SentenceFlagId, SentenceScaleId, TextureId, ThemeId } from "./catalog.ts";
 
 export type Distribution<K extends string> = Record<K, number>;
 
@@ -20,6 +20,52 @@ export type SegmentAnalysis = {
   model: string;
   rubric: string;
   usage?: JevUsage;
+};
+
+/**
+ * Where on a page each focus dimension sits: for every dimension, the probability that each sentence carries it most
+ * (index = sentence), and the probability that none does. Sentences are the page's rows in `sentences`.
+ */
+export type FocusAnalysis = {
+  sentences: number;
+  focus: Record<FocusId, number[]>;
+  none: Record<FocusId, number>;
+  confidence: Record<FocusId, number>;
+  model: string;
+  rubric: string;
+  usage?: JevUsage;
+};
+
+/** Jev judgments for one sentence read with its neighbours. Scores are 0–1; flags are Noul probabilities. */
+export type SentenceAnalysis = {
+  emotion: Distribution<SentenceEmotionId>;
+  emotionConfidence: number;
+  scales: Distribution<SentenceScaleId>;
+  scaleConfidence: Distribution<SentenceScaleId>;
+  flags: Distribution<SentenceFlagId>;
+  act: Distribution<SentenceActId>;
+  actConfidence: number;
+  model: string;
+  rubric: string;
+  usage?: JevUsage;
+};
+
+/** A sentence answer as the browser gets it: the leading emotion and act, rounded scales and flags. */
+export type SentenceRead = {
+  emotion: SentenceEmotionId;
+  act: SentenceActId;
+  scales: Record<SentenceScaleId, number>;
+  flags: Record<SentenceFlagId, number>;
+};
+
+/** One of a book's strongest sentences in a dimension; `page` and `n` (the sentence on it) are 1-based. */
+export type BookLine = { dim: FocusId; page: number; n: number; text: string; weight: number; read: SentenceRead | null };
+
+/** The sentences of one page for the reader: offsets into the page text, focus probabilities and sentence answers. */
+export type PageSentences = {
+  spans: [start: number, end: number][];
+  focus: { focus: Record<FocusId, number[]>; none: Record<FocusId, number> } | null;
+  read: (SentenceRead | null)[];
 };
 
 /** Whole-book judgments made once from evenly spaced excerpts. */
@@ -113,6 +159,8 @@ export type CorpusBook = Omit<CorpusEntry, "analysed" | "complete" | "briefed" |
   briefs: Partial<Record<BriefLang, BookBrief>>;
   /** The English brief; kept for older clients. */
   brief: BookBrief | null;
+  /** The book's most quotable, funniest and most abstract sentences, once the sentence analysis has run. */
+  lines?: BookLine[];
 };
 
 /** A single stored page; `page` is 1-based, as in `/book/:id?page=`. */

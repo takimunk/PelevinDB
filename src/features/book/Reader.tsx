@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { EMOTIONS, highOf, labelOf, lowOf, MODES, MOODS, TEXTURES, THEMES } from "../../../shared/catalog.ts";
-import type { SegmentAnalysis } from "../../../shared/types.ts";
+import type { PageSentences, SegmentAnalysis } from "../../../shared/types.ts";
 import { argmax, isParatext, modeColor, moodColor } from "../../domain/analysis.ts";
 import { pageValues } from "../../domain/fingerprint.ts";
 import type { Segment } from "../../domain/text.ts";
@@ -9,6 +9,7 @@ import { PixelStrip } from "../../ui/PixelStrip.tsx";
 import { Meter, Swatch } from "../../ui/term.tsx";
 import { Sliders } from "./charts/Text.tsx";
 import { num, pageRef } from "./i18n.ts";
+import { LensBar, SentenceText, useLens } from "./SentenceText.tsx";
 
 const T = {
   en: {
@@ -79,13 +80,15 @@ export function Reader({
   onClose: () => void;
   excerpt?: boolean;
   /** Full text of this page for excerpt-only books, fetched on demand. */
-  page?: { text: string | null; loading: boolean; error: string | null };
+  page?: { text: string | null; sentences?: PageSentences | null; loading: boolean; error: string | null };
 }) {
   const t = useT(T);
   const lang = useLang();
   const closeRef = useRef<HTMLButtonElement>(null);
   const textRef = useRef<HTMLDivElement>(null);
   const [showAnalysis, setShowAnalysis] = useState(false);
+  const [lens, setLens] = useLens();
+  const sentences = excerpt && page?.text ? (page.sentences ?? null) : null;
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
     const overflow = document.body.style.overflow;
@@ -113,7 +116,7 @@ export function Reader({
   const themes = analysis ? THEMES.filter((th) => analysis.themes[th.id] >= 0.5).sort((a, b) => analysis.themes[b.id] - analysis.themes[a.id]) : [];
   const chars = segment.end - segment.start;
   return (
-    <aside className={`reader ${excerpt && !page?.text ? "excerpt-mode" : ""}`} role="dialog" aria-modal="false" aria-label={t.page(segment.id)}>
+    <aside className={`reader ${excerpt && !page?.text ? "excerpt-mode" : ""} ${sentences ? "has-lens" : ""}`} role="dialog" aria-modal="false" aria-label={t.page(segment.id)}>
       <header className="reader-top">
         <span className="reader-page">
           <b className="num">{pageRef(lang, segment.id)}</b>
@@ -134,10 +137,11 @@ export function Reader({
           </button>
         </div>
       </header>
+      {sentences && <LensBar lens={lens} onLens={setLens} />}
       <div className="reader-text" ref={textRef}>
         {excerpt && page?.text ? (
           <>
-            {page.text}
+            {sentences ? <SentenceText text={page.text} sentences={sentences} analysis={analysis} lens={lens} /> : page.text}
             <span className="reader-one-page" role="note">
               {t.onePage}
             </span>

@@ -674,3 +674,107 @@ a.bt-row:focus-visible .pt-quote {
     height: 44px;
   }
 }
+
+/* ——— Lines: the strongest sentences of the corpus ——— */
+.lines-dims {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 14px 0 4px;
+}
+.lines-dims > button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 4px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+.lines-dims > button:hover {
+  color: var(--ink);
+  border-color: var(--line-2);
+}
+.lines-dims > button.on {
+  color: var(--ink);
+  border-color: var(--ink);
+}
+.lines-dims > button i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--c);
+}
+.lines-list {
+  display: grid;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--line);
+}
+.lines-list > li {
+  border-bottom: 1px solid var(--line);
+}
+.lines-list a {
+  display: grid;
+  gap: 8px;
+  padding: 16px 4px;
+  color: inherit;
+  text-decoration: none;
+}
+.lines-list a:hover .pt-quote,
+.lines-list a:focus-visible .pt-quote {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--line-2);
+  text-underline-offset: 3px;
+}
+.lines-list .pt-quote {
+  font-size: 18px;
+  line-height: 1.5;
+}
+.lines-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 18px;
+}
+.lines-meta .pt-book {
+  display: inline-flex;
+  gap: 8px;
+  align-items: baseline;
+}
+.lines-weight {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: var(--ink-2);
+}
+.lines-weight i {
+  width: 48px;
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--c) calc(var(--w) * 100%), var(--line) 0);
+}
+.lt-read {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+.lt-read .tag {
+  padding: 0 7px;
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  font-size: 11.5px;
+}
+@media (max-width: 720px) {
+  .lines-list .pt-quote {
+    font-size: 17px;
+  }
+}

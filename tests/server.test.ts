@@ -368,7 +368,7 @@ test("the page route serves exactly one page of full text, 404 out of range and 
   const allow = () => ({ ok: true }) as const;
   const ok = pageResponse(store, "pg-7", "2", allow);
   assert.equal(ok.status, 200);
-  assert.deepEqual(ok.body, { page: 2, text: "Two page.", start: 11, end: 20 });
+  assert.deepEqual(ok.body, { page: 2, text: "Two page.", start: 11, end: 20, sentences: null });
   assert.match((ok as { etag: string }).etag, /^W\/"[\w-]+"$/);
   assert.equal(pageResponse(store, "pg-7", "3", allow).status, 404);
   assert.equal(pageResponse(store, "pg-8", "1", allow).status, 404);

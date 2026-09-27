@@ -6,8 +6,9 @@
 // pages, one sentence per row. Anything further has to be reached by narrowing the filters.
 import { createHash } from "node:crypto";
 import { argmax, isParatext } from "../shared/analysis.ts";
-import { EMOTIONS, MODES, MOODS, RUBRIC_VERSION, TEXTURES, THEMES, type EmotionId, type ModeId, type MoodId, type TextureId, type ThemeId } from "../shared/catalog.ts";
+import { EMOTIONS, FOCUS, MODES, MOODS, RUBRIC_VERSION, TEXTURES, THEMES, type EmotionId, type FocusId, type ModeId, type MoodId, type TextureId, type ThemeId } from "../shared/catalog.ts";
 import type { BookKind } from "../shared/types.ts";
+import { peakQuote } from "./sentences.ts";
 import { pageQuote } from "./stats.ts";
 import type { Store } from "./store.ts";
 
@@ -208,14 +209,26 @@ export function queryPages(store: Store, query: PagesQuery): PagesResult {
     pageSize: PAGE_SIZE,
     pages,
     maxPages: MAX_RESULT_PAGES,
-    rows: matched.slice(start, start + PAGE_SIZE).map(({ decade: _d, search: _s, ...row }) => row),
+    rows: matched.slice(start, start + PAGE_SIZE).map(({ decade: _d, search: _s, ...row }) => {
+      // The quote follows the sort: the page's most frightening sentence when sorted by fear. A text search keeps
+      // the indexed quote, so the words searched for stay visible.
+      const dim = words.length ? null : quoteDim(query.sort, query.dir, row.emotion);
+      return { ...row, quote: (dim && peakQuote(store, row.id, row.page - 1, dim)) || row.quote };
+    }),
     facets,
     books,
   };
 }
 
+/** The focus dimension whose peak sentence best quotes a page sorted by `sort`, if any. */
+function quoteDim(sort: ScoreKey, dir: 1 | -1, leading: EmotionId): FocusId | null {
+  if (sort === "intensity") return FOCUS.some((f) => f.id === leading) ? (leading as FocusId) : null;
+  if (sort === "valence") return dir === -1 ? "light" : "dark";
+  return dir === -1 && FOCUS.some((f) => f.id === sort) ? (sort as FocusId) : null;
+}
+
 /** A weak ETag for one query against the current store. */
 export function pagesETag(store: Store, query: PagesQuery) {
   const key = JSON.stringify([pageIndex(store).stamp, query]);
-  return `W/"${createHash("sha1").update(`pages1|${key}`).digest("base64url")}"`;
+  return `W/"${createHash("sha1").update(`pages2|${key}`).digest("base64url")}"`;
 }

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import type { CorpusBook, CorpusEntry, CorpusStats } from "../../shared/types.ts";
+import type { BookLine, CorpusBook, CorpusEntry, CorpusStats, PageSentences } from "../../shared/types.ts";
 import { fingerprintFrom, type Fingerprint } from "../domain/fingerprint.ts";
 import { useAtlas } from "./atlas.ts";
 import type { Segment } from "../domain/text.ts";
@@ -9,12 +9,14 @@ import type { BookContent, BookMeta } from "./library.ts";
 /** Read-only repository for the server-side canon; nothing here is written to IndexedDB. */
 export type CorpusList = { available: boolean; books: CorpusEntry[] };
 /** `excerpt`: the server sent a short opening per page instead of the copyrighted text (see CorpusBook). */
-export type CorpusExtra = { excerpt: boolean; year: number | null; kind: CorpusEntry["kind"] | null; titleEn: string | null };
+/** `lines`: the book's strongest sentences (most quotable, funniest, most abstract), once sentence analysis has run. */
+export type CorpusExtra = { excerpt: boolean; year: number | null; kind: CorpusEntry["kind"] | null; titleEn: string | null; lines: BookLine[] };
 export type CorpusView = { meta: BookMeta; content: BookContent; segments: Segment[]; rank: number | null } & CorpusExtra;
 
 const MAX_CACHED = 3;
 const EMPTY: CorpusList = { available: false, books: [] };
 const NO_SEGMENTS: Segment[] = [];
+const NO_LINES: BookLine[] = [];
 
 let list: Promise<CorpusList> | null = null;
 
@@ -99,6 +101,7 @@ function toView(book: CorpusBook): CorpusView {
     year: book.year ?? null,
     kind: book.kind ?? null,
     titleEn: book.titleEn ?? null,
+    lines: book.lines ?? NO_LINES,
   };
 }
 
@@ -143,11 +146,12 @@ export function useCorpusBook(id: string | null) {
     year: view?.year ?? null,
     kind: view?.kind ?? null,
     titleEn: view?.titleEn ?? null,
+    lines: view?.lines ?? NO_LINES,
   };
 }
 
-/** One page of a corpus book with its full text; the book payload itself carries only excerpts. */
-export type CorpusPageText = { page: number; text: string; start: number; end: number };
+/** One page of a corpus book with its full text and sentences; the book payload itself carries only excerpts. */
+export type CorpusPageText = { page: number; text: string; start: number; end: number; sentences?: PageSentences | null };
 
 const PAGE_CACHE = 12;
 const pages = new Map<string, Promise<CorpusPageText>>();
@@ -174,14 +178,14 @@ export function loadCorpusPage(id: string, page: number) {
  * excerpt-only book). Neighbouring pages are prefetched so paging feels immediate; never the whole book.
  */
 export function useCorpusPage(id: string, page: number | null, total: number, enabled: boolean) {
-  const [state, setState] = useState<{ key: string; text?: string; error?: string } | null>(null);
+  const [state, setState] = useState<{ key: string; text?: string; sentences?: PageSentences | null; error?: string } | null>(null);
   const key = `${id}#${page}`;
   useEffect(() => {
     if (!enabled || page == null) return;
     let alive = true;
     setState((s) => (s?.key === key ? s : { key }));
     loadCorpusPage(id, page).then(
-      (p) => alive && setState({ key, text: p.text }),
+      (p) => alive && setState({ key, text: p.text, sentences: p.sentences ?? null }),
       (e: Error) => alive && setState({ key, error: e.message }),
     );
     const prefetch = setTimeout(() => {
@@ -193,5 +197,10 @@ export function useCorpusPage(id: string, page: number | null, total: number, en
     };
   }, [id, page, total, enabled, key]);
   const current = state?.key === key ? state : null;
-  return { text: current?.text ?? null, loading: enabled && page != null && !current?.text && !current?.error, error: current?.error ?? null };
+  return {
+    text: current?.text ?? null,
+    sentences: current?.sentences ?? null,
+    loading: enabled && page != null && !current?.text && !current?.error,
+    error: current?.error ?? null,
+  };
 }
