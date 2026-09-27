@@ -21,7 +21,7 @@ type TopPages = { emotion: EmotionId; items: TopPage[] }[];
 
 const T = {
   en: {
-    description: "An independent research project. A computational reading of Viktor Olegovich’s work, with analytics.",
+    description: "An independent research project. A computational reading of Viktor Olegovich’s work.",
     github: "Source on GitHub",
     author: "by",
     authorName: "central dogma specialist",
@@ -36,7 +36,7 @@ const T = {
     fig1: "Fig. 1 — “Ural”, after Chapaev and Void",
   },
   ru: {
-    description: "Независимый исследовательский проект. Вычислительное прочтение творчества Виктора Олеговича и аналитика.",
+    description: "Независимый исследовательский проект. Вычислительное прочтение творчества Виктора Олеговича.",
     github: "Исходный код на GitHub",
     author: "автор —",
     authorName: "central dogma specialist",
