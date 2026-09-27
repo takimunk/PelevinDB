@@ -1,38 +1,88 @@
-@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,700;1,400&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,300..700;1,7..72,300..700&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&display=swap");
 
+/*
+ * Design tokens. The interface is ink on paper: black and white only.
+ * Colour (RGB and the --d* data palette) is reserved for analytics — charts, maps, pixel strips.
+ */
 :root {
-  --bg: #080808;
-  --bg-2: #0f0f0f;
-  --surface: rgba(255, 255, 255, 0.025);
-  --surface-2: rgba(255, 255, 255, 0.06);
-  --line: rgba(255, 255, 255, 0.085);
-  --line-2: rgba(255, 255, 255, 0.19);
-  --ink: #ededed;
-  --ink-2: #a8a8a8;
-  --muted: #6e6e6e;
-  --faint: #3a3a3a;
-  /* RGB primaries: green is the interface accent, red and blue mark data. */
-  --r: #ff4538;
-  --g: #3ddc84;
-  --b: #4d7cff;
-  --accent: var(--g);
-  --accent-2: #8af0b6;
-  --amber: #ffb340;
+  /* paper & ink — light */
+  --paper: #f6f4ef;
+  --paper-2: #efece5;
+  --paper-3: #e6e2d9;
+  --ink: #141413;
+  --ink-2: #3d3c39;
+  --muted: #74716a;
+  --faint: #b4b0a6;
+  --line: rgba(20, 20, 19, 0.12);
+  --line-2: rgba(20, 20, 19, 0.28);
+  --surface: rgba(20, 20, 19, 0.025);
+  --surface-2: rgba(20, 20, 19, 0.055);
+  --veil: rgba(246, 244, 239, 0.9);
+
+  /* data colour: analytics only */
+  --r: #d8362b;
+  --g: #1f9d5a;
+  --b: #2f5fe0;
+  --d1: #2f5fe0;
+  --d2: #d8362b;
+  --d3: #1f9d5a;
+  --d4: #d98a00;
+  --d5: #8a3fd1;
+  --d6: #0f9aa8;
+  --d7: #c2408a;
+  --d8: #6b7a1f;
+
+  /* legacy names, kept so older rules keep working: accent is ink, not a colour */
+  --bg: var(--paper);
+  --bg-2: var(--paper-2);
+  --accent: var(--ink);
+  --accent-2: var(--ink-2);
+  --amber: #b87400;
   --blue: var(--b);
   --danger: var(--r);
-  --radius: 0px;
-  --mono: "JetBrains Mono", "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
-  --display: var(--mono);
-  --reading: var(--mono);
-  --ui: var(--mono);
+
+  --radius: 2px;
+  --serif: "Literata", "PT Serif", Georgia, "Times New Roman", serif;
+  --sans: "IBM Plex Sans", -apple-system, "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --display: var(--serif);
+  --reading: var(--serif);
+  --ui: var(--sans);
   --ease: cubic-bezier(0.2, 0.9, 0.2, 1);
-  color-scheme: dark;
-  font: 400 13px/1.6 var(--mono);
+  color-scheme: light;
+  font: 400 15px/1.6 var(--sans);
   color: var(--ink);
-  background: var(--bg);
+  background: var(--paper);
   -webkit-font-smoothing: antialiased;
   font-synthesis: none;
-  font-variant-ligatures: none;
+}
+
+:root[data-theme="dark"] {
+  --paper: #0f0f0e;
+  --paper-2: #171716;
+  --paper-3: #21211f;
+  --ink: #ecebe6;
+  --ink-2: #c3c1ba;
+  --muted: #8a8780;
+  --faint: #4a4844;
+  --line: rgba(236, 235, 230, 0.1);
+  --line-2: rgba(236, 235, 230, 0.26);
+  --surface: rgba(236, 235, 230, 0.03);
+  --surface-2: rgba(236, 235, 230, 0.065);
+  --veil: rgba(15, 15, 14, 0.9);
+  --r: #ff5a4e;
+  --g: #3ddc84;
+  --b: #5b8cff;
+  --d1: #5b8cff;
+  --d2: #ff5a4e;
+  --d3: #3ddc84;
+  --d4: #ffb340;
+  --d5: #b57bff;
+  --d6: #34c6d3;
+  --d7: #f06bb6;
+  --d8: #b5c24a;
+  --amber: #ffb340;
+  color-scheme: dark;
 }
 
 * {
