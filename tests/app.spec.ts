@@ -311,6 +311,7 @@ test("map switches 2D/3D, takes any answer as an axis, shows coordinates on hove
   await expect(page.getByRole("heading", { name: "85 dimensions in 3" })).toBeVisible();
   await expect(page.locator(".graph canvas")).toBeVisible();
   await expect(page.locator(".node-label")).toHaveCount(8);
+  await expect(page.getByRole("group", { name: "Regions" }).getByRole("button")).toHaveCount(2);
 
   const walden = page.locator('.node-label[data-node="pg-900"]');
   await expect(walden).toHaveAttribute("style", /translate/);

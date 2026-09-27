@@ -32,6 +32,15 @@ export function axisOptions(embedding: Embedding) {
   ];
 }
 
+/** Where each star sits on the shown axes, squashed into −1..1 so outliers stay on screen. */
+export function placeStars(ids: string[], axes: GraphAxis[], dims: number) {
+  const fitters = axes.slice(0, dims).map((a) => {
+    const std = Math.sqrt(ids.reduce((sum, id) => sum + (a.values.get(id) ?? 0) ** 2, 0) / Math.max(1, ids.length)) || 1;
+    return (id: string) => Math.tanh((a.values.get(id) ?? 0) / std / 2);
+  });
+  return new Map(ids.map((id) => [id, fitters.map((f) => f(id))]));
+}
+
 export function buildAxis(choice: AxisChoice, stars: Star[], embedding: Embedding): GraphAxis {
   const pc = /^pc(\d)$/.exec(choice);
   if (pc) {

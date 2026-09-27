@@ -88,6 +88,8 @@ Each book has an 85-dimensional fingerprint of named coordinates: emotions, text
 
 Presets (feel / about / craft) and sliders reweight the map instantly without calling Jev again. Neighbours are ranked by cosine similarity.
 
+**Regions** (`src/domain/clusters.ts`) group the books on whatever the current view shows: deterministic k-means in the 2 or 3 displayed coordinates, with k from 2 to 7 picked by silhouette. Each region is named in code from the features whose mean differs most from the corpus (in standard deviations, favouring the view's axes and weighted groups), using the word list in `src/domain/region-words.ts`, e.g. "Playful realm of laughter" or "Quiet cove of ideas". They appear as translucent outlined areas (in 3D, the on-screen silhouette of each region's convex hull, reshaping as the camera orbits), with a legend: hover a region to highlight it, click it to fly there.
+
 The reference atlas (`public/atlas.json`) contains only books Jev has really read. It is built from the top of the 500-book list:
 
 ```sh

@@ -13,6 +13,7 @@ import { buildDossier } from "../src/domain/dossier.ts";
 import { axisOptions, buildAxis } from "../src/features/map/axes.ts";
 import { MAP_PRESETS, matchPreset } from "../src/features/map/presets.ts";
 import { canonFindings } from "../src/domain/canon.ts";
+import { cluster, findRegions, silhouette } from "../src/domain/clusters.ts";
 import { applyShelf, readState, writeState } from "../src/features/library/shelf.ts";
 import type { Fingerprint } from "../src/domain/fingerprint.ts";
 import { bookInsights, dnaInsights } from "../src/domain/insights.ts";
@@ -266,6 +267,32 @@ test("map presets only use existing axes and recognise themselves", () => {
     assert.equal(matchPreset(p.mode, p.axes, p.weights), p.id);
   }
   assert.equal(matchPreset("2d", ["mode:dialogue", "themes:war"], DEFAULT_WEIGHTS), undefined);
+});
+
+test("clustering picks the number of groups by silhouette and is deterministic", () => {
+  const blobs = [
+    [0, 0],
+    [5, 5],
+    [0, 5],
+  ].flatMap(([x, y], b) => Array.from({ length: 6 }, (_, i) => [x + Math.sin(i + b) * 0.3, y + Math.cos(i * 2 + b) * 0.3]));
+  const labels = cluster(blobs)!;
+  assert.equal(new Set(labels).size, 3);
+  for (let b = 0; b < 3; b++) assert.equal(new Set(labels.slice(b * 6, b * 6 + 6)).size, 1);
+  assert.deepEqual(cluster(blobs), labels);
+  assert.ok(silhouette(blobs, labels) > 0.8);
+  assert.equal(cluster(blobs.slice(0, 7)), null);
+});
+
+test("map regions partition the view and get distinct names from distinctive features", () => {
+  const items = fixtureCorpus();
+  const coords = new Map(items.map((b, i) => [b.id, [i < 4 ? -0.8 : 0.8, (i % 2) * 0.05]]));
+  const regions = findRegions(items, coords, { weights: DEFAULT_WEIGHTS, axes: ["pc0", "pc1"] });
+  assert.equal(regions.length, 2);
+  assert.deepEqual(regions.flatMap((r) => r.members).sort(), items.map((b) => b.id).sort());
+  assert.equal(new Set(regions.map((r) => r.name)).size, 2);
+  assert.ok(regions.every((r) => / of /.test(r.name) && r.traits.length > 0 && r.centre.length === 2));
+  assert.deepEqual(findRegions(items, coords, { weights: DEFAULT_WEIGHTS, axes: ["pc0", "pc1"] }), regions);
+  assert.deepEqual(findRegions(items.slice(0, 3), coords, { weights: DEFAULT_WEIGHTS, axes: [] }), []);
 });
 
 test("canon findings pair near-twins by different authors and need four books", () => {

@@ -2,21 +2,34 @@ import { useMemo, useState } from "react";
 import { EMOTIONS, MOODS, THEMES } from "../../../shared/catalog.ts";
 import { ARC_SHAPES, argmax, topEntries } from "../../domain/analysis.ts";
 import { ALL_FEATURES, DEFAULT_WEIGHTS, FEATURE_GROUPS, fingerprintValues, WEIGHT_PRESETS, type Weights } from "../../domain/fingerprint.ts";
+import { findRegions } from "../../domain/clusters.ts";
 import { neighbours } from "../../domain/pca.ts";
 import { navigate } from "../../app/router.ts";
 import { bar } from "../../ui/ascii.ts";
 import { GroupLegend, PixelStrip } from "../../ui/PixelStrip.tsx";
 import { Search } from "../search/Search.tsx";
-import { axisOptions, buildAxis, DEFAULT_AXES, type AxisChoice } from "./axes.ts";
+import { axisOptions, buildAxis, DEFAULT_AXES, placeStars, type AxisChoice } from "./axes.ts";
 import { MAP_PRESETS, matchPreset, type MapPreset } from "./presets.ts";
-import { BookGraph, type GraphMode } from "./BookGraph.tsx";
+import { BookGraph, regionColor, type GraphMode } from "./BookGraph.tsx";
 import { starPath, useCorpus, useEmbedding, type Star } from "./corpus.ts";
 import "./map.css";
 
 const canonLabel = (c: NonNullable<Star["canon"]>) => (c.complete ? `canon · jev read all ${c.pages} pages` : `canon · jev read ${c.analysed}/${c.pages} pages`);
 const glyph = (s: Star) => (s.kind === "library" ? "■" : s.canon?.complete ? "▣" : "□");
 
-function StarCard({ star, similar, onClose, onPick }: { star: Star; similar: { star: Star; similarity: number }[]; onClose: () => void; onPick: (id: string) => void }) {
+function StarCard({
+  star,
+  similar,
+  region,
+  onClose,
+  onPick,
+}: {
+  star: Star;
+  similar: { star: Star; similarity: number }[];
+  region?: { name: string; color: string };
+  onClose: () => void;
+  onPick: (id: string) => void;
+}) {
   const fp = star.fingerprint;
   const mood = MOODS.find((m) => m.id === argmax(fp.mood))!;
   const lead = EMOTIONS.find((e) => e.id === argmax(fp.emotions))!;
@@ -34,6 +47,12 @@ function StarCard({ star, similar, onClose, onPick }: { star: Star; similar: { s
       <h2>{star.title}</h2>
       <p className="star-card-author">{star.author}</p>
       <dl className="star-card-facts">
+        {region && (
+          <div>
+            <dt>region</dt>
+            <dd style={{ color: region.color }}>{region.name.toLowerCase()}</dd>
+          </div>
+        )}
         <div>
           <dt>emotion</dt>
           <dd style={{ color: lead.color }}>{lead.label.toLowerCase()}</dd>
@@ -88,6 +107,7 @@ export function MapPage({ focus }: { focus?: string }) {
   const [includeAtlas, setIncludeAtlas] = useState(true);
   const [labels, setLabels] = useState(false);
   const [threads, setThreads] = useState(true);
+  const [showRegions, setShowRegions] = useState(true);
   const [filter, setFilter] = useState("");
   const [mode, setMode] = useState<GraphMode>("3d");
   const [axisChoice, setAxisChoice] = useState<AxisChoice[]>(DEFAULT_AXES);
@@ -97,8 +117,12 @@ export function MapPage({ focus }: { focus?: string }) {
   const byId = useMemo(() => new Map(stars.map((s) => [s.id, s])), [stars]);
   const axes = useMemo(() => axisChoice.map((c) => buildAxis(c, stars, embedding)), [axisChoice, stars, embedding]);
   const options = useMemo(() => axisOptions(embedding), [embedding]);
+  const dims = mode === "2d" ? 2 : 3;
+  const coords = useMemo(() => placeStars(stars.map((s) => s.id), axes, dims), [stars, axes, dims]);
+  const regions = useMemo(() => findRegions(stars, coords, { weights, axes: axisChoice.slice(0, dims) }), [stars, coords, weights, axisChoice, dims]);
   const select = (id: string | null) => navigate(id ? `/map?focus=${id}` : "/map", { replace: true });
   const current = selected ? byId.get(selected) : undefined;
+  const currentRegion = current && showRegions ? regions.findIndex((r) => r.members.includes(current.id)) : -1;
   const similar = current ? neighbours(embedding.rows, current.id, 5).flatMap((n) => (byId.has(n.id) ? [{ star: byId.get(n.id)!, similarity: n.similarity }] : [])) : [];
   const preset = WEIGHT_PRESETS.find((p) => FEATURE_GROUPS.every((g) => p.weights[g.id] === weights[g.id]))?.id;
   const view = matchPreset(mode, axisChoice, weights);
@@ -191,6 +215,9 @@ export function MapPage({ focus }: { focus?: string }) {
           <label>
             <input type="checkbox" checked={threads} onChange={(e) => setThreads(e.target.checked)} /> edges
           </label>
+          <label>
+            <input type="checkbox" checked={showRegions} onChange={(e) => setShowRegions(e.target.checked)} /> regions
+          </label>
         </div>
         <div className="map-list">
           <input className="map-filter" placeholder={`find among ${stars.length} books`} value={filter} onChange={(e) => setFilter(e.target.value)} aria-label="Filter books on the map" />
@@ -214,7 +241,19 @@ export function MapPage({ focus }: { focus?: string }) {
         </p>
       </aside>
       <section className="map-stage">
-        <BookGraph stars={stars} embedding={embedding} axes={axes} mode={mode} selected={selected} onSelect={select} labels={labels} threads={threads} />
+        <BookGraph
+          stars={stars}
+          embedding={embedding}
+          axes={axes}
+          coords={coords}
+          regions={regions}
+          mode={mode}
+          selected={selected}
+          onSelect={select}
+          labels={labels}
+          threads={threads}
+          showRegions={showRegions}
+        />
         {stars.length < 3 && (
           <div className="map-empty">
             <p>
@@ -222,7 +261,16 @@ export function MapPage({ focus }: { focus?: string }) {
             </p>
           </div>
         )}
-        {current && <StarCard key={current.id} star={current} similar={similar} onClose={() => select(null)} onPick={select} />}
+        {current && (
+          <StarCard
+            key={current.id}
+            star={current}
+            similar={similar}
+            region={currentRegion >= 0 ? { name: regions[currentRegion].name, color: regionColor(currentRegion) } : undefined}
+            onClose={() => select(null)}
+            onPick={select}
+          />
+        )}
       </section>
     </div>
   );
