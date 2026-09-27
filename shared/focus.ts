@@ -1,7 +1,7 @@
 // Sentence-level values derived from stored answers. A focus answer says where on a page each dimension sits; the
 // page answer says how strong it is there. Their product ranks sentences across pages without asking Jev again.
-import { FOCUS, type FocusId } from "../../shared/catalog.ts";
-import type { FocusAnalysis, SegmentAnalysis } from "../../shared/types.ts";
+import { FOCUS, type FocusId } from "./catalog.ts";
+import type { FocusAnalysis, SegmentAnalysis } from "./types.ts";
 
 /** The page score a focus dimension spreads over its sentences; 1 when the dimension has no page score. */
 export function pageScore(page: SegmentAnalysis | null, id: FocusId): number {

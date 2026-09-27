@@ -15,7 +15,7 @@ import { FOCUS, FOCUS_RUBRIC, RUBRIC_VERSION, SENTENCE_RUBRIC } from "../shared/
 import { numberedPassage, splitSentences } from "../shared/sentences.ts";
 import { analyzeFocus, analyzeSentence } from "../server/jev.ts";
 import { openStore } from "../server/store.ts";
-import { focusWeights } from "../src/domain/sentences.ts";
+import { focusWeights } from "../shared/focus.ts";
 import { args as readArgs, pool, usd } from "./lib.ts";
 
 const CONCURRENCY = 8;

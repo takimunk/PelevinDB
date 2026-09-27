@@ -3,7 +3,7 @@
 import { FOCUS, FOCUS_RUBRIC, RUBRIC_VERSION, SENTENCE_RUBRIC, type FocusId } from "../shared/catalog.ts";
 import type { SentenceAnalysis } from "../shared/types.ts";
 import type { Store } from "../server/store.ts";
-import { peakSentence } from "../src/domain/sentences.ts";
+import { peakSentence } from "../shared/focus.ts";
 
 /** The sentence-request measure each focus dimension is compared with. */
 const measure: Record<FocusId, (a: SentenceAnalysis) => number> = {

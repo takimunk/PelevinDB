@@ -12,7 +12,7 @@ import {
   type FocusId,
 } from "../../../shared/catalog.ts";
 import type { PageSentences, SegmentAnalysis } from "../../../shared/types.ts";
-import { pageScore } from "../../domain/sentences.ts";
+import { pageScore } from "../../../shared/focus.ts";
 import { useLang, useT } from "../../i18n/index.ts";
 
 const T = {

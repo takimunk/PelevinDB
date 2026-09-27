@@ -17,7 +17,7 @@ import {
   type FocusId,
 } from "../shared/catalog.ts";
 import type { BookKind, BookLine, FocusAnalysis, PageSentences, SegmentAnalysis, SentenceAnalysis, SentenceRead } from "../shared/types.ts";
-import { focusWeights, peakSentence } from "../src/domain/sentences.ts";
+import { focusWeights, peakSentence } from "../shared/focus.ts";
 import type { Store } from "./store.ts";
 
 export const PAGE_SIZE = 25;

@@ -12,7 +12,7 @@ import { corpusBook, pageResponse } from "../server/corpus.ts";
 import { MIGRATIONS, openStore } from "../server/store.ts";
 import { linesQuery, MAX_RESULT_PAGES, peakQuote, queryLines, sentenceQuote } from "../server/sentences.ts";
 import { queryPages, pagesQuery } from "../server/pages.ts";
-import { focusWeights, peakSentence } from "../src/domain/sentences.ts";
+import { focusWeights, peakSentence } from "../shared/focus.ts";
 import { demoAnalyses } from "./fixtures/synthetic.ts";
 
 const texts = (page: string) => splitSentences(page).map((s) => page.slice(s.start, s.end));
