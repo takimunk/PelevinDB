@@ -32,7 +32,7 @@
 }
 .logo {
   margin: 0;
-  font: 400 clamp(7px, 1.2vw, 13px) / 1.05 var(--mono);
+  font: 400 clamp(28px, 6vw, 64px) / 1.05 var(--mono);
   color: var(--ink);
   white-space: pre;
 }
