@@ -525,3 +525,143 @@ input[type="range"]::-moz-range-thumb {
   border: 1px solid var(--line-2);
   background: rgba(8, 8, 8, 0.92);
 }
+
+.map-page {
+  position: relative;
+}
+.graph-touch-help {
+  display: none;
+}
+.graph-controls {
+  position: absolute;
+  left: 14px;
+  top: 44px;
+  display: flex;
+  border: 1px solid var(--line-2);
+  background: var(--bg-2);
+}
+.graph-controls button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 10px;
+  border-right: 1px solid var(--line);
+}
+.graph-controls button:last-child {
+  border-right: 0;
+}
+@media (max-width: 960px) {
+  .map-page {
+    grid-template-rows: auto;
+  }
+  .map-stage {
+    height: clamp(320px, 55svh, 600px);
+    scroll-margin-top: calc(100px + env(safe-area-inset-top));
+  }
+  .star-card {
+    position: static;
+    grid-row: 2;
+    width: auto;
+    max-height: none;
+    margin: 12px;
+    overflow: visible;
+  }
+  .map-rail {
+    grid-row: 3;
+    min-width: 0;
+  }
+  .star-card h2,
+  .star-card-facts dd {
+    overflow-wrap: anywhere;
+    min-width: 0;
+  }
+  .graph-hud {
+    font-size: 10px;
+  }
+  .graph-legend {
+    display: none;
+  }
+  .graph-regions {
+    max-height: 35%;
+    max-width: 55%;
+    overflow: auto;
+    bottom: 72px;
+  }
+  .graph-regions button {
+    min-height: 44px;
+  }
+}
+@media (max-width: 760px) {
+  .map-rail {
+    padding: 20px 14px;
+  }
+  .map-views button {
+    min-height: 48px;
+  }
+  .axis-pickers select {
+    min-height: 48px;
+  }
+  .axis-pickers .link {
+    min-height: 44px;
+  }
+  .weights input[type="range"] {
+    height: 44px;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    width: 20px;
+    height: 24px;
+    margin-top: -12px;
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 20px;
+    height: 24px;
+  }
+  .toggles label {
+    min-height: 44px;
+  }
+  .toggles input {
+    width: 20px;
+    height: 20px;
+  }
+  .map-filter {
+    height: 48px;
+  }
+  .map-list button {
+    min-height: 48px;
+    padding: 10px 6px;
+  }
+  .map-list small {
+    max-width: 10ch;
+  }
+  .star-card-top {
+    min-height: 48px;
+    align-items: center;
+    gap: 8px;
+  }
+  .star-card-top button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  .star-card-near button {
+    min-height: 44px;
+  }
+  .map-empty p {
+    max-width: calc(100% - 28px);
+  }
+}
+@media (hover: none) {
+  .graph-desktop-help {
+    display: none;
+  }
+  .graph-touch-help {
+    display: inline;
+  }
+}
+
+@media (max-width: 760px) {
+  .graph-desktop-help {
+    display: none;
+  }
+  .graph-touch-help {
+    display: inline;
+  }
+}

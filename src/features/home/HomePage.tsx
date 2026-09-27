@@ -273,7 +273,7 @@ export function HomePage() {
             Jev reads a book page by page, answers {SEGMENT_QUESTION_COUNT} questions about each one and places the book among all the others.
             {stats ? ` So far: the ${stats.books} most canonical books, every page.` : ""}
           </p>
-          <Search autoFocus />
+          <Search autoFocus={window.matchMedia("(min-width: 761px) and (hover: hover)").matches} />
           <div className="hero-actions">
             <button className="btn primary" onClick={openFilePicker}>
               upload epub · fb2 · txt

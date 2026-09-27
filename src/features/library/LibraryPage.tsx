@@ -17,6 +17,7 @@ const SORTS = {
 } as const;
 
 function CanonShelf({ params }: { params: Record<string, string> }) {
+  const [showFilters, setShowFilters] = useState(false);
   const { available, rows } = useCanonShelf();
   const state = readState(params);
   const key = writeState(state);
@@ -40,7 +41,7 @@ function CanonShelf({ params }: { params: Record<string, string> }) {
 
   const sort = (id: string) => {
     const col = column(id)!;
-    set(state.sort === id ? { dir: (-state.dir as 1 | -1) } : { sort: id, dir: col.score ? -1 : 1 });
+    set(state.sort === id ? { dir: -state.dir as 1 | -1 } : { sort: id, dir: col.score ? -1 : 1 });
   };
   return (
     <>
@@ -57,40 +58,45 @@ function CanonShelf({ params }: { params: Record<string, string> }) {
           ))}
         </div>
       </div>
-      <div className="shelf-filters">
-        {FACETS.map((f) => (
-          <label key={f} className={state.facets[f] ? "on" : ""}>
-            <span>{column(f)!.label}</span>
-            <select value={state.facets[f] ?? ""} onChange={(e) => set({ facets: { ...state.facets, [f]: e.target.value || undefined } })} aria-label={`Filter by ${column(f)!.label}`}>
-              <option value="">any</option>
-              {facetCounts(all, f).map(([v, n]) => (
-                <option key={v} value={v}>
-                  {v} ({n})
-                </option>
-              ))}
-            </select>
-          </label>
-        ))}
-      </div>
-      <div className="shelf-lenses" role="group" aria-label="Quick filters">
-        {LENSES.map((l) => (
-          <button key={l.id} className={state.lens === l.id ? "on" : ""} aria-pressed={state.lens === l.id} title={l.hint} onClick={() => set({ lens: state.lens === l.id ? null : l.id })}>
-            {l.label} <small>{all.filter(l.test).length}</small>
-          </button>
-        ))}
-        <span className="shelf-count">
-          {shown.length === all.length ? `${all.length} books` : `${shown.length} of ${all.length} books`}
-          {filtered && (
-            <button className="link" onClick={() => set({ q: "", lens: null, facets: {} })}>
-              clear filters
+      <button className="btn shelf-filter-toggle" aria-expanded={showFilters} aria-controls="shelf-refinements" onClick={() => setShowFilters(!showFilters)}>
+        {showFilters ? "Hide filters" : "Filters"} · {shown.length} books{filtered ? " · active" : ""}
+      </button>
+      <div id="shelf-refinements" className={`shelf-refinements ${showFilters ? "expanded" : ""}`}>
+        <div className="shelf-filters">
+          {FACETS.map((f) => (
+            <label key={f} className={state.facets[f] ? "on" : ""}>
+              <span>{column(f)!.label}</span>
+              <select value={state.facets[f] ?? ""} onChange={(e) => set({ facets: { ...state.facets, [f]: e.target.value || undefined } })} aria-label={`Filter by ${column(f)!.label}`}>
+                <option value="">any</option>
+                {facetCounts(all, f).map(([v, n]) => (
+                  <option key={v} value={v}>
+                    {v} ({n})
+                  </option>
+                ))}
+              </select>
+            </label>
+          ))}
+        </div>
+        <div className="shelf-lenses" role="group" aria-label="Quick filters">
+          {LENSES.map((l) => (
+            <button key={l.id} className={state.lens === l.id ? "on" : ""} aria-pressed={state.lens === l.id} title={l.hint} onClick={() => set({ lens: state.lens === l.id ? null : l.id })}>
+              {l.label} <small>{all.filter(l.test).length}</small>
             </button>
-          )}
-        </span>
+          ))}
+          <span className="shelf-count">
+            {shown.length === all.length ? `${all.length} books` : `${shown.length} of ${all.length} books`}
+            {filtered && (
+              <button className="link" onClick={() => set({ q: "", lens: null, facets: {} })}>
+                clear filters
+              </button>
+            )}
+          </span>
+        </div>
       </div>
       <CanonTable rows={shown} state={state} ranges={scale} onSort={sort} />
       <p className="shelf-note dim">
-        Scores are 0–1 means of Jev's answers over every page of the book. Shading runs from the lowest to the highest value on the shelf: red columns are
-        feel, blue are craft, green are the whole-book profile. Hover a header for what it measures.
+        Scores are 0–1 means of Jev's answers over every page of the book. Shading runs from the lowest to the highest value on the shelf: red columns are feel, blue are craft, green are the
+        whole-book profile. Hover a header for what it measures.
       </p>
     </>
   );
@@ -114,11 +120,17 @@ export function LibraryPage({ tab = "canon", params = {} }: { tab?: "mine" | "ca
           <div className="eyebrow">library</div>
           {tab === "canon" ? (
             <h1>
-              Canon <span className="dim">· {rows?.length ?? 0} {plural(rows?.length ?? 0, "book")} · {read} read in full by Jev</span>
+              Canon{" "}
+              <span className="dim">
+                · {rows?.length ?? 0} {plural(rows?.length ?? 0, "book")} · {read} read in full by Jev
+              </span>
             </h1>
           ) : (
             <h1>
-              Your books <span className="dim">· {books.length} · {fmt(chars)} characters</span>
+              Your books{" "}
+              <span className="dim">
+                · {books.length} · {fmt(chars)} characters
+              </span>
             </h1>
           )}
         </div>

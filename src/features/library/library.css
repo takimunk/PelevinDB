@@ -200,3 +200,176 @@
     margin-left: 0;
   }
 }
+
+.canon-mobile {
+  display: none;
+}
+@media (max-width: 760px) {
+  .library-page {
+    padding: 20px 14px 40px;
+    min-width: 0;
+  }
+  .library-page > * {
+    min-width: 0;
+  }
+  .page-head h1 {
+    font-size: 17px;
+    overflow-wrap: anywhere;
+  }
+  .page-head .btn {
+    width: 100%;
+  }
+  .library-grep {
+    height: 48px;
+  }
+  .shelf-tabs,
+  .shelf-views {
+    width: 100%;
+  }
+  .shelf-tabs button,
+  .shelf-views button {
+    flex: 1 1 auto;
+  }
+  .shelf-filters {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .shelf-filters label {
+    height: 48px;
+    justify-content: space-between;
+    padding: 0 10px;
+  }
+  .shelf-filters select {
+    min-width: 0;
+    max-width: 75%;
+    height: 44px;
+  }
+  .shelf-lenses > button {
+    min-height: 44px;
+    padding: 8px 10px;
+  }
+  .shelf-count {
+    flex-basis: 100%;
+    align-items: center;
+  }
+  .shelf-count button {
+    min-height: 44px;
+  }
+  .shelf-scroll {
+    display: none;
+  }
+  .canon-mobile {
+    display: grid;
+    gap: 12px;
+  }
+  .canon-sort {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .canon-sort label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+  }
+  .canon-sort select {
+    min-width: 0;
+    flex: 1;
+    height: 44px;
+    background: var(--bg-2);
+    border: 1px solid var(--line-2);
+    padding: 0 8px;
+  }
+  .canon-cards {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 12px;
+  }
+  .canon-cards > li {
+    border: 1px solid var(--line-2);
+    min-width: 0;
+  }
+  .canon-card-link {
+    display: grid;
+    gap: 6px;
+    padding: 16px;
+    overflow-wrap: anywhere;
+  }
+  .canon-card-link b {
+    font-size: 17px;
+    font-weight: 500;
+  }
+  .canon-card-metrics {
+    border-top: 1px dashed var(--line);
+  }
+  .canon-card-metrics summary {
+    padding: 12px 16px;
+    min-height: 44px;
+    cursor: pointer;
+    color: var(--ink-2);
+  }
+  .canon-card-metrics dl {
+    margin: 0;
+    padding: 0 16px 12px;
+  }
+  .canon-card-metrics dl > div {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 9ch);
+    gap: 12px;
+    padding: 8px 0;
+    border-top: 1px solid var(--line);
+  }
+  .canon-card-metrics dt small {
+    display: block;
+    margin-top: 4px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .canon-card-metrics dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+    text-align: right;
+  }
+  .book-table:not(.canon-table) .bt-row {
+    grid-template-columns: 3ch minmax(0, 1fr);
+    gap: 4px 8px;
+    padding: 12px 4px;
+  }
+  .book-table:not(.canon-table) .bt-title {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .library-page .book-table:not(.canon-table) .bt-author {
+    display: block;
+    grid-column: 2;
+    white-space: normal;
+  }
+  .book-table:not(.canon-table) .bt-jev {
+    grid-column: 2;
+  }
+  .book-table:not(.canon-table) .bt-head {
+    display: none;
+  }
+}
+
+.shelf-filter-toggle {
+  display: none;
+}
+.shelf-refinements {
+  display: grid;
+  gap: 16px;
+}
+@media (max-width: 760px) {
+  .shelf-filter-toggle {
+    display: inline-flex;
+  }
+  .shelf-refinements {
+    display: none;
+  }
+  .shelf-refinements.expanded {
+    display: grid;
+  }
+}

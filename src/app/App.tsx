@@ -11,13 +11,26 @@ const MapPage = lazy(() => import("../features/map/MapPage.tsx").then((m) => ({ 
 
 function Palette({ onClose }: { onClose: () => void }) {
   useEffect(() => {
+    const previous = document.activeElement as HTMLElement | null;
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     const key = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     document.addEventListener("keydown", key);
-    return () => document.removeEventListener("keydown", key);
+    return () => {
+      document.removeEventListener("keydown", key);
+      document.body.style.overflow = overflow;
+      previous?.focus({ preventScroll: true });
+    };
   }, [onClose]);
   return (
     <div className="palette-backdrop" onMouseDown={onClose}>
       <div className="palette" role="dialog" aria-modal="true" aria-label="Find book" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="palette-head">
+          <span>Find book</span>
+          <button className="btn" aria-label="Close search" onClick={onClose}>
+            Close
+          </button>
+        </div>
         <Search autoFocus onDone={onClose} />
       </div>
     </div>
@@ -57,7 +70,10 @@ export default function App() {
     document.addEventListener("keydown", key);
     return () => document.removeEventListener("keydown", key);
   }, []);
-  useEffect(() => setPalette(false), [route.name, route.name === "book" ? route.id : ""]);
+  useEffect(() => {
+    setPalette(false);
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [route.name, route.name === "book" ? route.id : ""]);
 
   const nav = [
     { name: "home", key: "1", label: "Overview", path: "/" },
@@ -96,7 +112,7 @@ export default function App() {
           </svg>
           <span className="brand-name">XBOOK</span>
         </a>
-        <nav className="nav">
+        <nav className="nav" aria-label="Main navigation">
           {nav.map((n) => (
             <a key={n.name} data-key={n.key} href={href(n.path)} className={route.name === n.name ? "on" : ""} aria-current={route.name === n.name ? "page" : undefined}>
               {n.label}
@@ -108,7 +124,10 @@ export default function App() {
             Find book <kbd>/</kbd>
           </button>
           <button className="btn icon palette-icon" aria-label="Find book" onClick={() => setPalette(true)}>
-            /
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <circle cx="10" cy="10" r="6" />
+              <path d="m15 15 6 6" />
+            </svg>
           </button>
           <button className="btn icon" aria-label="Upload book" title="Upload book (u)" onClick={openFilePicker}>
             ↑
@@ -120,7 +139,14 @@ export default function App() {
         {route.name === "home" && <HomePage />}
         {route.name === "library" && <LibraryPage tab={route.tab} params={route.params} />}
         {route.name === "map" && (
-          <Suspense fallback={<div className="loading-page">loading map<span className="cursor" /></div>}>
+          <Suspense
+            fallback={
+              <div className="loading-page">
+                loading map
+                <span className="cursor" />
+              </div>
+            }
+          >
             <MapPage focus={route.focus} />
           </Suspense>
         )}

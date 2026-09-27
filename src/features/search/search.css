@@ -112,3 +112,39 @@
 .search-status::before {
   content: "-- ";
 }
+
+@media (max-width: 760px) {
+  .search-field {
+    min-height: 52px;
+    flex-shrink: 0;
+    padding: 0 10px;
+    gap: 8px;
+  }
+  .search-item {
+    grid-template-columns: 3ch minmax(0, 1fr);
+    gap: 4px 8px;
+    min-height: 64px;
+    padding: 10px;
+  }
+  .search-cursor {
+    display: none;
+  }
+  .search-text {
+    flex-direction: column;
+    gap: 2px;
+    white-space: normal;
+  }
+  .search-text b,
+  .search-text small {
+    overflow-wrap: anywhere;
+  }
+  .search-note {
+    grid-column: 2;
+  }
+  .search-status {
+    overflow-wrap: anywhere;
+  }
+  .search-results {
+    max-height: min(55dvh, 520px);
+  }
+}

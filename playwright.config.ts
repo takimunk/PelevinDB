@@ -9,5 +9,9 @@ export default defineConfig({
     url: baseURL,
     reuseExistingServer: !process.env.CI,
   },
+  projects: [
+    { name: "chromium", use: { browserName: "chromium" } },
+    { name: "iphone-webkit", grep: /phone workflows/, use: { browserName: "webkit" } },
+  ],
   reporter: "list",
 });

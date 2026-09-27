@@ -83,20 +83,48 @@ export function BookGraph({ stars, embedding, axes, coords, regions, mode, selec
   const wrap = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const overlay = useRef<HTMLDivElement>(null);
-  const [hover, setHover] = useState<{ id: string; x: number; y: number } | null>(null);
+  const projected = useRef(new Map<string, Screen>());
+  const [hover, setHover] = useState<{
+    id: string;
+    x: number;
+    y: number;
+  } | null>(null);
   const [spot, setSpot] = useState<number | null>(null);
   const view = useRef({
     ...HOME,
     target: new THREE.Vector3(),
     goal: null as THREE.Vector3 | null,
     keys: new Set<string>(),
-    drag: null as null | { x: number; y: number; yaw: number; pitch: number; target: THREE.Vector3; moved: boolean },
+    drag: null as null | {
+      x: number;
+      y: number;
+      yaw: number;
+      pitch: number;
+      target: THREE.Vector3;
+      moved: boolean;
+    },
     pointer: null as null | { x: number; y: number },
     hover: null as string | null,
     dirty: true,
   });
-  const live = useRef({ selected, labels, threads, onSelect, mode, showRegions, spot });
-  live.current = { selected, labels, threads, onSelect, mode, showRegions, spot };
+  const live = useRef({
+    selected,
+    labels,
+    threads,
+    onSelect,
+    mode,
+    showRegions,
+    spot,
+  });
+  live.current = {
+    selected,
+    labels,
+    threads,
+    onSelect,
+    mode,
+    showRegions,
+    spot,
+  };
 
   const byId = useMemo(() => new Map(stars.map((s) => [s.id, s])), [stars]);
   const positions = useMemo(
@@ -137,7 +165,11 @@ export function BookGraph({ stars, embedding, axes, coords, regions, mode, selec
     view.current.dirty = true;
   }, [labels, threads, edges, axisNames, showRegions, spot]);
   useEffect(() => {
-    Object.assign(view.current, mode === "2d" ? HOME_2D : HOME, { target: new THREE.Vector3(), goal: null, dirty: true });
+    Object.assign(view.current, mode === "2d" ? HOME_2D : HOME, {
+      target: new THREE.Vector3(),
+      goal: null,
+      dirty: true,
+    });
   }, [mode]);
 
   // Render loop.
@@ -176,7 +208,12 @@ export function BookGraph({ stars, embedding, axes, coords, regions, mode, selec
     const tmp = new THREE.Vector3();
     const project = (p: THREE.Vector3): Screen => {
       tmp.copy(p).project(camera);
-      return { x: ((tmp.x + 1) / 2) * w, y: ((1 - tmp.y) / 2) * h, depth: camera.position.distanceTo(p), visible: tmp.z > -1 && tmp.z < 1 };
+      return {
+        x: ((tmp.x + 1) / 2) * w,
+        y: ((1 - tmp.y) / 2) * h,
+        depth: camera.position.distanceTo(p),
+        visible: tmp.z > -1 && tmp.z < 1,
+      };
     };
     const line = (a: THREE.Vector3, b: THREE.Vector3) => {
       const pa = project(a),
@@ -228,19 +265,17 @@ export function BookGraph({ stars, embedding, axes, coords, regions, mode, selec
       if (!v.dirty) return;
       v.dirty = false;
 
-      camera.position.set(
-        v.target.x + Math.cos(v.pitch) * Math.sin(v.yaw) * v.distance,
-        v.target.y + Math.sin(v.pitch) * v.distance,
-        v.target.z + Math.cos(v.pitch) * Math.cos(v.yaw) * v.distance,
-      );
+      camera.position.set(v.target.x + Math.cos(v.pitch) * Math.sin(v.yaw) * v.distance, v.target.y + Math.sin(v.pitch) * v.distance, v.target.z + Math.cos(v.pitch) * Math.cos(v.yaw) * v.distance);
       camera.lookAt(v.target);
       camera.updateMatrixWorld();
 
       const { selected: sel, threads: showEdges, labels: allLabels } = live.current;
       const focus = v.hover ?? sel;
       const near = new Set<string>();
-      if (focus) for (const e of edges) if (e.a === focus) near.add(e.b);
-      else if (e.b === focus) near.add(e.a);
+      if (focus)
+        for (const e of edges)
+          if (e.a === focus) near.add(e.b);
+          else if (e.b === focus) near.add(e.a);
 
       ctx.clearRect(0, 0, w, h);
       ctx.font = FONT;
@@ -296,6 +331,7 @@ export function BookGraph({ stars, embedding, axes, coords, regions, mode, selec
       // Project nodes once.
       const screen = new Map<string, Screen>();
       for (const [id, p] of positions) screen.set(id, project(p));
+      projected.current = screen;
       const depths = [...screen.values()].map((s) => s.depth);
       const dMin = Math.min(...depths),
         dMax = Math.max(...depths);
@@ -424,8 +460,7 @@ export function BookGraph({ stars, embedding, axes, coords, regions, mode, selec
 
       // Labels: place by priority, skip overlaps.
       const placed: [number, number, number, number][] = [...axisBoxes, ...regionBoxes, [0, 0, w, 56], [0, h - 66, w, h]];
-      const priority = (id: string) =>
-        id === focus || id === sel ? 0 : near.has(id) ? 1 : byId.get(id)!.kind === "library" ? 2 : 3 + screen.get(id)!.depth / 1000;
+      const priority = (id: string) => (id === focus || id === sel ? 0 : near.has(id) ? 1 : byId.get(id)!.kind === "library" ? 2 : 3 + screen.get(id)!.depth / 1000);
       const ids = [...screen.keys()].sort((a, b) => priority(a) - priority(b));
       const els = new Map<string, HTMLElement>();
       overlay.current?.querySelectorAll<HTMLElement>("[data-node]").forEach((n) => els.set(n.dataset.node!, n));
@@ -477,16 +512,40 @@ export function BookGraph({ stars, embedding, axes, coords, regions, mode, selec
   useEffect(() => {
     const el = canvas.current!;
     const v = view.current;
+    const pointers = new Map<number, { x: number; y: number }>();
+    let pinch: { span: number; distance: number } | null = null;
+    const span = () => {
+      const [a, b] = [...pointers.values()];
+      return Math.max(1, Math.hypot(a.x - b.x, a.y - b.y));
+    };
     const local = (e: PointerEvent | WheelEvent) => {
       const r = el.getBoundingClientRect();
       return { x: e.clientX - r.left, y: e.clientY - r.top };
     };
     const down = (e: PointerEvent) => {
-      v.drag = { ...local(e), yaw: v.yaw, pitch: v.pitch, target: v.target.clone(), moved: false };
+      pointers.set(e.pointerId, local(e));
+      if (pointers.size === 2) {
+        pinch = { span: span(), distance: v.distance };
+        v.drag = null;
+      } else if (!pinch) {
+        v.drag = {
+          ...local(e),
+          yaw: v.yaw,
+          pitch: v.pitch,
+          target: v.target.clone(),
+          moved: false,
+        };
+      }
       el.setPointerCapture(e.pointerId);
       wrap.current?.focus({ preventScroll: true });
     };
     const move = (e: PointerEvent) => {
+      if (pointers.has(e.pointerId)) pointers.set(e.pointerId, local(e));
+      if (pinch && pointers.size >= 2) {
+        v.distance = Math.max(6, Math.min(90, (pinch.distance * pinch.span) / span()));
+        v.dirty = true;
+        return;
+      }
       v.pointer = local(e);
       v.dirty = true;
       if (!v.drag) return;
@@ -502,8 +561,18 @@ export function BookGraph({ stars, embedding, axes, coords, regions, mode, selec
       v.yaw = v.drag.yaw - dx * 0.006;
       v.pitch = Math.max(-1.2, Math.min(1.35, v.drag.pitch + dy * 0.006));
     };
-    const up = () => {
-      if (v.drag && !v.drag.moved) live.current.onSelect(v.hover);
+    const up = (e: PointerEvent) => {
+      if (v.drag && !v.drag.moved && !pinch) {
+        const point = local(e);
+        let best: { id: string; distance: number } | null = null;
+        for (const [id, s] of projected.current) {
+          const distance = Math.hypot(s.x - point.x, s.y - point.y);
+          if (s.visible && distance < (e.pointerType === "touch" ? 24 : 14) && (!best || distance < best.distance)) best = { id, distance };
+        }
+        live.current.onSelect(best?.id ?? null);
+      }
+      pointers.delete(e.pointerId);
+      if (!pointers.size) pinch = null;
       v.drag = null;
       v.dirty = true;
     };
@@ -530,9 +599,17 @@ export function BookGraph({ stars, embedding, axes, coords, regions, mode, selec
     };
     const keyUp = (e: KeyboardEvent) => v.keys.delete(e.key.toLowerCase());
     const blur = () => v.keys.clear();
+    const cancel = () => {
+      pointers.clear();
+      pinch = null;
+      v.drag = null;
+      v.pointer = null;
+      v.dirty = true;
+    };
     el.addEventListener("pointerdown", down);
     el.addEventListener("pointermove", move);
     el.addEventListener("pointerup", up);
+    el.addEventListener("pointercancel", cancel);
     el.addEventListener("pointerleave", leave);
     el.addEventListener("wheel", wheel, { passive: false });
     window.addEventListener("keydown", keyDown);
@@ -542,6 +619,7 @@ export function BookGraph({ stars, embedding, axes, coords, regions, mode, selec
       el.removeEventListener("pointerdown", down);
       el.removeEventListener("pointermove", move);
       el.removeEventListener("pointerup", up);
+      el.removeEventListener("pointercancel", cancel);
       el.removeEventListener("pointerleave", leave);
       el.removeEventListener("wheel", wheel);
       window.removeEventListener("keydown", keyDown);
@@ -570,29 +648,68 @@ export function BookGraph({ stars, embedding, axes, coords, regions, mode, selec
         ))}
       </div>
       {hovered && hover && (
-        <div className="node-card" style={{ left: Math.min(hover.x + 18, (wrap.current?.clientWidth ?? 800) - 330), top: Math.max(8, hover.y - 20) }}>
+        <div
+          className="node-card"
+          style={{
+            left: Math.min(hover.x + 18, (wrap.current?.clientWidth ?? 800) - 330),
+            top: Math.max(8, hover.y - 20),
+          }}
+        >
           <div className="node-card-title">
             <b>{hovered.title}</b>
             <span className="dim"> · {hovered.author}</span>
           </div>
           <div className="node-card-meta">
-            {hovered.kind === "library" ? "your book" : hovered.canon?.complete ? `canon · jev read all ${hovered.canon.pages} pages` : `atlas · jev read ${hovered.pagesRead ?? "?"} sampled pages`}             · coverage {Math.round(hovered.fingerprint.coverage * 100)}%
+            {hovered.kind === "library" ? "your book" : hovered.canon?.complete ? `canon · jev read all ${hovered.canon.pages} pages` : `atlas · jev read ${hovered.pagesRead ?? "?"} sampled pages`} ·
+            coverage {Math.round(hovered.fingerprint.coverage * 100)}%
             {hoveredRegion != null && <span style={{ color: regionColor(hoveredRegion) }}> · {regions[hoveredRegion].name.toLowerCase()}</span>}
           </div>
           <PixelStrip values={fingerprintValues(hovered.fingerprint)} size={6} label="fingerprint coordinates" idle="85 coordinates · click to select" />
         </div>
       )}
       <div className="graph-hud">
-        <span>
+        <span className="graph-desktop-help">
           <kbd>W</kbd>
           <kbd>A</kbd>
           <kbd>S</kbd>
           <kbd>D</kbd> {mode === "2d" ? "pan" : "move"} <kbd>Q</kbd>
           <kbd>E</kbd> {mode === "2d" ? "zoom" : "down/up"} · drag {mode === "2d" ? "pan" : "orbit"} · scroll zoom · <kbd>R</kbd> reset
         </span>
+        <span className="graph-touch-help">Drag to {mode === "2d" ? "pan" : "rotate"} · pinch to zoom · tap a book</span>
         <span className="graph-legend">
           <i className="own" /> your book <i className="canon" /> canon, read in full <i className="ref" /> atlas · colour = leading emotion · edge label = similarity
         </span>
+      </div>
+      <div className="graph-controls" role="group" aria-label="Map camera">
+        <button
+          aria-label="Zoom in"
+          onClick={() => {
+            view.current.distance = Math.max(6, view.current.distance / 1.25);
+            view.current.dirty = true;
+          }}
+        >
+          +
+        </button>
+        <button
+          aria-label="Zoom out"
+          onClick={() => {
+            view.current.distance = Math.min(90, view.current.distance * 1.25);
+            view.current.dirty = true;
+          }}
+        >
+          −
+        </button>
+        <button
+          aria-label="Reset map view"
+          onClick={() => {
+            Object.assign(view.current, mode === "2d" ? HOME_2D : HOME, {
+              goal: new THREE.Vector3(),
+              dirty: true,
+            });
+          }}
+        >
+          Reset
+        </button>
       </div>
       {showRegions && regions.length > 0 && (
         <div className="graph-regions" role="group" aria-label="Regions">
