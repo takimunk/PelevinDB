@@ -443,6 +443,8 @@ test("canon books open read-only from the library, the map and search with brief
 });
 
 test.describe("phone workflows", () => {
+  // Each journey visits every page; WebKit needs more time on shared CI runners.
+  test.setTimeout(60_000);
   test.use({ hasTouch: true, isMobile: true });
 
   for (const width of [320, 390, 430]) {
