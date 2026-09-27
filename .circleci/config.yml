@@ -15,7 +15,7 @@ jobs:
           paths: [~/.npm]
       - run: npm run build
       - run: npm test
-      - run: npx playwright install --with-deps chromium
+      - run: npx playwright install --with-deps chromium webkit
       - run: npm run test:e2e
       - store_artifacts:
           path: test-results

@@ -269,3 +269,35 @@
     white-space: normal;
   }
 }
+
+@media (max-width: 760px) {
+  .hero-copy {
+    min-width: 0;
+    gap: 20px;
+  }
+  .hero-actions .btn {
+    flex: 1 1 220px;
+  }
+  .home-body {
+    gap: 32px;
+  }
+  .finding {
+    min-width: 0;
+    padding: 18px 14px;
+  }
+  .records,
+  .pairs {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .finding,
+  .hero-lede,
+  .dims-items {
+    overflow-wrap: anywhere;
+  }
+  .totals > div {
+    padding: 14px 10px;
+  }
+  .totals dd {
+    font-size: 22px;
+  }
+}

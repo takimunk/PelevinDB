@@ -438,3 +438,121 @@ test("canon books open read-only from the library, the map and search with brief
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   expect(errors).toEqual([]);
 });
+
+test.describe("phone workflows", () => {
+  test.use({ hasTouch: true, isMobile: true });
+
+  for (const width of [320, 390, 430]) {
+    test(`library, book, reader, search and map work at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 844 });
+      await page.route("**/atlas.json", (route) => route.fulfill({ json: atlas }));
+      await page.route("**/api/status", (route) => route.fulfill({ json: { configured: false } }));
+      await page.route("**/api/corpus", (route) => route.fulfill({ json: canonList }));
+      await page.route("**/api/corpus/pg-901", (route) => route.fulfill({ json: canonBook }));
+      const fits = async () => {
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      };
+      const touchTarget = async (selector: string) => {
+        const box = await page.locator(selector).first().boundingBox();
+        expect(box?.height).toBeGreaterThanOrEqual(44);
+      };
+      await page.goto("/");
+      await fits();
+      if (width === 390) await page.screenshot({ path: "/tmp/xbook-mobile-home.png", fullPage: true });
+      await touchTarget(".nav a");
+      expect(await page.evaluate(() => document.activeElement?.tagName)).not.toBe("INPUT");
+      await page.getByRole("button", { name: "Find book", exact: true }).tap();
+      await page.getByRole("dialog", { name: "Find book" }).getByRole("combobox", { name: "Search books" }).fill("Meditations");
+      await expect(page.getByRole("option", { name: /CAN\s*Meditations/ })).toBeVisible();
+      await page.getByRole("button", { name: "Close search" }).tap();
+      await expect(page.getByRole("dialog", { name: "Find book" })).toHaveCount(0);
+
+      await page.getByRole("link", { name: "Library", exact: true }).tap();
+      await expect(page.locator(".canon-cards > li")).toHaveCount(2);
+      await expect(page.locator(".shelf-scroll")).toBeHidden();
+      await page.locator(".shelf-filter-toggle").tap();
+      await expect(page.getByRole("combobox", { name: "Filter by genre" })).toBeVisible();
+      await page.locator(".shelf-filter-toggle").tap();
+      await page.getByRole("combobox", { name: "Sort canon books" }).selectOption("pages");
+      await page.getByRole("button", { name: "Reverse sort order" }).tap();
+      await expect(page.locator(".canon-card-link").first()).toContainText("Emma");
+      await page.locator(".canon-card-metrics summary").first().tap();
+      await expect(page.locator(".canon-card-metrics dl").first()).toBeVisible();
+      await fits();
+      if (width === 390) await page.screenshot({ path: "/tmp/xbook-mobile-library.png", fullPage: true });
+      await page.locator(".canon-card-link").filter({ hasText: "Meditations" }).tap();
+      await expect(page.locator(".brief-logline")).toBeVisible();
+      await fits();
+      for (const selector of [".quotes", ".pulse-marks", ".neighbours", ".sliders", ".ridges"]) {
+        const boxes = await page.locator(selector).evaluateAll((els) =>
+          els.map((el) => ({
+            client: el.clientWidth,
+            scroll: el.scrollWidth,
+          })),
+        );
+        for (const box of boxes) expect(box.scroll).toBeLessThanOrEqual(box.client + 1);
+      }
+      if (width === 390) await page.screenshot({ path: "/tmp/xbook-mobile-book.png", fullPage: true });
+      await page.getByRole("button", { name: "explore", exact: true }).tap();
+      await page.getByRole("combobox", { name: "show" }).selectOption("emotions:fear");
+      await page.locator(".explorer-hits li button").first().tap();
+      await expect(page.locator(".reader-text")).toBeVisible();
+      await expect(page.locator(".reader-analysis")).toBeHidden();
+      await touchTarget(".reader-nav button");
+      if (width === 390) await page.screenshot({ path: "/tmp/xbook-mobile-reader.png" });
+      await page.getByRole("button", { name: "Show page analysis +" }).tap();
+      await expect(page.locator(".reader-analysis")).toBeVisible();
+      await fits();
+      await page.getByRole("button", { name: "Hide page analysis −" }).tap();
+      await page.getByRole("button", { name: "Next page" }).tap();
+      await page.getByRole("button", { name: "Close reader" }).tap();
+      await expect(page.locator(".reader")).toHaveCount(0);
+
+      await page.getByRole("link", { name: "Map", exact: true }).tap();
+      await expect(page.locator(".graph canvas")).toBeVisible();
+      await expect(page.locator(".graph-touch-help")).toBeVisible();
+      await page.getByRole("button", { name: "Zoom in", exact: true }).tap();
+      await page.getByRole("button", { name: "Reset map view" }).tap();
+      await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+      const meditations = page.locator('.node-label[data-node="pg-901"]');
+      await expect(meditations).toHaveCSS("visibility", "visible");
+      const point = await meditations.evaluate((el) =>
+        /translate\((-?[\d.]+)px, (-?[\d.]+)px\)/
+          .exec((el as HTMLElement).style.transform)!
+          .slice(1)
+          .map(Number),
+      );
+      const canvasBox = (await page.locator(".graph canvas").boundingBox())!;
+      await page.touchscreen.tap(canvasBox.x + point[0], canvasBox.y + point[1]);
+      await expect(page.locator(".star-card")).toContainText("Meditations");
+      await page.getByRole("button", { name: "Close card" }).tap();
+      await page.getByRole("button", { name: /Meditations Fixture Author/ }).tap();
+      await expect(page.locator(".star-card")).toContainText("Meditations");
+      const graph = (await page.locator(".map-stage").boundingBox())!;
+      const card = (await page.locator(".star-card").boundingBox())!;
+      expect(card.y).toBeGreaterThanOrEqual(graph.y + graph.height);
+      await fits();
+      if (width === 390) await page.screenshot({ path: "/tmp/xbook-mobile-map.png" });
+      await page.getByRole("button", { name: "Close card" }).tap();
+
+      await page.getByRole("link", { name: "Overview", exact: true }).tap();
+      await upload(page, "A-very-long-title-that-needs-to-wrap-on-a-phone.txt", "A calm morning. ".repeat(300));
+      await fits();
+      await page.getByRole("link", { name: "Library", exact: true }).tap();
+      await button(page, "your books").tap();
+      await expect(page.locator("a.bt-row .bt-author").first()).toBeVisible();
+      await fits();
+      await page.locator("a.bt-row").first().tap();
+      await openReader(page);
+      await fits();
+      await page.getByRole("button", { name: "Close reader" }).tap();
+      await page.setViewportSize({ width: 844, height: 390 });
+      await openReader(page);
+      await expect(page.locator(".reader-analysis")).toBeHidden();
+      await page.getByRole("button", { name: "Close reader" }).tap();
+      await fits();
+      await page.goto("/#/map");
+      await fits();
+    });
+  }
+});

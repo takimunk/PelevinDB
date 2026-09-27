@@ -750,3 +750,136 @@ button.link {
 button.link:hover:not(:disabled) {
   color: var(--accent);
 }
+
+.palette-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: var(--bg-2);
+  border: 1px solid var(--line-2);
+  border-bottom: 0;
+}
+
+@media (max-width: 760px) {
+  :root {
+    --shell-height: calc(100px + env(safe-area-inset-top));
+  }
+  body {
+    min-height: 100dvh;
+  }
+  .topbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    height: var(--shell-height);
+    padding: env(safe-area-inset-top) max(12px, env(safe-area-inset-right)) 0
+      max(12px, env(safe-area-inset-left));
+  }
+  .brand {
+    height: 52px;
+    border: 0;
+  }
+  .brand-name {
+    display: inline;
+  }
+  .topbar-right {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .topbar-right .btn.icon {
+    width: 48px;
+    min-height: 48px;
+  }
+  .palette-icon svg {
+    width: 20px;
+    height: 20px;
+  }
+  .nav {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    min-width: 0;
+  }
+  .nav a {
+    flex: 1;
+    justify-content: center;
+    min-height: 48px;
+    padding: 0 8px;
+    font-size: 12px;
+  }
+  .nav a:last-child {
+    border-right: 0;
+  }
+  .main {
+    min-height: calc(100dvh - var(--shell-height));
+  }
+  .statusline {
+    position: static;
+    height: auto;
+    min-height: 32px;
+    padding-bottom: env(safe-area-inset-bottom);
+    gap: 10px;
+    font-size: 10px;
+  }
+  .statusline > :first-child {
+    min-height: 32px;
+  }
+  .btn {
+    min-height: 44px;
+    height: auto;
+    padding: 10px 12px;
+  }
+  .presets button {
+    min-height: 44px;
+  }
+  input:not([type="range"]):not([type="checkbox"]),
+  select {
+    font-size: 16px !important;
+  }
+  button,
+  a,
+  summary,
+  input,
+  select {
+    -webkit-tap-highlight-color: transparent;
+  }
+  .menu {
+    min-width: min(280px, calc(100vw - 48px));
+    max-width: calc(100vw - 48px);
+  }
+  .menu button {
+    min-height: 44px;
+  }
+  .palette-backdrop {
+    padding: calc(env(safe-area-inset-top) + 12px) 0
+      calc(env(safe-area-inset-bottom) + 12px);
+  }
+  .palette {
+    max-height: 100%;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .palette .search {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .palette .search-results {
+    max-height: none;
+    min-height: 0;
+    overflow: auto;
+  }
+  .toast {
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    width: max-content;
+    overflow-wrap: anywhere;
+  }
+  .toast button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .empty-page {
+    padding: 24px 16px;
+    text-align: center;
+  }
+}

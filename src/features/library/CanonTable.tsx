@@ -2,7 +2,7 @@ import type { CSSProperties } from "react";
 import { href } from "../../app/router.ts";
 import type { CanonRow } from "../../storage/corpus.ts";
 import { fmt } from "../../ui/format.ts";
-import { column, VIEWS, type Column, type ShelfState } from "./shelf.ts";
+import { COLUMNS, column, VIEWS, type Column, type ShelfState } from "./shelf.ts";
 
 const TINT = { r: "255, 69, 56", g: "61, 220, 132", b: "77, 124, 255" };
 
@@ -30,17 +30,7 @@ function Cell({ col, row, range }: { col: Column; row: CanonRow; range?: [number
 }
 
 /** Canon shelf: any column sorts, score cells are shaded from the lowest to the highest value on the whole shelf. */
-export function CanonTable({
-  rows,
-  state,
-  ranges,
-  onSort,
-}: {
-  rows: CanonRow[];
-  state: ShelfState;
-  ranges: Map<string, [number, number]>;
-  onSort: (id: string) => void;
-}) {
+export function CanonTable({ rows, state, ranges, onSort }: { rows: CanonRow[]; state: ShelfState; ranges: Map<string, [number, number]>; onSort: (id: string) => void }) {
   const cols = VIEWS[state.view].columns.map((id) => column(id)!);
   const grid = { gridTemplateColumns: cols.map((c) => c.width).join(" ") };
   const means = cols.map((c) => {
@@ -49,41 +39,93 @@ export function CanonTable({
     return vs.length ? vs.reduce((s, v) => s + v, 0) / vs.length : null;
   });
   return (
-    <div className="shelf-scroll">
-      <div className="book-table canon-table" role="table" aria-label="Canon">
-        <div className="bt-row bt-head" role="row" style={grid}>
-          {cols.map((c) => (
-            <span
-              key={c.id}
-              role="columnheader"
-              className={`${c.score || c.id === "pages" || c.id === "jev" ? "bt-num" : ""} ${c.tint ? `tint-${c.tint}` : ""}`}
-              aria-sort={state.sort === c.id ? (state.dir === 1 ? "ascending" : "descending") : undefined}
-              title={c.hint || undefined}
-            >
-              <button onClick={() => onSort(c.id)}>
-                {c.label}
-                {state.sort === c.id ? (state.dir === 1 ? "↑" : "↓") : ""}
-              </button>
-            </span>
-          ))}
+    <>
+      <div className="canon-mobile">
+        <div className="canon-sort">
+          <label>
+            Sort by{" "}
+            <select aria-label="Sort canon books" value={state.sort} onChange={(e) => onSort(e.target.value)}>
+              {COLUMNS.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.id === "rank" ? "rank" : c.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button className="btn" aria-label="Reverse sort order" onClick={() => onSort(state.sort)}>
+            {state.dir === 1 ? "Ascending ↑" : "Descending ↓"}
+          </button>
         </div>
-        {rows.map((r) => (
-          <a key={r.id} className="bt-row" role="row" href={href(`/book/${r.id}`)} style={grid}>
+        <ul className="canon-cards">
+          {rows.map((r) => (
+            <li key={r.id}>
+              <a className="canon-card-link" href={href(`/book/${r.id}`)}>
+                <span className="eyebrow">
+                  #{r.rank ?? "—"} · {fmt(r.pages)} pages ·{" "}
+                  <span className={r.complete ? "ok" : "warn"}>{r.complete ? "read in full" : `${Math.round((r.pages ? r.analysed / r.pages : 0) * 100)}% read`}</span>
+                </span>
+                <b>{r.title}</b>
+                <span className="dim">{r.author}</span>
+                <span className="ok">Open book →</span>
+              </a>
+              <details className="canon-card-metrics">
+                <summary>{VIEWS[state.view].label} · details</summary>
+                <dl>
+                  {cols
+                    .filter((c) => !["rank", "title", "author", "pages", "jev"].includes(c.id))
+                    .map((c) => (
+                      <div key={c.id}>
+                        <dt>
+                          {c.label}
+                          {c.hint && <small>{c.hint}</small>}
+                        </dt>
+                        <dd>
+                          <Cell col={c} row={r} range={ranges.get(c.id)} />
+                        </dd>
+                      </div>
+                    ))}
+                </dl>
+              </details>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div className="shelf-scroll">
+        <div className="book-table canon-table" role="table" aria-label="Canon">
+          <div className="bt-row bt-head" role="row" style={grid}>
             {cols.map((c) => (
-              <Cell key={c.id} col={c} row={r} range={ranges.get(c.id)} />
-            ))}
-          </a>
-        ))}
-        {rows.length > 1 && (
-          <div className="bt-row bt-foot" role="row" style={grid}>
-            {cols.map((c, i) => (
-              <span key={c.id} className={means[i] != null ? "bt-score" : ""}>
-                {c.id === "title" ? `mean of ${rows.length}` : c.id === "pages" ? fmt(rows.reduce((s, r) => s + r.pages, 0) / rows.length) : means[i] != null ? means[i]!.toFixed(2) : ""}
+              <span
+                key={c.id}
+                role="columnheader"
+                className={`${c.score || c.id === "pages" || c.id === "jev" ? "bt-num" : ""} ${c.tint ? `tint-${c.tint}` : ""}`}
+                aria-sort={state.sort === c.id ? (state.dir === 1 ? "ascending" : "descending") : undefined}
+                title={c.hint || undefined}
+              >
+                <button onClick={() => onSort(c.id)}>
+                  {c.label}
+                  {state.sort === c.id ? (state.dir === 1 ? "↑" : "↓") : ""}
+                </button>
               </span>
             ))}
           </div>
-        )}
+          {rows.map((r) => (
+            <a key={r.id} className="bt-row" role="row" href={href(`/book/${r.id}`)} style={grid}>
+              {cols.map((c) => (
+                <Cell key={c.id} col={c} row={r} range={ranges.get(c.id)} />
+              ))}
+            </a>
+          ))}
+          {rows.length > 1 && (
+            <div className="bt-row bt-foot" role="row" style={grid}>
+              {cols.map((c, i) => (
+                <span key={c.id} className={means[i] != null ? "bt-score" : ""}>
+                  {c.id === "title" ? `mean of ${rows.length}` : c.id === "pages" ? fmt(rows.reduce((s, r) => s + r.pages, 0) / rows.length) : means[i] != null ? means[i]!.toFixed(2) : ""}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }

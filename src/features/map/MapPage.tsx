@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { EMOTIONS, MOODS, THEMES } from "../../../shared/catalog.ts";
 import { ARC_SHAPES, argmax, topEntries } from "../../domain/analysis.ts";
 import { ALL_FEATURES, DEFAULT_WEIGHTS, FEATURE_GROUPS, fingerprintValues, WEIGHT_PRESETS, type Weights } from "../../domain/fingerprint.ts";
@@ -103,6 +103,7 @@ function StarCard({
 }
 
 export function MapPage({ focus }: { focus?: string }) {
+  const stage = useRef<HTMLElement>(null);
   const [weights, setWeights] = useState<Weights>(DEFAULT_WEIGHTS);
   const [includeAtlas, setIncludeAtlas] = useState(true);
   const [labels, setLabels] = useState(false);
@@ -118,9 +119,20 @@ export function MapPage({ focus }: { focus?: string }) {
   const axes = useMemo(() => axisChoice.map((c) => buildAxis(c, stars, embedding)), [axisChoice, stars, embedding]);
   const options = useMemo(() => axisOptions(embedding), [embedding]);
   const dims = mode === "2d" ? 2 : 3;
-  const coords = useMemo(() => placeStars(stars.map((s) => s.id), axes, dims), [stars, axes, dims]);
+  const coords = useMemo(
+    () =>
+      placeStars(
+        stars.map((s) => s.id),
+        axes,
+        dims,
+      ),
+    [stars, axes, dims],
+  );
   const regions = useMemo(() => findRegions(stars, coords, { weights, axes: axisChoice.slice(0, dims) }), [stars, coords, weights, axisChoice, dims]);
-  const select = (id: string | null) => navigate(id ? `/map?focus=${id}` : "/map", { replace: true });
+  const select = (id: string | null) => {
+    navigate(id ? `/map?focus=${id}` : "/map", { replace: true });
+    if (id && window.matchMedia("(max-width: 960px)").matches) stage.current?.scrollIntoView({ block: "start" });
+  };
   const current = selected ? byId.get(selected) : undefined;
   const currentRegion = current && showRegions ? regions.findIndex((r) => r.members.includes(current.id)) : -1;
   const similar = current ? neighbours(embedding.rows, current.id, 5).flatMap((n) => (byId.has(n.id) ? [{ star: byId.get(n.id)!, similarity: n.similarity }] : [])) : [];
@@ -145,8 +157,8 @@ export function MapPage({ focus }: { focus?: string }) {
           {ALL_FEATURES.length} dimensions in {mode === "2d" ? 2 : 3}
         </h1>
         <p className="map-intro">
-          Every book is a vector of {ALL_FEATURES.length} Jev answers. Pick a question below, or put principal components or any single answer on the axes. Edges link each book to its 3
-          nearest neighbours across all dimensions.
+          Every book is a vector of {ALL_FEATURES.length} Jev answers. Pick a question below, or put principal components or any single answer on the axes. Edges link each book to its 3 nearest
+          neighbours across all dimensions.
         </p>
         <div className="map-views" role="group" aria-label="Views">
           {MAP_PRESETS.map((p) => (
@@ -225,7 +237,13 @@ export function MapPage({ focus }: { focus?: string }) {
             {list.map((s) => (
               <li key={s.id}>
                 <button className={s.id === selected ? "on" : ""} onClick={() => select(s.id)}>
-                  <i style={{ color: EMOTIONS.find((e) => e.id === argmax(s.fingerprint.emotions))!.color }}>{glyph(s)}</i>
+                  <i
+                    style={{
+                      color: EMOTIONS.find((e) => e.id === argmax(s.fingerprint.emotions))!.color,
+                    }}
+                  >
+                    {glyph(s)}
+                  </i>
                   <span>{s.title}</span>
                   <small>{s.author}</small>
                 </button>
@@ -240,7 +258,7 @@ export function MapPage({ focus }: { focus?: string }) {
           {stars.length > own + read ? ` □ ${stars.length - own - read} atlas books measured by Jev.` : !read && " No atlas yet: run npm run atlas to add reference books."}
         </p>
       </aside>
-      <section className="map-stage">
+      <section className="map-stage" ref={stage} aria-label="Book map">
         <BookGraph
           stars={stars}
           embedding={embedding}
@@ -261,17 +279,24 @@ export function MapPage({ focus }: { focus?: string }) {
             </p>
           </div>
         )}
-        {current && (
-          <StarCard
-            key={current.id}
-            star={current}
-            similar={similar}
-            region={currentRegion >= 0 ? { name: regions[currentRegion].name, color: regionColor(currentRegion) } : undefined}
-            onClose={() => select(null)}
-            onPick={select}
-          />
-        )}
       </section>
+      {current && (
+        <StarCard
+          key={current.id}
+          star={current}
+          similar={similar}
+          region={
+            currentRegion >= 0
+              ? {
+                  name: regions[currentRegion].name,
+                  color: regionColor(currentRegion),
+                }
+              : undefined
+          }
+          onClose={() => select(null)}
+          onPick={select}
+        />
+      )}
     </div>
   );
 }
