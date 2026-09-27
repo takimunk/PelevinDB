@@ -442,7 +442,7 @@ export function BookPage({ id, page }: { id: string; page?: number }) {
   const arcShape = ARC_SHAPES.find((s) => s.id === arc.shape);
   const minutes = meta.chars / READING_CHARS_PER_MINUTE;
   const kindLabel = kind ? KIND_LABELS[kind]?.[lang] : null;
-  const source = canon ? [kindLabel, year, `${t.corpus}${rank ? ` ${t.rank(rank)}` : ""}`].filter(Boolean).join(" · ") : meta.source === "gutenberg" ? t.gutenberg : t.localFile(meta.format);
+  const source = canon ? kindLabel : meta.source === "gutenberg" ? t.gutenberg : t.localFile(meta.format);
   const picked = briefFor(content, lang);
   const brief = picked?.brief;
   const cost = spend(analyses, content.profile, brief);
@@ -533,12 +533,16 @@ export function BookPage({ id, page }: { id: string; page?: number }) {
       <header className="book-hero">
         <div className="eyebrow">
           {source}
-          {canon && <span className="corpus-badge">{t.readByJev}</span>}
         </div>
-        <h1 className="book-title">{name.main}</h1>
+        <div className="book-title-row">
+          <h1 className="book-title">
+            {name.main}
+            {year != null && <small className="book-year">{year}</small>}
+          </h1>
+          {actions}
+        </div>
         {name.sub && <p className="book-subtitle">{name.sub}</p>}
-        <p className="book-author">{meta.author}</p>
-        {actions}
+        {!canon && <p className="book-author">{meta.author}</p>}
         {hasData ? (
           <p className="book-character">
             <span>
@@ -585,6 +589,8 @@ export function BookPage({ id, page }: { id: string; page?: number }) {
             <dt>{t.reading}</dt>
             <dd className="num">{minutes < 90 ? t.min(Math.round(minutes)) : t.hours(Math.round(minutes / 60))}</dd>
           </div>
+          {!canon && (
+            <>
           <div>
             <dt>{t.jev}</dt>
             <dd className="data-badge num">
@@ -599,6 +605,8 @@ export function BookPage({ id, page }: { id: string; page?: number }) {
             <dt>{t.cost}</dt>
             <dd className="cost num">{usd(cost.totalUsd)}</dd>
           </div>
+            </>
+          )}
         </dl>
         {running && (
           <div className="progress-line" aria-live="polite">
@@ -659,7 +667,7 @@ export function BookPage({ id, page }: { id: string; page?: number }) {
               <span className="eyebrow">{t.skipIf}</span> {brief.skip}
             </p>
             <p className="brief-foot num">
-              {n2(brief.usage.prompt_tokens)} {t.tokensIn} · {n2(brief.usage.completion_tokens)} {t.tokensOut} · {usd(brief.usage.cost)}
+              {!canon && `${n2(brief.usage.prompt_tokens)} ${t.tokensIn} · ${n2(brief.usage.completion_tokens)} ${t.tokensOut} · ${usd(brief.usage.cost)}`}
               {editable && status?.brief && !picked!.fallback && (
                 <button className="link-u" onClick={() => void requestBrief(id, lang)} disabled={briefJob?.status === "running"}>
                   {briefJob?.status === "running" ? t.rewriting : t.rewrite}

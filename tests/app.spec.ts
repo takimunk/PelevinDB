@@ -552,7 +552,9 @@ test("canon books open read-only from the library, the map and search with brief
   const rows = page.locator(".canon-table a.bt-row");
   await expect(rows).toHaveCount(2);
   await expect(rows.first()).toContainText("Meditations");
-  await expect(rows.nth(1)).toContainText("50%");
+  await expect(rows.nth(1)).toContainText("Emma");
+  // The public shelf shows no model coverage, tokens or costs.
+  await expect(page.locator(".canon-table")).not.toContainText("%");
   await page.getByRole("button", { name: /^pages/ }).click();
   await page.getByRole("button", { name: /^pages/ }).click();
   await expect(page.getByRole("columnheader", { name: /pages/ })).toHaveAttribute("aria-sort", "descending");
@@ -561,12 +563,13 @@ test("canon books open read-only from the library, the map and search with brief
 
   await expect(page).toHaveURL(/#\/book\/pg-901$/);
   await expect(page.locator(".book-title")).toHaveText("Meditations");
-  await expect(page.locator(".corpus-badge")).toHaveText("read by Jev");
-  await expect(page.locator(".eyebrow").first()).toContainText("PelevinDB corpus #2");
-  await expect(page.locator(".data-badge")).toContainText("complete");
+  await expect(page.locator(".corpus-badge")).toHaveCount(0);
+  await expect(page.locator(".eyebrow").first()).not.toContainText("corpus");
+  // Corpus pages show no model coverage, tokens or costs.
+  await expect(page.locator(".data-badge")).toHaveCount(0);
   await expect(page.locator(".brief-logline")).toHaveText(briefAnswer.logline);
-  await expect(page.locator(".book-facts")).toContainText(tokens(canonBook.pages * 5000 + 1500));
-  await expect(page.locator(".cost")).toContainText("$");
+  await expect(page.locator(".cost")).toHaveCount(0);
+  await expect(page.locator(".book-hero")).not.toContainText("$");
   await expectBookLayout(page);
   await expect(page.locator(".cell-radar svg")).toBeVisible();
   await expect(page.locator(".hero-strip .pixels i")).toHaveCount(85);
@@ -639,9 +642,12 @@ test("corpus books send excerpts and open their full text one page at a time", a
   });
 
   await page.goto("/#/book/pv-generation-p");
-  await expect(page.locator(".book-title")).toHaveText("Homo Zapiens");
+  await expect(page.locator(".book-title")).toHaveText(/^Homo Zapiens/);
+  await expect(page.locator(".book-title .book-year")).toHaveText("1999");
   await expect(page.locator(".book-subtitle")).toHaveText("Generation «П»");
-  await expect(page.locator(".book-hero .eyebrow")).toContainText("Novel · 1999");
+  await expect(page.locator(".book-hero .eyebrow")).toHaveText("Novel");
+  await expect(page.locator(".book-author")).toHaveCount(0);
+  await expect(page.locator(".book-hero")).not.toContainText(/read by Jev|\$|tokens/);
   await expect(page.locator(".excerpt-note")).toHaveCount(0);
   await expect(page.locator(".book-facts")).toContainText(String(canonSegments.length));
   await expect(page.locator(".quotes li").first()).toBeVisible();
@@ -662,9 +668,10 @@ test("corpus books send excerpts and open their full text one page at a time", a
   await page.keyboard.press("Escape");
 
   await page.locator(".lang-switch button[lang=ru]").click();
-  await expect(page.locator(".book-title")).toHaveText("Generation «П»");
+  await expect(page.locator(".book-title")).toHaveText(/^Generation «П»/);
   await expect(page.locator(".book-subtitle")).toHaveText("Homo Zapiens");
-  await expect(page.locator(".book-hero .eyebrow")).toContainText("Роман · 1999");
+  await expect(page.locator(".book-hero .eyebrow")).toHaveText("Роман");
+  await expect(page.locator(".book-title .book-year")).toHaveText("1999");
   await expect(cell(page, "эмоции по ходу книги")).toBeVisible();
   await expect(section(page, "Коротко")).toBeVisible();
   await page.goto("/#/book/pv-generation-p?page=2");

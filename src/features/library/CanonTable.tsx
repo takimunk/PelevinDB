@@ -97,7 +97,7 @@ export function CanonTable({ rows, state, ranges, onSort }: { rows: CanonRow[]; 
   const t = useT(T);
   const lang = useLang();
   // Columns without a single value on the shelf (nothing analysed yet, or metadata the store lacks) are left out.
-  const cols = VIEWS[state.view].columns.map((id) => column(id)!).filter((c) => c.id === "title" || c.id === "jev" || c.id === "pages" || rows.some((r) => c.value(r) != null));
+  const cols = VIEWS[state.view].columns.map((id) => column(id)!).filter((c) => c.id === "title" || c.id === "pages" || rows.some((r) => c.value(r) != null));
   // Widths are written in ch but resolved in rem, so the smaller header text keeps the same column grid as the rows.
   // The title column stretches only when the view is narrow enough to fit; wide views keep it fixed and scroll.
   const width = (c: Column) => (c.id === "title" && cols.length > 6 ? "36ch" : c.width);

@@ -79,7 +79,6 @@ export const COLUMNS: Column[] = [
     display: (v, lang) => kindLabel(v as never, lang) ?? v,
   },
   { id: "pages", label: l("pages", "стр."), hint: l("Pages of up to 1,800 characters", "Страницы до 1800 знаков"), width: "6ch", tint: null, value: (r) => r.pages },
-  { id: "jev", label: l("read", "прочитано"), hint: l("Share of pages the model has read", "Доля страниц, прочитанных моделью"), width: "13ch", tint: null, value: (r) => (r.pages ? r.analysed / r.pages : 0) },
   tag("genre", l("genre", "жанр"), l("Most likely genre from the whole-book profile", "Наиболее вероятный жанр по профилю всей книги"), "18ch", (f) => (f.profile ? known(GENRES, argmax(f.profile.genre)) : null), tagOf("genre", GENRES)),
   tag("era", l("era", "эпоха"), l("When the story is set", "Когда происходит действие"), "14ch", era, tagOf("era", ERAS)),
   tag("arc", l("arc", "дуга"), l("Closest of Vonnegut’s six story shapes, from the light curve", "Ближайшая из шести сюжетных форм Воннегута по кривой света"), "16ch", (f) => known(ARC_LIST, f.arcShape) ?? "flat", tagOf("arc", ARC_LIST)),
@@ -144,7 +143,7 @@ export const column = (id: string) => BY_ID.get(id);
 
 const LEAD = ["title", "year"];
 export const VIEWS = {
-  overview: { label: l("overview", "обзор"), columns: [...LEAD, "kind", "pages", "jev", "genre", "arc", "light", "tension", "humor", "worldview"] },
+  overview: { label: l("overview", "обзор"), columns: [...LEAD, "kind", "pages", "genre", "arc", "light", "tension", "humor", "worldview"] },
   feel: { label: l("feel", "чувства"), columns: [...LEAD, "emotion", "mood", "light", "tension", "pace", "humor", "joy", "fear", "sadness", "anger"] },
   arc: { label: l("arc", "дуга"), columns: [...LEAD, "arc", "opening", "ending", "turn", "volatility", "tension", "worldview"] },
   craft: { label: l("craft", "письмо"), columns: [...LEAD, "pages", "dialogue", "introspection", "description", "digression", "interiority", "imagery", "ideas", "complexity"] },

@@ -1588,3 +1588,47 @@
     grid-template-columns: repeat(3, auto);
   }
 }
+
+/* Year beside the title, as the map labels show it: small, mono, muted, set slightly below the baseline. */
+.book-title .book-year {
+  position: relative;
+  top: 0.2em;
+  margin-left: 0.35em;
+  font: 400 max(11px, 0.22em) / 1 var(--mono);
+  letter-spacing: 0.02em;
+  color: var(--muted);
+  vertical-align: baseline;
+  white-space: nowrap;
+}
+
+/* Title row: the title on the left, small actions on the right. */
+.book-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px 24px;
+  min-width: 0;
+}
+.book-title-row .book-title {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.book-title-row .title-actions {
+  flex: none;
+  margin-top: 0.9em;
+  gap: 4px;
+}
+.book-title-row .title-actions .btn.small {
+  height: 24px;
+  min-height: 0;
+  padding: 0 8px;
+  font-size: 11px;
+}
+@media (max-width: 560px) {
+  .book-title-row {
+    flex-direction: column;
+  }
+  .book-title-row .title-actions {
+    margin-top: 0;
+  }
+}

@@ -112,7 +112,10 @@ export type BookProgress = StoredBook & { analysed: number; profiled: boolean; b
 
 const BOOK_COLUMNS = "id, source, source_ref, title, author, rank, chars, page_chars, pages, year, kind, title_en";
 
-const now = () => new Date().toISOString();
+// Strictly increasing within a process: cache stamps use MAX(created_at), so two writes in the same millisecond
+// (a replaced answer keeps the row count) must still produce a new stamp.
+let last = 0;
+const now = () => new Date((last = Math.max(Date.now(), last + 1))).toISOString();
 
 function briefState(raw: unknown) {
   const have = new Set(typeof raw === "string" ? raw.split(",") : []);
