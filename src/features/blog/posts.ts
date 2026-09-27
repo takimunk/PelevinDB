@@ -13,6 +13,21 @@ export interface Post {
 
 export const POSTS: Post[] = [
   {
+    slug: "image-to-idea",
+    date: "2026-09-28",
+    title: {
+      en: "From image to idea: what 8,186 pages say about how Pelevin changed",
+      ru: "От образа к идее: что 8186 страниц говорят о том, как менялся Пелевин",
+    },
+    dek: {
+      en: "A model answered 36 questions about every page of Pelevin’s fiction and then reread it sentence by sentence. Across thirty-seven years the pictures thin out, the ideas take over and the narrator steps forward — while the jokes stay exactly where they were. Tested, with figures you can play with.",
+      ru: "Модель ответила на 36 вопросов о каждой странице прозы Пелевина, а потом перечитала её по фразам. За тридцать семь лет картинки редеют, идеи берут верх, рассказчик выходит вперёд — а шутки остаются ровно на месте. С проверкой статистикой и живыми графиками.",
+    },
+    minutes: { en: 16, ru: 16 },
+    tags: { en: ["Jev", "style over time", "statistics"], ru: ["Jev", "стиль во времени", "статистика"] },
+    Component: lazy(() => import("./jev/JevPost.tsx")),
+  },
+  {
     slug: "eda",
     date: "2026-09-27",
     title: {

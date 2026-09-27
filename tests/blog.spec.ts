@@ -78,3 +78,22 @@ test("about page is a short note with the project links", async ({ page }) => {
   await expect(about.getByRole("heading", { name: "Авторские права" })).toBeVisible();
   expect(errors).toEqual([]);
 });
+
+test("the image-to-idea post draws its six figures, links figures together and quotes into the reader", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await page.goto("/#/blog");
+  await page.getByRole("link", { name: /From image to idea/ }).click();
+  await expect(page).toHaveURL(/#\/blog\/image-to-idea$/);
+  await expect(page.locator("figure.jv-fig")).toHaveCount(6);
+  // A row of Fig. 1 becomes line A of Fig. 2.
+  await page.locator("figure.jv-fig").first().scrollIntoViewIfNeeded();
+  await page.locator(".jv-row", { hasText: /^faith$/ }).click();
+  await expect(page.locator("#jv-fig-2 select").first()).toHaveValue("theme:faith");
+  // Every quote opens the reader on its own sentence.
+  await expect(page.locator(".jv-line").first()).toHaveAttribute("href", /#\/book\/pv-[\w-]+\?page=\d+&s=\d+$/);
+  await page.getByRole("button", { name: "Russian" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: /От образа к идее/ })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "Рассказчик выходит вперёд" })).toBeVisible();
+  expect(errors).toEqual([]);
+});
