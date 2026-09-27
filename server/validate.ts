@@ -1,5 +1,5 @@
 import { isCorpusId } from "../shared/corpus.ts";
-import type { BriefDossier } from "../shared/types.ts";
+import { BRIEF_LANGS, type BriefDossier, type BriefLang } from "../shared/types.ts";
 
 export const MAX_PAGE = 1800;
 export const MAX_EXCERPTS = 8;
@@ -22,10 +22,23 @@ export function excerptsInput(body: unknown): Parsed<string[]> {
 }
 
 export function corpusId(value: unknown): Parsed<string> {
-  return typeof value === "string" && isCorpusId(value) ? { value } : { error: "Expected a corpus book id like pg-1342." };
+  return typeof value === "string" && isCorpusId(value) ? { value } : { error: "Expected a corpus book id like pv-generation-p or pg-1342." };
+}
+
+/** A 1-based page number from the URL. */
+export function pageNumber(value: unknown): Parsed<number> {
+  return typeof value === "string" && /^[1-9]\d{0,5}$/.test(value) ? { value: Number(value) } : { error: "Expected a page number from 1." };
 }
 
 export const MAX_DOSSIER = 24_000;
+
+/** A dossier plus the brief language ("en" when absent). */
+export function briefInput(body: unknown): Parsed<{ dossier: BriefDossier; lang: BriefLang }> {
+  const lang = (body as { lang?: unknown } | null)?.lang ?? "en";
+  if (typeof lang !== "string" || !(BRIEF_LANGS as readonly string[]).includes(lang)) return { error: `Expected lang to be one of ${BRIEF_LANGS.join(", ")}.` };
+  const dossier = dossierInput(body);
+  return "error" in dossier ? dossier : { value: { dossier: dossier.value, lang: lang as BriefLang } };
+}
 
 export function dossierInput(body: unknown): Parsed<BriefDossier> {
   const dossier = (body as { dossier?: unknown } | null)?.dossier as Partial<BriefDossier> | undefined;

@@ -1,65 +1,128 @@
 import { useMemo, useState } from "react";
-import { EMOTIONS, MODES, MOODS, TEXTURES, THEMES } from "../../../shared/catalog.ts";
+import { EMOTIONS, labelOf, MODES, MOODS, TEXTURES, THEMES } from "../../../shared/catalog.ts";
 import type { Analyses } from "../../domain/analysis.ts";
 import { explorePages, THEME_THRESHOLD, type PageFilter, type PageSort } from "../../domain/explore.ts";
 import { firstSentence, type Segment } from "../../domain/text.ts";
-import { bar } from "../../ui/ascii.ts";
-import { fmt, plural } from "../../ui/format.ts";
+import { plural, useLang, useT, type Lang } from "../../i18n/index.ts";
+import { Meter } from "../../ui/term.tsx";
+import { num, pageRef } from "./i18n.ts";
 
 const PAGE_SIZE = 12;
 
 type Option = { value: string; label: string; color?: string };
+type Group = { group: string; options: Option[] };
 const NARRATION = MODES.filter((m) => m.id !== "paratext");
 
-const FILTERS: { group: string; options: Option[] }[] = [
-  { group: "everything", options: [{ value: "all", label: "all pages" }] },
-  { group: "leading emotion", options: EMOTIONS.map((e) => ({ value: `emotions:${e.id}`, label: `${e.label.toLowerCase()} pages`, color: e.color })) },
-  { group: "mood", options: MOODS.map((m) => ({ value: `mood:${m.id}`, label: `${m.label.toLowerCase()} mood`, color: m.color })) },
-  { group: "narration", options: NARRATION.map((m) => ({ value: `mode:${m.id}`, label: `mostly ${m.label.toLowerCase()}`, color: m.color })) },
-  { group: `theme ≥ ${THEME_THRESHOLD * 100}% likely`, options: THEMES.map((t) => ({ value: `themes:${t.id}`, label: `about ${t.label.toLowerCase()}` })) },
-];
-
-const SORTS: { group: string; options: Option[] }[] = [
-  {
-    group: "order",
-    options: [
-      { value: "page", label: "reading order" },
-      { value: "intensity", label: "intensity" },
-    ],
+const T = {
+  en: {
+    show: "show",
+    sortBy: "sort by",
+    pages: (n: number) => `${n} ${plural(n, ["page", "pages"])}`,
+    none: "No analysed page matches this filter.",
+    score: "score",
+    showing: (a: number, b: string) => `showing ${a} of ${b}`,
+    more: (n: number) => `show ${n} more`,
+    g: {
+      everything: "everything",
+      emotion: "leading emotion",
+      mood: "mood",
+      narration: "narration",
+      theme: `theme ≥ ${THEME_THRESHOLD * 100}% likely`,
+      order: "order",
+      emotionSort: "emotion",
+      texture: "texture",
+      themeSort: "theme",
+    },
+    all: "all pages",
+    emotionPages: (l: string) => `${l} pages`,
+    moodPages: (l: string) => `${l} mood`,
+    modePages: (l: string) => `mostly ${l}`,
+    themePages: (l: string) => `about ${l}`,
+    reading: "reading order",
+    intensity: "intensity",
   },
-  { group: "emotion", options: EMOTIONS.map((e) => ({ value: `emotions:${e.id}`, label: e.label.toLowerCase(), color: e.color })) },
-  { group: "texture", options: TEXTURES.map((t) => ({ value: `texture:${t.id}`, label: t.id === "valence" ? "light" : t.label.toLowerCase() })) },
-  { group: "mood", options: MOODS.map((m) => ({ value: `mood:${m.id}`, label: `${m.label.toLowerCase()} mood`, color: m.color })) },
-  { group: "narration", options: NARRATION.map((m) => ({ value: `mode:${m.id}`, label: m.label.toLowerCase(), color: m.color })) },
-  { group: "theme", options: THEMES.map((t) => ({ value: `themes:${t.id}`, label: t.label.toLowerCase() })) },
-];
+  ru: {
+    show: "показать",
+    sortBy: "сортировать",
+    pages: (n: number) => `${n} ${plural(n, ["страница", "страницы", "страниц"])}`,
+    none: "Ни одна прочитанная страница не подходит под фильтр.",
+    score: "оценка",
+    showing: (a: number, b: string) => `показано ${a} из ${b}`,
+    more: (n: number) => `показать ещё ${n}`,
+    g: {
+      everything: "всё",
+      emotion: "ведущая эмоция",
+      mood: "настроение",
+      narration: "повествование",
+      theme: `тема с вероятностью ≥ ${THEME_THRESHOLD * 100} %`,
+      order: "порядок",
+      emotionSort: "эмоция",
+      texture: "фактура",
+      themeSort: "тема",
+    },
+    all: "все страницы",
+    emotionPages: (l: string) => `эмоция: ${l}`,
+    moodPages: (l: string) => `настроение: ${l}`,
+    modePages: (l: string) => `в основном ${l}`,
+    themePages: (l: string) => `тема: ${l}`,
+    reading: "по порядку чтения",
+    intensity: "сила эмоций",
+  },
+};
 
-const find = (groups: typeof SORTS, value: string) => groups.flatMap((g) => g.options).find((o) => o.value === value);
+function groups(lang: Lang) {
+  const t = T[lang];
+  const l = (x: { label: string; ru?: string }) => labelOf(x, lang).toLowerCase();
+  const filters: Group[] = [
+    { group: t.g.everything, options: [{ value: "all", label: t.all }] },
+    { group: t.g.emotion, options: EMOTIONS.map((e) => ({ value: `emotions:${e.id}`, label: t.emotionPages(l(e)), color: e.color })) },
+    { group: t.g.mood, options: MOODS.map((m) => ({ value: `mood:${m.id}`, label: t.moodPages(l(m)), color: m.color })) },
+    { group: t.g.narration, options: NARRATION.map((m) => ({ value: `mode:${m.id}`, label: t.modePages(l(m)), color: m.color })) },
+    { group: t.g.theme, options: THEMES.map((th) => ({ value: `themes:${th.id}`, label: t.themePages(l(th)) })) },
+  ];
+  const sorts: Group[] = [
+    {
+      group: t.g.order,
+      options: [
+        { value: "page", label: t.reading },
+        { value: "intensity", label: t.intensity },
+      ],
+    },
+    { group: t.g.emotionSort, options: EMOTIONS.map((e) => ({ value: `emotions:${e.id}`, label: l(e), color: e.color })) },
+    { group: t.g.texture, options: TEXTURES.map((tx) => ({ value: `texture:${tx.id}`, label: l(tx) })) },
+    { group: t.g.mood, options: MOODS.map((m) => ({ value: `mood:${m.id}`, label: t.moodPages(l(m)), color: m.color })) },
+    { group: t.g.narration, options: NARRATION.map((m) => ({ value: `mode:${m.id}`, label: l(m), color: m.color })) },
+    { group: t.g.themeSort, options: THEMES.map((th) => ({ value: `themes:${th.id}`, label: l(th) })) },
+  ];
+  return { filters, sorts };
+}
+
+const find = (list: Group[], value: string) => list.flatMap((g) => g.options).find((o) => o.value === value);
 
 /** Every page, filtered by a Jev answer and ranked by any score. Quotes are cut only for the rows on screen. */
 export function QuoteExplorer({ segments, analyses, onPick }: { segments: Segment[]; analyses: Analyses; onPick: (index: number) => void }) {
+  const t = useT(T);
+  const lang = useLang();
+  const { filters, sorts } = useMemo(() => groups(lang), [lang]);
   const [filter, setFilter] = useState<PageFilter>("all");
   const [sort, setSort] = useState<PageSort>("intensity");
   const [limit, setLimit] = useState(PAGE_SIZE);
   const hits = useMemo(() => explorePages(analyses, filter, sort), [analyses, filter, sort]);
-  const counts = useMemo(
-    () => new Map(FILTERS.flatMap((g) => g.options).map((o) => [o.value, explorePages(analyses, o.value as PageFilter, "page").length])),
-    [analyses],
-  );
+  const counts = useMemo(() => new Map(filters.flatMap((g) => g.options).map((o) => [o.value, explorePages(analyses, o.value as PageFilter, "page").length])), [analyses, filters]);
   const shown = hits.slice(0, limit);
-  const metric = find(SORTS, sort === "page" ? "intensity" : sort)!;
-  const color = metric.color ?? find(FILTERS, filter)?.color ?? "var(--accent)";
-  const select = (label: string, value: string, groups: typeof SORTS, onChange: (v: string) => void, count?: (v: string) => number | undefined) => (
-    <label>
-      <span className="dim">{label}</span>
+  const metric = find(sorts, sort === "page" ? "intensity" : sort)!;
+  const color = metric.color ?? find(filters, filter)?.color;
+  const select = (label: string, value: string, list: Group[], onChange: (v: string) => void, count?: (v: string) => number | undefined) => (
+    <label className="field">
+      <span className="eyebrow">{label}</span>
       <select value={value} onChange={(e) => onChange(e.target.value)} aria-label={label}>
-        {groups.map((g) => (
+        {list.map((g) => (
           <optgroup key={g.group} label={g.group}>
             {g.options.map((o) => {
               const n = count?.(o.value);
               return (
                 <option key={o.value} value={o.value}>
-                  {n == null ? o.label : `${o.label} · ${fmt(n)}`}
+                  {n == null ? o.label : `${o.label} · ${num(lang, n)}`}
                 </option>
               );
             })}
@@ -72,9 +135,9 @@ export function QuoteExplorer({ segments, analyses, onPick }: { segments: Segmen
     <div className="explorer">
       <div className="explorer-controls">
         {select(
-          "show",
+          t.show,
           filter,
-          FILTERS,
+          filters,
           (v) => {
             setFilter(v as PageFilter);
             setSort(v === "all" ? "intensity" : (v as PageSort));
@@ -82,12 +145,12 @@ export function QuoteExplorer({ segments, analyses, onPick }: { segments: Segmen
           },
           (v) => counts.get(v),
         )}
-        {select("sort by", sort, SORTS, (v) => {
+        {select(t.sortBy, sort, sorts, (v) => {
           setSort(v as PageSort);
           setLimit(PAGE_SIZE);
         })}
-        <span className="dim" aria-live="polite">
-          {fmt(hits.length)} {plural(hits.length, "page")}
+        <span className="explorer-count num" aria-live="polite">
+          {t.pages(hits.length)}
         </span>
       </div>
       {shown.length ? (
@@ -95,9 +158,9 @@ export function QuoteExplorer({ segments, analyses, onPick }: { segments: Segmen
           {shown.map((h) => (
             <li key={h.index}>
               <button onClick={() => onPick(h.index)}>
-                <span className="hit-page">p.{h.index + 1}</span>
+                <span className="hit-page num">{pageRef(lang, h.index + 1)}</span>
                 <span className="hit-score">
-                  <span style={{ color }}>{bar(h.value, 6, "█", "·")}</span> {h.value.toFixed(2)}
+                  <Meter value={h.value} color={color} className="thin" /> <span className="num">{num(lang, h.value, 2)}</span>
                 </span>
                 <q>{firstSentence(segments[h.index].text, 180)}</q>
               </button>
@@ -105,15 +168,15 @@ export function QuoteExplorer({ segments, analyses, onPick }: { segments: Segmen
           ))}
         </ol>
       ) : (
-        <p className="placeholder">no analysed page matches this filter.</p>
+        <p className="placeholder">{t.none}</p>
       )}
       <p className="explorer-foot">
         <span className="dim">
-          score = {metric.label} · showing {shown.length} of {fmt(hits.length)}
+          {t.score} = {metric.label} · {t.showing(shown.length, num(lang, hits.length))}
         </span>
         {hits.length > limit && (
-          <button className="link" onClick={() => setLimit(limit + PAGE_SIZE)}>
-            show {Math.min(PAGE_SIZE, hits.length - limit)} more
+          <button className="link-u" onClick={() => setLimit(limit + PAGE_SIZE)}>
+            {t.more(Math.min(PAGE_SIZE, hits.length - limit))}
           </button>
         )}
       </p>

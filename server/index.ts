@@ -4,10 +4,11 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { DEFAULT_BRIEF_MODEL, writeBrief } from "./brief.ts";
 import { AnalysisError, analyzeProfile, analyzeSegment } from "./jev.ts";
-import { corpusETag, corpusList, corpusStore, packCorpusBook, type Encoding } from "./corpus.ts";
-import { fetchCatalogText, searchCatalog } from "./gutenberg.ts";
-import { corpusStats } from "./stats.ts";
-import { corpusId, dossierInput, excerptsInput, pageInput, type Parsed } from "./validate.ts";
+import { corpusETag, corpusList, corpusStore, fullTextEnabled, packCorpusBook, pageResponse, rateLimiter, type Encoding } from "./corpus.ts";
+import { localMode } from "./mode.ts";
+import { corpusStats, topPages, topPagesStamp } from "./stats.ts";
+import { createHash as hashOf } from "node:crypto";
+import { briefInput, corpusId, excerptsInput, pageInput, type Parsed } from "./validate.ts";
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const port = Number(process.env.PORT || 5173);
@@ -35,9 +36,15 @@ app.get("/api/status", (_req, res) => {
   res.set("Cache-Control", "no-store");
   try {
     const budgets = { typesafe: budgetStore().summary("typesafe"), openrouter: budgetStore().summary("openrouter") };
-    res.json({ configured: !!process.env.TYPESAFE_API_KEY && budgets.typesafe.remaining > 0, brief: !!process.env.OPENROUTER_API_KEY && budgets.openrouter.remaining > 0, budgets });
+    const local = localMode();
+    res.json({
+      localMode: local,
+      configured: local && !!process.env.TYPESAFE_API_KEY && budgets.typesafe.remaining > 0,
+      brief: local && !!process.env.OPENROUTER_API_KEY && budgets.openrouter.remaining > 0,
+      budgets,
+    });
   } catch {
-    res.status(503).json({ configured: false, brief: false, error: "Spending protection is unavailable. Analysis is paused." });
+    res.status(503).json({ localMode: localMode(), configured: false, brief: false, error: "Spending protection is unavailable. Analysis is paused." });
   }
 });
 
@@ -50,6 +57,11 @@ function guardedRoute<T>(
   run: (input: T, key: string, signal: AbortSignal) => Promise<unknown>,
 ) {
   return async (req: Request, res: Response) => {
+    // Paid routes exist only for your own uploads, which only local mode offers.
+    if (!localMode()) {
+      res.status(404).json({ error: "Not available on the public site." });
+      return;
+    }
     const origin = req.headers.origin;
     if (origin && origin !== (process.env.APP_ORIGIN || `${req.protocol}://${req.headers.host}`)) {
       res.status(403).json({ error: "Request origin not allowed." });
@@ -110,46 +122,10 @@ app.post(
 
 app.post(
   "/api/brief",
-  guardedRoute("OPENROUTER_API_KEY", dossierInput, (dossier, key, signal) =>
-    writeBrief(dossier, key, process.env.OPENROUTER_MODEL || DEFAULT_BRIEF_MODEL, signal),
+  guardedRoute("OPENROUTER_API_KEY", briefInput, ({ dossier, lang }, key, signal) =>
+    writeBrief(dossier, key, process.env.OPENROUTER_MODEL || DEFAULT_BRIEF_MODEL, signal, { lang }),
   ),
 );
-
-function abortOnClose(res: Response) {
-  const controller = new AbortController();
-  res.on("close", () => {
-    if (!res.writableEnded) controller.abort();
-  });
-  return controller.signal;
-}
-
-app.get("/api/catalog/search", async (req, res) => {
-  const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
-  if (q.length < 2 || q.length > 120) {
-    res.status(400).json({ error: "Query must be 2 to 120 chars." });
-    return;
-  }
-  try {
-    res.json({ hits: await searchCatalog(q, abortOnClose(res)) });
-  } catch {
-    if (!res.destroyed)
-      res.status(502).json({ error: "Project Gutenberg catalog is unavailable." });
-  }
-});
-
-app.get("/api/catalog/:id", async (req, res) => {
-  try {
-    res.json(await fetchCatalogText(req.params.id, abortOnClose(res)));
-  } catch (error) {
-    if (!res.destroyed)
-      res.status(502).json({
-        error:
-          error instanceof Error && /^(Book is too large|Invalid book id)/.test(error.message)
-            ? error.message
-            : "Could not download the book from Project Gutenberg.",
-      });
-  }
-});
 
 app.get("/api/corpus", (_req, res) => {
   const store = corpusStore();
@@ -165,6 +141,41 @@ app.get("/api/corpus-stats", (_req, res) => {
   }
   res.set("Cache-Control", "no-cache");
   res.json(corpusStats(store));
+});
+
+// The home page showcase: the strongest pages per emotion, one short quote each. Registered before /api/corpus/:id.
+app.get("/api/corpus/top-pages", (req, res) => {
+  const store = corpusStore();
+  if (!store) {
+    res.status(404).json({ error: "No corpus yet: run npm run corpus." });
+    return;
+  }
+  const per = Math.max(1, Math.min(10, Number(req.query.per) || 3));
+  res.set({ "Cache-Control": "no-cache", ETag: `W/"${hashOf("sha1").update(topPagesStamp(store, per)).digest("base64url")}"` });
+  if (req.fresh) {
+    res.status(304).end();
+    return;
+  }
+  res.json(topPages(store, per));
+});
+
+// One page of full text at a time: the book payload carries only excerpts, and this route is rate limited
+// per client so it serves reading, not bulk download.
+const pageLimit = rateLimiter(Number(process.env.CORPUS_PAGES_PER_MINUTE) || 60);
+app.get("/api/corpus/:id/page/:n", (req, res) => {
+  const out = pageResponse(corpusStore(), req.params.id, req.params.n, () => pageLimit(req.ip || "unknown"));
+  res.set("Cache-Control", "no-cache");
+  if (out.status === 429) res.set("Retry-After", String(out.retryAfter));
+  if (out.status !== 200) {
+    res.status(out.status).json(out.body);
+    return;
+  }
+  res.set("ETag", out.etag);
+  if (req.fresh) {
+    res.status(304).end();
+    return;
+  }
+  res.json(out.body);
 });
 
 app.get("/api/corpus/:id", async (req, res) => {
@@ -198,6 +209,17 @@ app.get("/api/corpus/:id", async (req, res) => {
   }
 });
 
+// The map atlas can live next to the store (e.g. on the persistent volume the corpus script writes to):
+// XBOOK_ATLAS serves that file instead of the one baked into public/.
+const atlasFile = process.env.XBOOK_ATLAS ? path.resolve(process.env.XBOOK_ATLAS) : null;
+if (atlasFile)
+  app.get("/atlas.json", (_req, res) => {
+    res.set("Cache-Control", "no-cache");
+    res.sendFile(atlasFile, (error) => {
+      if (error && !res.headersSent) res.status(404).json({ books: [] });
+    });
+  });
+
 app.use("/api", (_req, res) => {
   res.status(404).json({ error: "Unknown API endpoint." });
 });
@@ -222,4 +244,4 @@ if (process.env.NODE_ENV === "production") {
   app.use(vite.middlewares);
 }
 
-app.listen(port, host, () => console.log(`xbook running at http://${host}:${port}`));
+app.listen(port, host, () => console.log(`xbook running at http://${host}:${port} · corpus text: ${fullTextEnabled() ? "full (CORPUS_FULL_TEXT=1)" : "excerpts only"}`));

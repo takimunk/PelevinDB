@@ -2,19 +2,21 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { EMOTIONS, GENRES, MODES, MOODS, PROFILE_SCALES, RUBRIC_VERSION, SEGMENT_QUESTION_COUNT, TEXTURES, THEMES } from "../shared/catalog.ts";
 import { analyzeProfile, analyzeSegment, parseSegment, profileQuestions, segmentQuestions } from "../server/jev.ts";
-import { cleanGutenberg, parseOpds } from "../server/gutenberg.ts";
 import { parseBrief, writeBrief } from "../server/brief.ts";
 import { mkdtempSync, rmSync } from "node:fs";
+import { spawn } from "node:child_process";
+import { localMode } from "../server/mode.ts";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { gunzipSync } from "node:zlib";
-import { corpusBook, corpusETag, corpusList, packCorpusBook } from "../server/corpus.ts";
-import { openStore } from "../server/store.ts";
-import { corpusStats } from "../server/stats.ts";
+import { corpusBook, corpusETag, corpusList, EXCERPT_CHARS, fullTextEnabled, packCorpusBook, pageExcerpt, pageResponse, rateLimiter } from "../server/corpus.ts";
+import { MIGRATIONS, openStore } from "../server/store.ts";
+import { DatabaseSync } from "node:sqlite";
+import { corpusStats, pageQuote, topPages } from "../server/stats.ts";
 import { segmentText } from "../src/domain/text.ts";
 import { SAMPLE_BOOK, demoAnalyses } from "./fixtures/synthetic.ts";
 import type { SegmentAnalysis } from "../shared/types.ts";
-import { corpusId, dossierInput, excerptsInput, MAX_DOSSIER, MAX_PAGE, pageInput } from "../server/validate.ts";
+import { briefInput, corpusId, dossierInput, excerptsInput, MAX_DOSSIER, MAX_PAGE, pageInput } from "../server/validate.ts";
 
 function answers(questions: Record<string, { type: string; criteria?: unknown }>) {
   return Object.fromEntries(
@@ -88,36 +90,65 @@ test("handles authentication failure without exposing upstream content", async (
   );
 });
 
-test("parses Gutenberg OPDS entries and skips navigation", () => {
-  const xml = `<feed><entry><id>https://www.gutenberg.org/ebooks/authors/search.opds/?query=x</id><title>Authors</title></entry>
-    <entry><id>https://www.gutenberg.org/ebooks/2600.opds</id><title>War and Peace</title><content type="text">graf Leo Tolstoy</content></entry>
-    <entry><id>https://www.gutenberg.org/ebooks/19926.opds</id><title>Standard &amp; Selections
-</title><content type="text">1839 downloads</content></entry></feed>`;
-  assert.deepEqual(parseOpds(xml), [
-    { id: "2600", title: "War and Peace", author: "graf Leo Tolstoy", source: "gutenberg" },
-    { id: "19926", title: "Standard & Selections", author: "", source: "gutenberg" },
-  ]);
+test("local mode is on in development and with LOCAL_MODE=1, off in production and with LOCAL_MODE=0", () => {
+  assert.equal(localMode({}), true);
+  assert.equal(localMode({ NODE_ENV: "development" }), true);
+  assert.equal(localMode({ LOCAL_MODE: "0" }), false);
+  assert.equal(localMode({ NODE_ENV: "production" }), false);
+  assert.equal(localMode({ NODE_ENV: "production", LOCAL_MODE: "1" }), true);
+  assert.equal(localMode({ NODE_ENV: "production", LOCAL_MODE: "0" }), false);
 });
 
-test("strips Gutenberg boilerplate and re-joins hard-wrapped lines", () => {
-  const raw = [
-    "The Project Gutenberg eBook of Test",
-    "Title: Test Book",
-    "Author: Jane Writer",
-    "",
-    "*** START OF THE PROJECT GUTENBERG EBOOK TEST ***",
-    "",
-    "It was a dark",
-    "and stormy night.",
-    "",
-    "Second paragraph.",
-    "*** END OF THE PROJECT GUTENBERG EBOOK TEST ***",
-    "Licence text",
-  ].join("\r\n");
-  const book = cleanGutenberg(raw);
-  assert.equal(book.title, "Test Book");
-  assert.equal(book.author, "Jane Writer");
-  assert.equal(book.text, "It was a dark and stormy night.\n\nSecond paragraph.");
+/** Starts the real server (no Vite: LOCAL_MODE decides, NODE_ENV=production) and returns its base URL. */
+async function startServer(env: Record<string, string>) {
+  const dir = mkdtempSync(join(tmpdir(), "xbook-mode-"));
+  const port = String(20000 + Math.floor(Math.random() * 20000));
+  const child = spawn(process.execPath, ["server/index.ts"], {
+    env: { ...process.env, NODE_ENV: "production", PORT: port, HOST: "127.0.0.1", XBOOK_DB: join(dir, "none.db"), XBOOK_BUDGET_DB: join(dir, "spend.db"), TYPESAFE_API_KEY: "", OPENROUTER_API_KEY: "", ...env },
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  await new Promise<void>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("server did not start")), 15_000);
+    child.stdout!.on("data", (d) => /running at/.test(String(d)) && (clearTimeout(timer), resolve()));
+    child.on("exit", (code) => reject(new Error(`server exited ${code}`)));
+  });
+  return {
+    url: `http://127.0.0.1:${port}`,
+    stop: () => {
+      child.kill();
+      rmSync(dir, { recursive: true, force: true });
+    },
+  };
+}
+
+test("public mode rejects the upload analysis routes and reports localMode: false", async () => {
+  const server = await startServer({ LOCAL_MODE: "0" });
+  try {
+    const status = await (await fetch(`${server.url}/api/status`)).json();
+    assert.equal(status.localMode, false);
+    assert.equal(status.configured, false);
+    for (const route of ["/api/analyze", "/api/profile", "/api/brief"]) {
+      const res = await fetch(server.url + route, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: "x" }) });
+      assert.equal(res.status, 404, route);
+    }
+    assert.equal((await fetch(`${server.url}/api/catalog/search?q=walden`)).status, 404);
+  } finally {
+    server.stop();
+  }
+});
+
+test("local mode serves the upload analysis routes and reports localMode: true", async () => {
+  const server = await startServer({ LOCAL_MODE: "1" });
+  try {
+    const status = await (await fetch(`${server.url}/api/status`)).json();
+    assert.equal(status.localMode, true);
+    const res = await fetch(`${server.url}/api/analyze`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: "x" }) });
+    // Reaches the route itself: without a key it asks for one instead of hiding.
+    assert.equal(res.status, 503);
+    assert.match((await res.json()).error, /TYPESAFE_API_KEY/);
+  } finally {
+    server.stop();
+  }
 });
 
 test("request validation passes valid text through and never echoes it as an error", () => {
@@ -139,12 +170,72 @@ test("brief asks OpenRouter for a strict JSON schema and reports tokens and cost
     sent = { url, body: JSON.parse(String(init.body)), auth: new Headers(init.headers).get("authorization")! };
     return new Response(JSON.stringify({ model: "google/test", choices: [{ message: { content: JSON.stringify(brief) } }], usage: { prompt_tokens: 900, completion_tokens: 200, cost: 0.0021 } }));
   }) as typeof fetch;
-  const result = await writeBrief({ title: "T", author: "A" } as never, "or-key", "google/test", new AbortController().signal, fetcher);
+  const result = await writeBrief({ title: "T", author: "A" } as never, "or-key", "google/test", new AbortController().signal, { fetcher });
   assert.equal(sent!.url, "https://openrouter.ai/api/v1/chat/completions");
   assert.equal(sent!.auth, "Bearer or-key");
   assert.equal((sent!.body.response_format as { type: string }).type, "json_schema");
   assert.deepEqual(result.why, brief.why);
   assert.deepEqual(result.usage, { prompt_tokens: 900, completion_tokens: 200, cost: 0.0021 });
+  assert.equal(result.lang, "en");
+  const system = () => ((sent!.body.messages as { role: string; content: string }[])[0].content);
+  assert.match(system(), /concrete English/);
+
+  const ru = await writeBrief({ title: "T", author: "A" } as never, "or-key", "google/test", new AbortController().signal, { fetcher, lang: "ru" });
+  assert.equal(ru.lang, "ru");
+  assert.match(system(), /literary Russian/);
+  assert.doesNotMatch(system(), /concrete English/);
+  assert.deepEqual((sent!.body.response_format as { json_schema: { schema: { required: string[] } } }).json_schema.schema.required, ["logline", "what", "why", "who", "skip"]);
+});
+
+test("brief input accepts en or ru and defaults to en", () => {
+  const dossier = { title: "T", author: "A" };
+  assert.deepEqual(briefInput({ dossier }), { value: { dossier, lang: "en" } });
+  assert.deepEqual(briefInput({ dossier, lang: "ru" }), { value: { dossier, lang: "ru" } });
+  assert.ok("error" in briefInput({ dossier, lang: "de" }));
+  assert.ok("error" in briefInput({ lang: "ru" }));
+});
+
+test("store keeps the latest brief per language and reports which languages exist", () => {
+  const store = openStore(":memory:");
+  store.addBook({ id: "pv-t", source: "pelevin", sourceRef: "h", title: "t", author: "A", rank: 1, chars: 4, pageChars: 10, pages: 1, year: 2009, kind: "novel", titleEn: "t" }, "text", [{ start: 0, end: 4 }]);
+  const make = (lang: "en" | "ru" | undefined, logline: string, createdAt: number) => ({ ...brief, logline, model: "m", usage: { prompt_tokens: 1, completion_tokens: 1, cost: 0.001 }, createdAt, ...(lang && { lang }) });
+  store.putBrief("pv-t", make(undefined, "old en", 1_000));
+  assert.deepEqual(store.progress("r").map((b) => [b.briefed, b.briefedLangs]), [[false, ["en"]]]);
+  store.putBrief("pv-t", make("ru", "по-русски", 2_000));
+  store.putBrief("pv-t", make("en", "new en", 3_000));
+  assert.equal(store.brief("pv-t")!.logline, "new en");
+  assert.equal(store.brief("pv-t", "ru")!.logline, "по-русски");
+  assert.equal(store.brief("pv-t", "ru")!.lang, "ru");
+  assert.deepEqual(Object.keys(store.briefs("pv-t")).sort(), ["en", "ru"]);
+  assert.deepEqual(store.progress("r").map((b) => [b.briefed, b.briefedLangs]), [[true, ["en", "ru"]]]);
+  const book = corpusBook(store, "pv-t", true)!;
+  assert.equal(book.briefs.ru!.logline, "по-русски");
+  assert.equal(book.brief!.logline, "new en");
+  store.close();
+});
+
+test("store migration v2 → v3 keeps existing briefs as English", () => {
+  const dir = mkdtempSync(join(tmpdir(), "xbook-"));
+  const file = join(dir, "v2.db");
+  try {
+    const db = new DatabaseSync(file);
+    db.exec(MIGRATIONS[0]);
+    db.exec(MIGRATIONS[1]);
+    db.exec("PRAGMA user_version = 2");
+    db.exec(`INSERT INTO books (id, source, source_ref, title, author, rank, chars, page_chars, pages, text, created_at) VALUES ('pv-x', 'pelevin', 'h', 'X', 'A', 1, 4, 10, 1, 'text', 'now')`);
+    db.exec(`INSERT INTO briefs (book_id, model, answer, prompt_tokens, completion_tokens, cost_usd, created_at) VALUES ('pv-x', 'm', '${JSON.stringify({ ...brief, model: "m", usage: { prompt_tokens: 1, completion_tokens: 1, cost: 0.002 }, createdAt: 5 })}', 1, 1, 0.002, '5')`);
+    db.close();
+    const store = openStore(file);
+    assert.equal(Number((store.db.prepare("PRAGMA user_version").get() as { user_version: number }).user_version), MIGRATIONS.length);
+    assert.equal(store.brief("pv-x", "en")!.logline, brief.logline);
+    assert.equal(store.brief("pv-x", "en")!.lang, "en");
+    assert.equal(store.brief("pv-x", "ru"), null);
+    assert.deepEqual(store.progress("r")[0].briefedLangs, ["en"]);
+    assert.equal(store.spend().briefUsd, 0.002);
+    store.close();
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test("brief parsing rejects malformed or incomplete answers", () => {
@@ -229,24 +320,107 @@ test("corpus list and book payload keep page order, gaps and the latest brief", 
   const store = corpusFixture();
   store.putAnalysis("pg-7", 1, analysis);
   assert.deepEqual(corpusList(store), [
-    { id: "pg-7", title: "T", author: "A", rank: 2, gutenberg: "7", pages: 2, chars: 20, analysed: 1, complete: false, briefed: false },
+    { id: "pg-7", title: "T", author: "A", rank: 2, gutenberg: "7", pages: 2, chars: 20, analysed: 1, complete: false, briefed: false, briefedLangs: [] },
   ]);
-  const book = corpusBook(store, "pg-7")!;
+  const book = corpusBook(store, "pg-7", true)!;
   assert.deepEqual(book.segments, [
     [0, 9],
     [11, 20],
   ]);
-  assert.equal(book.text.slice(...book.segments[1]), "Two page.");
+  assert.equal(book.text!.slice(...book.segments[1]), "Two page.");
+  assert.equal(book.excerpts, undefined);
   assert.deepEqual(book.analyses.map((a) => a?.usage?.input_tokens ?? null), [null, 5000]);
   assert.equal(book.profile, null);
   assert.equal(corpusBook(store, "pg-8"), null);
 
-  const etag = corpusETag(store, "pg-7")!;
+  const etag = corpusETag(store, "pg-7", true)!;
   assert.match(etag, /^W\/"[\w-]+"$/);
   assert.equal(corpusETag(store, "pg-8"), null);
-  const packed = await packCorpusBook(store, "pg-7", etag, "gzip")!;
+  const packed = await packCorpusBook(store, "pg-7", etag, "gzip", true)!;
   assert.deepEqual(JSON.parse(gunzipSync(packed).toString()), book);
-  assert.equal(packCorpusBook(store, "pg-7", etag, "gzip"), packCorpusBook(store, "pg-7", etag, "gzip"));
+  assert.equal(packCorpusBook(store, "pg-7", etag, "gzip", true), packCorpusBook(store, "pg-7", etag, "gzip", true));
+  store.close();
+});
+
+test("corpus books are sent as short page excerpts unless CORPUS_FULL_TEXT=1", async () => {
+  assert.equal(fullTextEnabled({}), false);
+  assert.equal(fullTextEnabled({ CORPUS_FULL_TEXT: "0" }), false);
+  assert.equal(fullTextEnabled({ CORPUS_FULL_TEXT: "1" }), true);
+
+  const store = corpusFixture();
+  const book = corpusBook(store, "pg-7", false)!;
+  assert.equal(book.text, null);
+  assert.deepEqual(book.excerpts, ["One page.", "Two page."]);
+  assert.deepEqual(book.segments, [
+    [0, 9],
+    [11, 20],
+  ]);
+  assert.equal(book.chars, 20);
+  assert.notEqual(corpusETag(store, "pg-7", false), corpusETag(store, "pg-7", true));
+  const etag = corpusETag(store, "pg-7", false)!;
+  const body = gunzipSync(await packCorpusBook(store, "pg-7", etag, "gzip", false)!).toString();
+  assert.ok(!body.includes("One page.\n\nTwo page."));
+  store.close();
+});
+
+test("the page route serves exactly one page of full text, 404 out of range and 400 for bad ids", () => {
+  const store = corpusFixture();
+  const allow = () => ({ ok: true }) as const;
+  const ok = pageResponse(store, "pg-7", "2", allow);
+  assert.equal(ok.status, 200);
+  assert.deepEqual(ok.body, { page: 2, text: "Two page.", start: 11, end: 20 });
+  assert.match((ok as { etag: string }).etag, /^W\/"[\w-]+"$/);
+  assert.equal(pageResponse(store, "pg-7", "3", allow).status, 404);
+  assert.equal(pageResponse(store, "pg-8", "1", allow).status, 404);
+  assert.equal(pageResponse(null, "pv-x", "1", allow).status, 404);
+  for (const [id, n] of [["pg-7/../x", "1"], ["PV-X", "1"], ["pg-7", "0"], ["pg-7", "-1"], ["pg-7", "1.5"], ["pg-7", "abc"]]) assert.equal(pageResponse(store, id, n, allow).status, 400, `${id} ${n}`);
+  const limited = pageResponse(store, "pg-7", "1", () => ({ ok: false, retryAfter: 12 }));
+  assert.equal(limited.status, 429);
+  store.close();
+});
+
+test("page rate limit allows a reading pace per client and resets each window", () => {
+  let t = 0;
+  const allow = rateLimiter(3, 60_000, () => t);
+  assert.deepEqual([allow("a"), allow("a"), allow("a")].map((r) => r.ok), [true, true, true]);
+  assert.deepEqual(allow("a"), { ok: false, retryAfter: 60 });
+  assert.equal(allow("b").ok, true);
+  t = 60_000;
+  assert.equal(allow("a").ok, true);
+});
+
+test("page excerpts stay short and end on a sentence or a word", () => {
+  assert.equal(pageExcerpt("  Short   page.  "), "Short page.");
+  const sentences = "Первое предложение довольно длинное, чтобы занять место. ".repeat(3) + "x".repeat(300);
+  const a = pageExcerpt(sentences);
+  assert.ok(a.length <= EXCERPT_CHARS);
+  assert.match(a, /место\.$/);
+  const words = "word ".repeat(100);
+  const b = pageExcerpt(words);
+  assert.ok(b.length <= EXCERPT_CHARS);
+  assert.match(b, /word…$/);
+  const solid = "y".repeat(400);
+  assert.equal(pageExcerpt(solid).length, EXCERPT_CHARS);
+});
+
+test("corpus metadata carries year, kind and English title when the store has them", () => {
+  const store = corpusFixture();
+  const withMeta = {
+    ...store,
+    progress: (r: string) => store.progress(r).map((b) => ({ ...b, year: 1999, kind: "novel", titleEn: "Homo Zapiens" })),
+    book: (id: string) => {
+      const b = store.book(id);
+      return b && { ...b, year: "1999", kind: "poem", title_en: " Homo Zapiens " };
+    },
+  } as typeof store;
+  const [entry] = corpusList(withMeta);
+  assert.equal(entry.year, 1999);
+  assert.equal(entry.kind, "novel");
+  assert.equal(entry.titleEn, "Homo Zapiens");
+  const book = corpusBook(withMeta, "pg-7", false)!;
+  assert.equal(book.year, 1999);
+  assert.equal(book.kind, undefined);
+  assert.equal(book.titleEn, "Homo Zapiens");
   store.close();
 });
 
@@ -272,7 +446,56 @@ test("corpus stats aggregate stored pages, pick record pages and refresh when th
   store.close();
 });
 
-test("corpus id validation accepts only pg-{gutenberg id}", () => {
+test("corpus id validation accepts pv-{slug} and pg-{gutenberg id} only", () => {
   assert.deepEqual(corpusId("pg-1342"), { value: "pg-1342" });
-  for (const bad of ["pg-", "pg-0", "pg-01", "pg-12345678", "PG-1", "pg-1/../x", "pg-1 ", "abc", 7, null]) assert.ok("error" in corpusId(bad), String(bad));
+  assert.deepEqual(corpusId("pv-generation-p"), { value: "pv-generation-p" });
+  assert.deepEqual(corpusId("pv-1999"), { value: "pv-1999" });
+  for (const bad of ["pg-", "pg-0", "pg-01", "pg-12345678", "PG-1", "pg-1/../x", "pg-1 ", "abc", 7, null, "pv-", "pv--x", "pv-x-", "pv-Generation", "pv-x/../y", "pv-x_y", `pv-${"a".repeat(100)}`])
+    assert.ok("error" in corpusId(bad), String(bad));
+});
+
+test("top pages per emotion rank story pages, skip paratext, never repeat a page and quote one sentence", () => {
+  const store = openStore(":memory:");
+  const sentence = "Он посмотрел на реку и понял, что она течёт сквозь него уже много лет подряд.";
+  const pages = [`и дальше. ${sentence} Потом ещё одно предложение, которое уже не нужно никому.`, "Контент. Оглавление.", `${sentence}`, `${sentence}`];
+  const text = pages.join("\n\n");
+  let at = 0;
+  const segs = pages.map((p) => {
+    const s = { start: at, end: at + p.length };
+    at += p.length + 2;
+    return s;
+  });
+  store.addBook({ id: "pv-a", source: "pelevin", sourceRef: "a", title: "Омон Ра", titleEn: "Omon Ra", year: 1992, author: "П", rank: null, chars: text.length, pageChars: 1800, pages: 4 }, text, segs);
+  const base = demoAnalyses(segmentText(SAMPLE_BOOK.text, "pages"))[0];
+  const put = (idx: number, joy: number, paratext = 0) =>
+    store.putAnalysis("pv-a", idx, {
+      ...base,
+      rubric: RUBRIC_VERSION,
+      model: "jev",
+      emotions: { ...base.emotions, joy, fear: 0.1 },
+      mode: { ...base.mode, paratext },
+    } as SegmentAnalysis);
+  put(0, 0.9);
+  put(1, 0.99, 0.95);
+  put(2, 0.5);
+  put(3, 0.7);
+
+  const top = topPages(store, 3);
+  assert.deepEqual(top.map((c) => c.emotion), EMOTIONS.map((e) => e.id));
+  const joy = top.find((c) => c.emotion === "joy")!.items;
+  // Joy picks first, so it gets the strongest story page; the paratext page (p. 2) never appears.
+  assert.equal(joy[0].page, 1);
+  assert.equal(joy[0].quote, sentence);
+  assert.equal(joy[0].titleEn, "Omon Ra");
+  assert.equal(joy[0].year, 1992);
+  const seen = top.flatMap((c) => c.items.map((i) => i.page));
+  assert.equal(new Set(seen).size, seen.length);
+  assert.ok(!seen.includes(2));
+  assert.equal(topPages(store, 3), top);
+  put(2, 0.95);
+  assert.equal(topPages(store, 3).find((c) => c.emotion === "joy")!.items[0].page, 3);
+  store.close();
+
+  assert.equal(pageQuote("коротко. " + "слово ".repeat(60)).endsWith("…"), true);
+  assert.ok(pageQuote("слово ".repeat(60)).length <= 140);
 });

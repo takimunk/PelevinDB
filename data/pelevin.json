@@ -1,0 +1,3508 @@
+{
+ "about": "Viktor Pelevin's works, deduplicated by content from a folder of EPUBs by scripts/ingest-pelevin.ts. Texts are not stored in the repository.",
+ "generated": "2026-09-27",
+ "works": [
+  {
+   "id": "pv-koldun-ignat-i-lyudi",
+   "title": "Колдун Игнат и люди",
+   "titleEn": "Ignat the Sorcerer and the People",
+   "year": 1989,
+   "kind": "story",
+   "source": {
+    "file": "Колдун Игнат и люди.epub"
+   },
+   "chars": 2839,
+   "words": 416
+  },
+  {
+   "id": "pv-zatvornik-i-shestipalyi",
+   "title": "Затворник и Шестипалый",
+   "titleEn": "The Hermit and Six-Toes",
+   "year": 1990,
+   "kind": "novella",
+   "source": {
+    "file": "Затворник и Шестипалый.epub"
+   },
+   "chars": 65352,
+   "words": 9972
+  },
+  {
+   "id": "pv-oruzhie-vozmezdiya",
+   "title": "Оружие возмездия",
+   "titleEn": "The Weapon of Retribution",
+   "year": 1990,
+   "kind": "story",
+   "source": {
+    "file": "Оружие возмездия.epub"
+   },
+   "chars": 22724,
+   "words": 3110
+  },
+  {
+   "id": "pv-otkrovenie-kregera",
+   "title": "Откровение Крегера",
+   "titleEn": "Kreger's Revelation",
+   "year": 1990,
+   "kind": "story",
+   "source": {
+    "file": "Откровение Крегера.epub"
+   },
+   "chars": 10785,
+   "words": 1521
+  },
+  {
+   "id": "pv-rekonstruktor",
+   "title": "Реконструктор",
+   "titleEn": "The Reconstructor",
+   "year": 1990,
+   "kind": "story",
+   "source": {
+    "file": "Реконструктор.epub"
+   },
+   "chars": 12812,
+   "words": 1788
+  },
+  {
+   "id": "pv-zombifikatsiya",
+   "title": "Зомбификация. Опыт сравнительной антропологии",
+   "titleEn": "Zombification: An Essay in Comparative Anthropology",
+   "year": 1990,
+   "kind": "essay",
+   "source": {
+    "file": "Зомбификация. Опыт сравнительной антропологии.epub"
+   },
+   "chars": 50122,
+   "words": 6859
+  },
+  {
+   "id": "pv-prints-gosplana",
+   "title": "Принц Госплана",
+   "titleEn": "The Prince of Gosplan",
+   "year": 1991,
+   "kind": "novella",
+   "source": {
+    "file": "Принц госплана.epub"
+   },
+   "chars": 87974,
+   "words": 13707
+  },
+  {
+   "id": "pv-vesti-iz-nepala",
+   "title": "Вести из Непала",
+   "titleEn": "News from Nepal",
+   "year": 1991,
+   "kind": "story",
+   "source": {
+    "file": "Вести из Непала.epub"
+   },
+   "chars": 34334,
+   "words": 5014
+  },
+  {
+   "id": "pv-vodonapornaya-bashnya",
+   "title": "Водонапорная башня",
+   "titleEn": "The Water Tower",
+   "year": 1991,
+   "kind": "story",
+   "source": {
+    "file": "Водонапорная башня.epub"
+   },
+   "chars": 18111,
+   "words": 2836
+  },
+  {
+   "id": "pv-vstroennyi-napominatel",
+   "title": "Встроенный напоминатель",
+   "titleEn": "The Built-In Reminder",
+   "year": 1991,
+   "kind": "story",
+   "source": {
+    "file": "Встроенный напоминатель.epub"
+   },
+   "chars": 6758,
+   "words": 911
+  },
+  {
+   "id": "pv-devyatyi-son-very-pavlovny",
+   "title": "Девятый сон Веры Павловны",
+   "titleEn": "Vera Pavlovna's Ninth Dream",
+   "year": 1991,
+   "kind": "story",
+   "source": {
+    "file": "Девятый сон Веры Павловны.epub"
+   },
+   "chars": 42783,
+   "words": 6523
+  },
+  {
+   "id": "pv-den-buldozerista",
+   "title": "День бульдозериста",
+   "titleEn": "Bulldozer Driver's Day",
+   "year": 1991,
+   "kind": "story",
+   "source": {
+    "file": "День бульдозериста.epub"
+   },
+   "chars": 52594,
+   "words": 7966
+  },
+  {
+   "id": "pv-sarai-nomer-xii",
+   "title": "Жизнь и приключения сарая номер XII",
+   "titleEn": "The Life and Adventures of Shed Number XII",
+   "year": 1991,
+   "kind": "story",
+   "source": {
+    "file": "Жизнь и приключения сарая Номер XII.epub"
+   },
+   "chars": 20550,
+   "words": 3198
+  },
+  {
+   "id": "pv-mardongi",
+   "title": "Мардонги",
+   "titleEn": "Mardongs",
+   "year": 1991,
+   "kind": "story",
+   "source": {
+    "file": "Мардонги.epub"
+   },
+   "chars": 9696,
+   "words": 1301
+  },
+  {
+   "id": "pv-mittelshpil",
+   "title": "Миттельшпиль",
+   "titleEn": "Mid-Game",
+   "year": 1991,
+   "kind": "story",
+   "source": {
+    "file": "Миттельшпиль.epub"
+   },
+   "chars": 51851,
+   "words": 7856
+  },
+  {
+   "id": "pv-muzyka-so-stolba",
+   "title": "Музыка со столба",
+   "titleEn": "Music from a Pole",
+   "year": 1991,
+   "kind": "story",
+   "source": {
+    "file": "Музыка со столба.epub"
+   },
+   "chars": 27462,
+   "words": 4218
+  },
+  {
+   "id": "pv-ontologiya-detstva",
+   "title": "Онтология детства",
+   "titleEn": "The Ontology of Childhood",
+   "year": 1991,
+   "kind": "story",
+   "source": {
+    "file": "Онтология детства.epub"
+   },
+   "chars": 21107,
+   "words": 3247
+  },
+  {
+   "id": "pv-problema-verwolka",
+   "title": "Проблема верволка в средней полосе",
+   "titleEn": "A Werewolf Problem in Central Russia",
+   "year": 1991,
+   "kind": "story",
+   "source": {
+    "file": "Проблема верволка в средней полосе.epub"
+   },
+   "chars": 69082,
+   "words": 10649
+  },
+  {
+   "id": "pv-sinii-fonar",
+   "title": "Синий фонарь",
+   "titleEn": "The Blue Lantern",
+   "year": 1991,
+   "kind": "story",
+   "source": {
+    "file": "Синий фонарь.epub",
+    "section": "Виктор Пелевин Синий фонарь/Часть вторая Спи/Синий фонарь"
+   },
+   "chars": 18638,
+   "words": 3000
+  },
+  {
+   "id": "pv-spi",
+   "title": "Спи",
+   "titleEn": "Sleep",
+   "year": 1991,
+   "kind": "story",
+   "source": {
+    "file": "Спи.epub"
+   },
+   "chars": 34136,
+   "words": 5159
+  },
+  {
+   "id": "pv-sssr-taishou-chzhuan",
+   "title": "СССР Тайшоу Чжуань",
+   "titleEn": "USSR Taishou Zhuan",
+   "year": 1991,
+   "kind": "story",
+   "source": {
+    "file": "СССР Тайшоу Чжуань.epub"
+   },
+   "chars": 25307,
+   "words": 3996
+  },
+  {
+   "id": "pv-uhryab",
+   "title": "Ухряб",
+   "titleEn": "Ukhryab",
+   "year": 1991,
+   "kind": "story",
+   "source": {
+    "file": "Ухряб.epub"
+   },
+   "chars": 19889,
+   "words": 3013
+  },
+  {
+   "id": "pv-hrustalnyi-mir",
+   "title": "Хрустальный мир",
+   "titleEn": "Crystal World",
+   "year": 1991,
+   "kind": "story",
+   "source": {
+    "file": "Хрустальный мир.epub"
+   },
+   "chars": 43747,
+   "words": 6579
+  },
+  {
+   "id": "pv-omon-ra",
+   "title": "Омон Ра",
+   "titleEn": "Omon Ra",
+   "year": 1992,
+   "kind": "novel",
+   "source": {
+    "file": "Омон Ра.epub"
+   },
+   "chars": 198257,
+   "words": 30971
+  },
+  {
+   "id": "pv-nika",
+   "title": "Ника",
+   "titleEn": "Nika",
+   "year": 1992,
+   "kind": "story",
+   "source": {
+    "file": "Ника.epub"
+   },
+   "chars": 28188,
+   "words": 4479
+  },
+  {
+   "id": "pv-proishozhdenie-vidov",
+   "title": "Происхождение видов",
+   "titleEn": "The Origin of Species",
+   "year": 1992,
+   "kind": "story",
+   "source": {
+    "file": "Происхождение видов.epub"
+   },
+   "chars": 25328,
+   "words": 3801
+  },
+  {
+   "id": "pv-zhizn-nasekomyh",
+   "title": "Жизнь насекомых",
+   "titleEn": "The Life of Insects",
+   "year": 1993,
+   "kind": "novel",
+   "source": {
+    "file": "Жизнь насекомых.epub"
+   },
+   "chars": 287689,
+   "words": 43949
+  },
+  {
+   "id": "pv-zheltaya-strela",
+   "title": "Желтая стрела",
+   "titleEn": "The Yellow Arrow",
+   "year": 1993,
+   "kind": "novella",
+   "source": {
+    "file": "Желтая стрела.epub",
+    "section": "Повести/Желтая стрела"
+   },
+   "chars": 84981,
+   "words": 13061
+  },
+  {
+   "id": "pv-buben-verhnego-mira",
+   "title": "Бубен верхнего мира",
+   "titleEn": "The Tambourine of the Upper World",
+   "year": 1993,
+   "kind": "story",
+   "source": {
+    "file": "Бубен верхнего мира.epub"
+   },
+   "chars": 25482,
+   "words": 3888
+  },
+  {
+   "id": "pv-zigmund-v-kafe",
+   "title": "Зигмунд в кафе",
+   "titleEn": "Sigmund in a Café",
+   "year": 1993,
+   "kind": "story",
+   "source": {
+    "file": "Зигмунд в кафе.epub"
+   },
+   "chars": 12433,
+   "words": 1887
+  },
+  {
+   "id": "pv-ivan-kublahanov",
+   "title": "Иван Кублаханов",
+   "titleEn": "Ivan Kublakhanov",
+   "year": 1993,
+   "kind": "story",
+   "source": {
+    "file": "Иван Кублаханов.epub"
+   },
+   "chars": 18989,
+   "words": 2922
+  },
+  {
+   "id": "pv-tarzanka",
+   "title": "Тарзанка",
+   "titleEn": "Tarzanka",
+   "year": 1993,
+   "kind": "story",
+   "source": {
+    "file": "Тарзанка.epub"
+   },
+   "chars": 31469,
+   "words": 4914
+  },
+  {
+   "id": "pv-gkchp-kak-tetragrammaton",
+   "title": "ГКЧП как тетраграмматон",
+   "titleEn": "The State Emergency Committee as Tetragrammaton",
+   "year": 1993,
+   "kind": "essay",
+   "source": {
+    "file": "ГКЧП как тетраграмматон.epub"
+   },
+   "chars": 6809,
+   "words": 911
+  },
+  {
+   "id": "pv-dzhon-faulz",
+   "title": "Джон Фаулз и трагедия русского либерализма",
+   "titleEn": "John Fowles and the Tragedy of Russian Liberalism",
+   "year": 1993,
+   "kind": "essay",
+   "source": {
+    "file": "Джон Фаулз и трагедия русского либерализма.epub"
+   },
+   "chars": 8564,
+   "words": 1236
+  },
+  {
+   "id": "pv-podzemnoe-nebo",
+   "title": "Подземное небо",
+   "titleEn": "The Underground Sky",
+   "year": 1994,
+   "kind": "essay",
+   "source": {
+    "file": "Подземное небо.epub"
+   },
+   "chars": 7045,
+   "words": 987
+  },
+  {
+   "id": "pv-chapaev-i-pustota",
+   "title": "Чапаев и Пустота",
+   "titleEn": "Chapaev and Void",
+   "year": 1996,
+   "kind": "novel",
+   "source": {
+    "file": "Чапаев и пустота.epub"
+   },
+   "chars": 592562,
+   "words": 91895
+  },
+  {
+   "id": "pv-buben-nizhnego-mira",
+   "title": "Бубен нижнего мира",
+   "titleEn": "The Tambourine of the Lower World",
+   "year": 1996,
+   "kind": "story",
+   "source": {
+    "file": "Бубен нижнего мира.epub"
+   },
+   "chars": 10168,
+   "words": 1415
+  },
+  {
+   "id": "pv-kratkaya-istoriya-peintbola",
+   "title": "Краткая история пэйнтбола в Москве",
+   "titleEn": "A Short History of Paintball in Moscow",
+   "year": 1996,
+   "kind": "story",
+   "source": {
+    "file": "Краткая история пэйнтбола в Москве.epub"
+   },
+   "chars": 32431,
+   "words": 4867
+  },
+  {
+   "id": "pv-nizhnyaya-tundra",
+   "title": "Нижняя тундра",
+   "titleEn": "The Lower Tundra",
+   "year": 1996,
+   "kind": "story",
+   "source": {
+    "file": "Нижняя тундра.epub"
+   },
+   "chars": 37009,
+   "words": 5905
+  },
+  {
+   "id": "pv-svyatochnyi-kiberpank",
+   "title": "Святочный киберпанк, или Рождественская ночь-117.DIR",
+   "titleEn": "Christmas Cyberpunk, or Christmas Night-117.DIR",
+   "year": 1996,
+   "kind": "story",
+   "source": {
+    "file": "Святочный киберпанк 117.dir.epub"
+   },
+   "chars": 26027,
+   "words": 3697
+  },
+  {
+   "id": "pv-ikstlan-petushki",
+   "title": "Икстлан – Петушки",
+   "titleEn": "Ixtlan – Petushki",
+   "year": 1996,
+   "kind": "essay",
+   "source": {
+    "file": "Икстлан - Петушки.epub"
+   },
+   "chars": 8219,
+   "words": 1232
+  },
+  {
+   "id": "pv-moi-meskalitovyi-trip",
+   "title": "Мой мескалитовый трип",
+   "titleEn": "My Mescalito Trip",
+   "year": 1996,
+   "kind": "essay",
+   "source": {
+    "file": "Мой мескалитовый трип.epub"
+   },
+   "chars": 7777,
+   "words": 1107
+  },
+  {
+   "id": "pv-zapis-o-poiske-vetra",
+   "title": "Запись о поиске ветра",
+   "titleEn": "A Record of the Search for the Wind",
+   "year": 1997,
+   "kind": "story",
+   "source": {
+    "file": "Запись о поиске ветра.epub"
+   },
+   "chars": 24266,
+   "words": 3902
+  },
+  {
+   "id": "pv-time-out",
+   "title": "Time Out, или Вечерняя Москва",
+   "titleEn": "Time Out, or Evening Moscow",
+   "year": 1997,
+   "kind": "story",
+   "source": {
+    "file": "Timeout, или Вечерняя Москва.epub"
+   },
+   "chars": 14769,
+   "words": 2248
+  },
+  {
+   "id": "pv-imena-oligarhov",
+   "title": "Имена олигархов на карте Родины",
+   "titleEn": "The Names of Oligarchs on the Map of the Motherland",
+   "year": 1998,
+   "kind": "essay",
+   "source": {
+    "file": "Имена олигархов на карте родины.epub"
+   },
+   "chars": 11507,
+   "words": 1461
+  },
+  {
+   "id": "pv-most-kotoryi-ya-hotel-pereiti",
+   "title": "Мост, который я хотел перейти",
+   "titleEn": "The Bridge I Wanted to Cross",
+   "year": 1998,
+   "kind": "essay",
+   "source": {
+    "file": "Мост, который я хотел перейти.epub"
+   },
+   "chars": 2380,
+   "words": 395
+  },
+  {
+   "id": "pv-poslednyaya-shutka-voina",
+   "title": "Последняя шутка воина",
+   "titleEn": "The Warrior's Last Joke",
+   "year": 1998,
+   "kind": "essay",
+   "source": {
+    "file": "Последняя шутка воина.epub"
+   },
+   "chars": 4196,
+   "words": 634
+  },
+  {
+   "id": "pv-generation-p",
+   "title": "Generation «П»",
+   "titleEn": "Generation P",
+   "year": 1999,
+   "kind": "novel",
+   "source": {
+    "file": "Generation «П».epub"
+   },
+   "chars": 459633,
+   "words": 67649
+  },
+  {
+   "id": "pv-grecheskii-variant",
+   "title": "Греческий вариант",
+   "titleEn": "The Greek Version",
+   "year": 1999,
+   "kind": "story",
+   "source": {
+    "file": "Греческий вариант.epub"
+   },
+   "chars": 20155,
+   "words": 2951
+  },
+  {
+   "id": "pv-sprashivaet-prov",
+   "title": "Виктор Пелевин спрашивает PRов",
+   "titleEn": "Viktor Pelevin Questions the PR Men",
+   "year": 1999,
+   "kind": "essay",
+   "source": {
+    "file": "Виктор Пелевин спрашивает PRов.epub"
+   },
+   "chars": 10567,
+   "words": 1464
+  },
+  {
+   "id": "pv-ultima-tuleev",
+   "title": "Ultima Тулеев, или Дао выборов",
+   "titleEn": "Ultima Tuleev, or the Tao of Elections",
+   "year": 2000,
+   "kind": "essay",
+   "source": {
+    "file": "Ultima Тулеев, или Дао выборов.epub"
+   },
+   "chars": 8168,
+   "words": 1092
+  },
+  {
+   "id": "pv-svet-gorizonta",
+   "title": "Свет горизонта",
+   "titleEn": "The Light of the Horizon",
+   "year": 2001,
+   "kind": "story",
+   "source": {
+    "file": "Свет горизонта.epub"
+   },
+   "chars": 41341,
+   "words": 6508
+  },
+  {
+   "id": "pv-kod-mira",
+   "title": "Код Мира",
+   "titleEn": "The Mir Code",
+   "year": 2001,
+   "kind": "essay",
+   "source": {
+    "file": "Код Мира.epub"
+   },
+   "chars": 6394,
+   "words": 981
+  },
+  {
+   "id": "pv-chisla",
+   "title": "Числа",
+   "titleEn": "Numbers",
+   "year": 2003,
+   "kind": "novel",
+   "source": {
+    "file": "Числа.epub"
+   },
+   "chars": 373164,
+   "words": 56384
+  },
+  {
+   "id": "pv-makedonskaya-kritika",
+   "title": "Македонская критика французской мысли",
+   "titleEn": "The Macedonian Critique of French Thought",
+   "year": 2003,
+   "kind": "novella",
+   "source": {
+    "file": "Македонская критика французской мысли.epub",
+    "section": "Македонская критика французской мысли"
+   },
+   "chars": 57910,
+   "words": 8184
+  },
+  {
+   "id": "pv-akiko",
+   "title": "Акико",
+   "titleEn": "Akiko",
+   "year": 2003,
+   "kind": "story",
+   "source": {
+    "file": "Акико.epub"
+   },
+   "chars": 23180,
+   "words": 3895
+  },
+  {
+   "id": "pv-gost-na-prazdnike-bon",
+   "title": "Гость на празднике Бон",
+   "titleEn": "A Guest at the Bon Festival",
+   "year": 2003,
+   "kind": "story",
+   "source": {
+    "file": "Сумасшедший по фамилии Пустота.epub",
+    "section": "ФОКУС-ГРУППА/Гость на празднике бон"
+   },
+   "chars": 23074,
+   "words": 3703
+  },
+  {
+   "id": "pv-odin-vog",
+   "title": "Один вог",
+   "titleEn": "One Vogue",
+   "year": 2003,
+   "kind": "story",
+   "source": {
+    "file": "Сумасшедший по фамилии Пустота.epub",
+    "section": "ФОКУС-ГРУППА/Один вог"
+   },
+   "chars": 2652,
+   "words": 397
+  },
+  {
+   "id": "pv-fokus-gruppa",
+   "title": "Фокус-группа",
+   "titleEn": "Focus Group",
+   "year": 2003,
+   "kind": "story",
+   "source": {
+    "file": "Диалектика Переходного Периода из Ниоткуда в Никуда.epub",
+    "section": "Мощь Великого/Фокус-группа"
+   },
+   "chars": 47959,
+   "words": 7068
+  },
+  {
+   "id": "pv-svyashchennaya-kniga-oborotnya",
+   "title": "Священная книга оборотня",
+   "titleEn": "The Sacred Book of the Werewolf",
+   "year": 2004,
+   "kind": "novel",
+   "source": {
+    "file": "Священная книга оборотня.epub"
+   },
+   "chars": 515356,
+   "words": 79093
+  },
+  {
+   "id": "pv-shlem-uzhasa",
+   "title": "Шлем ужаса",
+   "titleEn": "The Helmet of Horror",
+   "year": 2005,
+   "kind": "novel",
+   "source": {
+    "file": "Шлем ужаса.epub"
+   },
+   "chars": 157513,
+   "words": 24434
+  },
+  {
+   "id": "pv-papahi-na-bashnyah",
+   "title": "Папахи на башнях",
+   "titleEn": "Papakhas on the Towers",
+   "year": 2005,
+   "kind": "story",
+   "source": {
+    "file": "Папахи на башнях.epub"
+   },
+   "chars": 28170,
+   "words": 3961
+  },
+  {
+   "id": "pv-who-by-fire",
+   "title": "Who by Fire",
+   "titleEn": "Who by Fire",
+   "year": 2005,
+   "kind": "story",
+   "source": {
+    "file": "Who by fire.epub"
+   },
+   "chars": 20353,
+   "words": 3064
+  },
+  {
+   "id": "pv-empire-v",
+   "title": "Empire V",
+   "titleEn": "Empire V",
+   "year": 2006,
+   "kind": "novel",
+   "source": {
+    "file": "Ампир «В».epub"
+   },
+   "chars": 535858,
+   "words": 81478
+  },
+  {
+   "id": "pv-zal-poyushchih-kariatid",
+   "title": "Зал поющих кариатид",
+   "titleEn": "The Hall of the Singing Caryatids",
+   "year": 2008,
+   "kind": "novella",
+   "source": {
+    "file": "Зал поющих кариатид.epub"
+   },
+   "chars": 127421,
+   "words": 18893
+  },
+  {
+   "id": "pv-assasin",
+   "title": "Ассасин",
+   "titleEn": "Assassin",
+   "year": 2008,
+   "kind": "story",
+   "source": {
+    "file": "Ассасин.epub"
+   },
+   "chars": 64292,
+   "words": 9994
+  },
+  {
+   "id": "pv-kormlenie-krokodila-hufu",
+   "title": "Кормление крокодила Хуфу",
+   "titleEn": "Feeding the Crocodile Khufu",
+   "year": 2008,
+   "kind": "story",
+   "source": {
+    "file": "Кормление крокодила Хуфу.epub"
+   },
+   "chars": 38238,
+   "words": 5679
+  },
+  {
+   "id": "pv-nekroment",
+   "title": "Некромент",
+   "titleEn": "Necroment",
+   "year": 2008,
+   "kind": "story",
+   "source": {
+    "file": "Некромент.epub"
+   },
+   "chars": 65606,
+   "words": 9291
+  },
+  {
+   "id": "pv-prostranstvo-fridmana",
+   "title": "Пространство Фридмана",
+   "titleEn": "Friedman Space",
+   "year": 2008,
+   "kind": "story",
+   "source": {
+    "file": "Пространство Фридмана.epub"
+   },
+   "chars": 24106,
+   "words": 3282
+  },
+  {
+   "id": "pv-t",
+   "title": "t",
+   "titleEn": "t",
+   "year": 2009,
+   "kind": "novel",
+   "source": {
+    "file": "t.epub"
+   },
+   "chars": 601379,
+   "words": 90666
+  },
+  {
+   "id": "pv-zenitnye-kodeksy",
+   "title": "Зенитные кодексы Аль-Эфесби",
+   "titleEn": "The Anti-Aircraft Codices of Al-Efesbi",
+   "year": 2010,
+   "kind": "novella",
+   "source": {
+    "file": "Зенитные кодексы Аль-Эфесби.epub"
+   },
+   "chars": 114669,
+   "words": 16343
+  },
+  {
+   "id": "pv-operatsiya-burning-bush",
+   "title": "Операция «Burning Bush»",
+   "titleEn": "Operation Burning Bush",
+   "year": 2010,
+   "kind": "novella",
+   "source": {
+    "file": "Ананасная вода для прекрасной дамы.epub",
+    "section": "Виктор Пелевин Ананасная вода для прекрасной дамы/Часть I БОГИ И МЕХАНИЗМЫ/Операция «Burning Вush» [1]"
+   },
+   "chars": 179252,
+   "words": 27579
+  },
+  {
+   "id": "pv-sozertsatel-teni",
+   "title": "Созерцатель тени",
+   "titleEn": "The Shadow Watcher",
+   "year": 2010,
+   "kind": "novella",
+   "source": {
+    "file": "Созерцатель тени.epub"
+   },
+   "chars": 68596,
+   "words": 10375
+  },
+  {
+   "id": "pv-otel-horoshih-voploshchenii",
+   "title": "Отель хороших воплощений",
+   "titleEn": "The Hotel of Good Incarnations",
+   "year": 2010,
+   "kind": "story",
+   "source": {
+    "file": "Ананасная вода для прекрасной дамы.epub",
+    "section": "Виктор Пелевин Ананасная вода для прекрасной дамы/Часть II МЕХАНИЗМЫ И БОГИ/Отель хороших воплощений Святочный рассказ"
+   },
+   "chars": 29903,
+   "words": 4595
+  },
+  {
+   "id": "pv-thagi",
+   "title": "Тхаги",
+   "titleEn": "Thugs",
+   "year": 2010,
+   "kind": "story",
+   "source": {
+    "file": "Тхаги.epub"
+   },
+   "chars": 43736,
+   "words": 6366
+  },
+  {
+   "id": "pv-snuff",
+   "title": "S.N.U.F.F.",
+   "titleEn": "S.N.U.F.F.",
+   "year": 2011,
+   "kind": "novel",
+   "source": {
+    "file": "S.N.U.F.F..epub"
+   },
+   "chars": 703569,
+   "words": 107241
+  },
+  {
+   "id": "pv-46-intervyu",
+   "title": "46 интервью с Пелевиным",
+   "titleEn": "46 Interviews with Pelevin",
+   "year": 2012,
+   "kind": "interview",
+   "source": {
+    "file": "46 интервью с Пелевиным. 46 интервью с писателем, который никогда не дает интервью.epub"
+   },
+   "chars": 623350,
+   "words": 94617
+  },
+  {
+   "id": "pv-betman-apollo",
+   "title": "Бэтман Аполло",
+   "titleEn": "Batman Apollo",
+   "year": 2013,
+   "kind": "novel",
+   "source": {
+    "file": "Бэтман Аполло.epub"
+   },
+   "chars": 737431,
+   "words": 112104
+  },
+  {
+   "id": "pv-lyubov-k-trem-tsukerbrinam",
+   "title": "Любовь к трем цукербринам",
+   "titleEn": "Love for Three Zuckerbrins",
+   "year": 2014,
+   "kind": "novel",
+   "source": {
+    "file": "Любовь к трем цукербринам.epub"
+   },
+   "chars": 571026,
+   "words": 85909
+  },
+  {
+   "id": "pv-zheleznaya-bezdna",
+   "title": "Смотритель. Железная бездна",
+   "titleEn": "The Watcher. The Iron Abyss",
+   "year": 2015,
+   "kind": "novel",
+   "source": {
+    "file": "Железная бездна.epub"
+   },
+   "chars": 370353,
+   "words": 57211
+  },
+  {
+   "id": "pv-orden-zheltogo-flaga",
+   "title": "Смотритель. Орден желтого флага",
+   "titleEn": "The Watcher. The Order of the Yellow Flag",
+   "year": 2015,
+   "kind": "novel",
+   "source": {
+    "file": "Орден желтого флага.epub"
+   },
+   "chars": 330029,
+   "words": 49592
+  },
+  {
+   "id": "pv-lampa-mafusaila",
+   "title": "Лампа Мафусаила, или Крайняя битва чекистов с масонами",
+   "titleEn": "Methuselah's Lamp, or The Final Battle of the Chekists and the Masons",
+   "year": 2016,
+   "kind": "novel",
+   "source": {
+    "file": "Лампа Мафусаила, или Крайняя битва чекистов с масонами.epub"
+   },
+   "chars": 549482,
+   "words": 82328
+  },
+  {
+   "id": "pv-iphuck-10",
+   "title": "iPhuck 10",
+   "titleEn": "iPhuck 10",
+   "year": 2017,
+   "kind": "novel",
+   "source": {
+    "file": "iPhuck 10.epub"
+   },
+   "chars": 556502,
+   "words": 82094
+  },
+  {
+   "id": "pv-tainye-vidy-na-goru-fudzi",
+   "title": "Тайные виды на гору Фудзи",
+   "titleEn": "Secret Views of Mount Fuji",
+   "year": 2018,
+   "kind": "novel",
+   "source": {
+    "file": "Тайные виды на гору Фудзи.epub"
+   },
+   "chars": 538937,
+   "words": 82578
+  },
+  {
+   "id": "pv-iakinf",
+   "title": "Иакинф",
+   "titleEn": "Iakinf",
+   "year": 2019,
+   "kind": "novella",
+   "source": {
+    "file": "Искусство легких касаний.epub",
+    "section": "Часть первая Сатурн почти не виден/Иакинф"
+   },
+   "chars": 142041,
+   "words": 21927
+  },
+  {
+   "id": "pv-iskusstvo-legkih-kasanii",
+   "title": "Искусство легких касаний",
+   "titleEn": "The Art of Light Touches",
+   "year": 2019,
+   "kind": "novella",
+   "source": {
+    "file": "Искусство легких касаний.epub",
+    "section": "Часть первая Сатурн почти не виден/Искусство легких касаний"
+   },
+   "chars": 275865,
+   "words": 39790
+  },
+  {
+   "id": "pv-stolypin",
+   "title": "Столыпин",
+   "titleEn": "Stolypin",
+   "year": 2019,
+   "kind": "story",
+   "source": {
+    "file": "Искусство легких касаний.epub",
+    "section": "Часть вторая Бой после победы/Столыпин"
+   },
+   "chars": 61664,
+   "words": 9695
+  },
+  {
+   "id": "pv-nepobedimoe-solntse",
+   "title": "Непобедимое солнце",
+   "titleEn": "Invincible Sun",
+   "year": 2020,
+   "kind": "novel",
+   "source": {
+    "file": "Непобедимое солнце.epub"
+   },
+   "chars": 739173,
+   "words": 115439
+  },
+  {
+   "id": "pv-transhumanism-inc",
+   "title": "Transhumanism Inc.",
+   "titleEn": "Transhumanism Inc.",
+   "year": 2021,
+   "kind": "novel",
+   "source": {
+    "file": "TRANSHUMANISM INC..epub"
+   },
+   "chars": 668653,
+   "words": 99459
+  },
+  {
+   "id": "pv-kgbt",
+   "title": "KGBT+",
+   "titleEn": "KGBT+",
+   "year": 2022,
+   "kind": "novel",
+   "source": {
+    "file": "KGBT+ (КГБТ+).epub"
+   },
+   "chars": 604061,
+   "words": 91393
+  },
+  {
+   "id": "pv-puteshestvie-v-elevsin",
+   "title": "Путешествие в Элевсин",
+   "titleEn": "Journey to Eleusis",
+   "year": 2023,
+   "kind": "novel",
+   "source": {
+    "file": "Путешествие в Элевсин.epub"
+   },
+   "chars": 503800,
+   "words": 75694
+  },
+  {
+   "id": "pv-krut",
+   "title": "Круть",
+   "titleEn": "Krut",
+   "year": 2024,
+   "kind": "novel",
+   "source": {
+    "file": "Круть.epub"
+   },
+   "chars": 510784,
+   "words": 75205
+  },
+  {
+   "id": "pv-a-sinistra",
+   "title": "A Sinistra",
+   "titleEn": "A Sinistra",
+   "year": 2025,
+   "kind": "novel",
+   "source": {
+    "file": "A Sinistra  —  А Синистра  —  Левый Путь.epub"
+   },
+   "chars": 490469,
+   "words": 75425
+  },
+  {
+   "id": "pv-vozvrashchenie-sinei-borody",
+   "title": "Возвращение Синей Бороды",
+   "titleEn": "The Return of Bluebeard",
+   "year": 2026,
+   "kind": "novel",
+   "source": {
+    "file": "Возвращение Синей Бороды.epub"
+   },
+   "chars": 472134,
+   "words": 68953
+  }
+ ],
+ "excluded": [
+  {
+   "file": "«Химия и жизнь». Фантастика и детектив. 1985-1994.epub",
+   "reason": "anthology (magazine anthology, 1985–1994): works by other authors skipped"
+  },
+  {
+   "file": "«Химия и жизнь». Фантастика и детектив. 1985-1994.epub",
+   "section": "Виктор Пелевин Жизнь и приключения сарая Номер XII",
+   "reason": "duplicate (93% of its 8-grams already kept)",
+   "duplicateOf": "pv-sarai-nomer-xii"
+  },
+  {
+   "file": "«Химия и жизнь». Фантастика и детектив. 1985-1994.epub",
+   "section": "Виктор Пелевин Затворник и шестипалый",
+   "reason": "alternate edition or overlapping cut (68% shared)",
+   "duplicateOf": "pv-zatvornik-i-shestipalyi"
+  },
+  {
+   "file": "Ананасная вода для прекрасной дамы.epub",
+   "section": "Виктор Пелевин Ананасная вода для прекрасной дамы/Часть I БОГИ И МЕХАНИЗМЫ/Зенитные кодексы Аль-Эфесби",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-zenitnye-kodeksy"
+  },
+  {
+   "file": "Ананасная вода для прекрасной дамы.epub",
+   "section": "Виктор Пелевин Ананасная вода для прекрасной дамы/Часть II МЕХАНИЗМЫ И БОГИ/Созерцатель тени",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-sozertsatel-teni"
+  },
+  {
+   "file": "Ананасная вода для прекрасной дамы.epub",
+   "section": "Виктор Пелевин Ананасная вода для прекрасной дамы/Часть II МЕХАНИЗМЫ И БОГИ/Тхаги",
+   "reason": "duplicate (99% of its 8-grams already kept)",
+   "duplicateOf": "pv-thagi"
+  },
+  {
+   "file": "Бэйсуортский отшельник.epub",
+   "reason": "translation of Arthur Machen's story, not Pelevin's own work"
+  },
+  {
+   "file": "Все повести и эссе.epub",
+   "section": "ГКЧП как тетраграмматон",
+   "reason": "duplicate (86% of its 8-grams already kept)",
+   "duplicateOf": "pv-gkchp-kak-tetragrammaton"
+  },
+  {
+   "file": "Все повести и эссе.epub",
+   "section": "День бульдозериста",
+   "reason": "duplicate (92% of its 8-grams already kept)",
+   "duplicateOf": "pv-den-buldozerista"
+  },
+  {
+   "file": "Все повести и эссе.epub",
+   "section": "Джон Фаулз и трагедия русского либерализма",
+   "reason": "duplicate (82% of its 8-grams already kept)",
+   "duplicateOf": "pv-dzhon-faulz"
+  },
+  {
+   "file": "Все повести и эссе.epub",
+   "section": "Желтая стрела",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-zheltaya-strela"
+  },
+  {
+   "file": "Все повести и эссе.epub",
+   "section": "Затворник и шестипалый",
+   "reason": "duplicate (98% of its 8-grams already kept)",
+   "duplicateOf": "pv-zatvornik-i-shestipalyi"
+  },
+  {
+   "file": "Все повести и эссе.epub",
+   "section": "Зомбификация. Опыт сравнительной антропологии",
+   "reason": "duplicate (83% of its 8-grams already kept)",
+   "duplicateOf": "pv-zombifikatsiya"
+  },
+  {
+   "file": "Все повести и эссе.epub",
+   "section": "Икстлан – Петушки",
+   "reason": "duplicate (94% of its 8-grams already kept)",
+   "duplicateOf": "pv-ikstlan-petushki"
+  },
+  {
+   "file": "Все повести и эссе.epub",
+   "section": "Имена олигархов на карте Родины",
+   "reason": "duplicate (85% of its 8-grams already kept)",
+   "duplicateOf": "pv-imena-oligarhov"
+  },
+  {
+   "file": "Все повести и эссе.epub",
+   "section": "Македонская критика французской мысли",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-makedonskaya-kritika"
+  },
+  {
+   "file": "Все повести и эссе.epub",
+   "section": "Мост, который я хотел перейти",
+   "reason": "duplicate (94% of its 8-grams already kept)",
+   "duplicateOf": "pv-most-kotoryi-ya-hotel-pereiti"
+  },
+  {
+   "file": "Все повести и эссе.epub",
+   "section": "Принц госплана",
+   "reason": "duplicate (98% of its 8-grams already kept)",
+   "duplicateOf": "pv-prints-gosplana"
+  },
+  {
+   "file": "Все повести и эссе.epub",
+   "section": "Проблема верволка в средней полосе",
+   "reason": "alternate edition or overlapping cut (48% shared)",
+   "duplicateOf": "pv-problema-verwolka"
+  },
+  {
+   "file": "Все рассказы.epub",
+   "section": "Греческий вариант/Греческий вариант",
+   "reason": "duplicate (88% of its 8-grams already kept)",
+   "duplicateOf": "pv-grecheskii-variant"
+  },
+  {
+   "file": "Все рассказы.epub",
+   "section": "Греческий вариант/Зигмунд в кафе",
+   "reason": "duplicate (90% of its 8-grams already kept)",
+   "duplicateOf": "pv-zigmund-v-kafe"
+  },
+  {
+   "file": "Все рассказы.epub",
+   "section": "Греческий вариант/Краткая история пэйнтбола в Москве",
+   "reason": "duplicate (86% of its 8-grams already kept)",
+   "duplicateOf": "pv-kratkaya-istoriya-peintbola"
+  },
+  {
+   "file": "Все рассказы.epub",
+   "section": "Греческий вариант/Нижняя тундра",
+   "reason": "duplicate (84% of its 8-grams already kept)",
+   "duplicateOf": "pv-nizhnyaya-tundra"
+  },
+  {
+   "file": "Все рассказы.epub",
+   "section": "Греческий вариант/Святочный киберпанк, или Рождественская ночь-117.DIR",
+   "reason": "alternate edition or overlapping cut (78% shared)",
+   "duplicateOf": "pv-svyatochnyi-kiberpank"
+  },
+  {
+   "file": "Все рассказы.epub",
+   "section": "Греческий вариант/Time out",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-time-out"
+  },
+  {
+   "file": "Все рассказы.epub",
+   "section": "Миттельшпиль/Водонапорная башня",
+   "reason": "duplicate (99% of its 8-grams already kept)",
+   "duplicateOf": "pv-vodonapornaya-bashnya"
+  },
+  {
+   "file": "Все рассказы.epub",
+   "section": "Миттельшпиль/Встроенный напоминатель",
+   "reason": "duplicate (84% of its 8-grams already kept)",
+   "duplicateOf": "pv-vstroennyi-napominatel"
+  },
+  {
+   "file": "Все рассказы.epub",
+   "section": "Миттельшпиль/Миттельшпиль",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-mittelshpil"
+  },
+  {
+   "file": "Все рассказы.epub",
+   "section": "Миттельшпиль/Онтология детства",
+   "reason": "duplicate (84% of its 8-grams already kept)",
+   "duplicateOf": "pv-ontologiya-detstva"
+  },
+  {
+   "file": "Все рассказы.epub",
+   "section": "Миттельшпиль/Ухряб",
+   "reason": "duplicate (85% of its 8-grams already kept)",
+   "duplicateOf": "pv-uhryab"
+  },
+  {
+   "file": "Все рассказы.epub",
+   "section": "Ника/Бубен верхнего мира",
+   "reason": "duplicate (99% of its 8-grams already kept)",
+   "duplicateOf": "pv-buben-verhnego-mira"
+  },
+  {
+   "file": "Все рассказы.epub",
+   "section": "Ника/Бубен нижнего мира (Зеленая коробочка)",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-buben-nizhnego-mira"
+  },
+  {
+   "file": "Все рассказы.epub",
+   "section": "Ника/Иван Кублаханов",
+   "reason": "duplicate (90% of its 8-grams already kept)",
+   "duplicateOf": "pv-ivan-kublahanov"
+  },
+  {
+   "file": "Все рассказы.epub",
+   "section": "Ника/Ника",
+   "reason": "duplicate (96% of its 8-grams already kept)",
+   "duplicateOf": "pv-nika"
+  },
+  {
+   "file": "Все рассказы.epub",
+   "section": "Ника/Происхождение видов",
+   "reason": "duplicate (98% of its 8-grams already kept)",
+   "duplicateOf": "pv-proishozhdenie-vidov"
+  },
+  {
+   "file": "Все рассказы.epub",
+   "section": "Ника/Тарзанка",
+   "reason": "duplicate (99% of its 8-grams already kept)",
+   "duplicateOf": "pv-tarzanka"
+  },
+  {
+   "file": "Все рассказы.epub",
+   "section": "Память огненных лет/Музыка со столба",
+   "reason": "duplicate (99% of its 8-grams already kept)",
+   "duplicateOf": "pv-muzyka-so-stolba"
+  },
+  {
+   "file": "Все рассказы.epub",
+   "section": "Память огненных лет/Оружие возмездия",
+   "reason": "duplicate (89% of its 8-grams already kept)",
+   "duplicateOf": "pv-oruzhie-vozmezdiya"
+  },
+  {
+   "file": "Все рассказы.epub",
+   "section": "Память огненных лет/Откровение Крегера (комплект документации)",
+   "reason": "duplicate (95% of its 8-grams already kept)",
+   "duplicateOf": "pv-otkrovenie-kregera"
+  },
+  {
+   "file": "Все рассказы.epub",
+   "section": "Память огненных лет/Реконструктор (Об исследованиях П. Стецюка)",
+   "reason": "duplicate (81% of its 8-grams already kept)",
+   "duplicateOf": "pv-rekonstruktor"
+  },
+  {
+   "file": "Все рассказы.epub",
+   "section": "Память огненных лет/Хрустальный мир",
+   "reason": "duplicate (81% of its 8-grams already kept)",
+   "duplicateOf": "pv-hrustalnyi-mir"
+  },
+  {
+   "file": "Все рассказы.epub",
+   "section": "Спи/Вести из Непала",
+   "reason": "duplicate (99% of its 8-grams already kept)",
+   "duplicateOf": "pv-vesti-iz-nepala"
+  },
+  {
+   "file": "Все рассказы.epub",
+   "section": "Спи/Девятый сон Веры Павловны",
+   "reason": "duplicate (89% of its 8-grams already kept)",
+   "duplicateOf": "pv-devyatyi-son-very-pavlovny"
+  },
+  {
+   "file": "Все рассказы.epub",
+   "section": "Спи/Жизнь и приключения сарая номер XII",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-sarai-nomer-xii"
+  },
+  {
+   "file": "Все рассказы.epub",
+   "section": "Спи/Колдун Игнат и люди",
+   "reason": "duplicate (93% of its 8-grams already kept)",
+   "duplicateOf": "pv-koldun-ignat-i-lyudi"
+  },
+  {
+   "file": "Все рассказы.epub",
+   "section": "Спи/Мардонги",
+   "reason": "duplicate (96% of its 8-grams already kept)",
+   "duplicateOf": "pv-mardongi"
+  },
+  {
+   "file": "Все рассказы.epub",
+   "section": "Спи/Синий фонарь",
+   "reason": "duplicate (96% of its 8-grams already kept)",
+   "duplicateOf": "pv-sinii-fonar"
+  },
+  {
+   "file": "Все рассказы.epub",
+   "section": "Спи/Спи",
+   "reason": "duplicate (90% of its 8-grams already kept)",
+   "duplicateOf": "pv-spi"
+  },
+  {
+   "file": "Все рассказы.epub",
+   "section": "Спи/СССР Тайшоу Чжуань",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-sssr-taishou-chzhuan"
+  },
+  {
+   "file": "Все рассказы.epub",
+   "section": "Фокус-группа/Акико",
+   "reason": "duplicate (99% of its 8-grams already kept)",
+   "duplicateOf": "pv-akiko"
+  },
+  {
+   "file": "Все рассказы.epub",
+   "section": "Фокус-группа/Гость на празднике Бон",
+   "reason": "duplicate (99% of its 8-grams already kept)",
+   "duplicateOf": "pv-gost-na-prazdnike-bon"
+  },
+  {
+   "file": "Все рассказы.epub",
+   "section": "Фокус-группа/Запись о поиске ветра",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-zapis-o-poiske-vetra"
+  },
+  {
+   "file": "Все рассказы.epub",
+   "section": "Фокус-группа/Один вог",
+   "reason": "duplicate (94% of its 8-grams already kept)",
+   "duplicateOf": "pv-odin-vog"
+  },
+  {
+   "file": "Все рассказы.epub",
+   "section": "Фокус-группа/Свет горизонта",
+   "reason": "duplicate (99% of its 8-grams already kept)",
+   "duplicateOf": "pv-svet-gorizonta"
+  },
+  {
+   "file": "Все рассказы.epub",
+   "section": "Фокус-группа/Фокус-группа",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-fokus-gruppa"
+  },
+  {
+   "file": "Вся вселенная TRANSHUMANISM INC. —  комплект из 4 книг.epub",
+   "section": "Круть",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-krut"
+  },
+  {
+   "file": "Вся вселенная TRANSHUMANISM INC. —  комплект из 4 книг.epub",
+   "section": "Путешествие в Элевсин",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-puteshestvie-v-elevsin"
+  },
+  {
+   "file": "Вся вселенная TRANSHUMANISM INC. —  комплект из 4 книг.epub",
+   "section": "KGBT+",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-kgbt"
+  },
+  {
+   "file": "Вся вселенная TRANSHUMANISM INC. —  комплект из 4 книг.epub",
+   "section": "TRANSHUMANISM INC.",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-transhumanism-inc"
+  },
+  {
+   "file": "Гадание на рунах или рунический оракул Ральфа Блума.epub",
+   "reason": "translation of Ralph Blum's The Book of Runes, not Pelevin's own work"
+  },
+  {
+   "file": "Детский мир.epub",
+   "reason": "anthology (anthology compiled by L. Petrushevskaya): works by other authors skipped"
+  },
+  {
+   "file": "Детский мир.epub",
+   "section": "Виктор Пелевин Онтология детства",
+   "reason": "duplicate (85% of its 8-grams already kept)",
+   "duplicateOf": "pv-ontologiya-detstva"
+  },
+  {
+   "file": "Диалектика Переходного Периода из Ниоткуда в Никуда.epub",
+   "section": "Жизнь замечательных людей/Гость на празднике Бон",
+   "reason": "duplicate (99% of its 8-grams already kept)",
+   "duplicateOf": "pv-gost-na-prazdnike-bon"
+  },
+  {
+   "file": "Диалектика Переходного Периода из Ниоткуда в Никуда.epub",
+   "section": "Жизнь замечательных людей/Запись о поиске ветра",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-zapis-o-poiske-vetra"
+  },
+  {
+   "file": "Диалектика Переходного Периода из Ниоткуда в Никуда.epub",
+   "section": "Мощь Великого/Акико",
+   "reason": "duplicate (99% of its 8-grams already kept)",
+   "duplicateOf": "pv-akiko"
+  },
+  {
+   "file": "Диалектика Переходного Периода из Ниоткуда в Никуда.epub",
+   "section": "Мощь Великого/Македонская критика французской мысли",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-makedonskaya-kritika"
+  },
+  {
+   "file": "Диалектика Переходного Периода из Ниоткуда в Никуда.epub",
+   "section": "Мощь Великого/Один вог",
+   "reason": "duplicate (94% of its 8-grams already kept)",
+   "duplicateOf": "pv-odin-vog"
+  },
+  {
+   "file": "Диалектика Переходного Периода из Ниоткуда в Никуда.epub",
+   "section": "Мощь Великого/Числа",
+   "reason": "duplicate (99% of its 8-grams already kept)",
+   "duplicateOf": "pv-chisla"
+  },
+  {
+   "file": "Диалектика Переходного Периода из Ниоткуда в Никуда.epub",
+   "section": "Элегия 2",
+   "reason": "too short (172 words): poem, epigraph or section title"
+  },
+  {
+   "file": "Желтая стрела.epub",
+   "section": "Повести/Затворник и Шестипалый",
+   "reason": "duplicate (98% of its 8-grams already kept)",
+   "duplicateOf": "pv-zatvornik-i-shestipalyi"
+  },
+  {
+   "file": "Желтая стрела.epub",
+   "section": "Повести/Принц Госплана",
+   "reason": "duplicate (98% of its 8-grams already kept)",
+   "duplicateOf": "pv-prints-gosplana"
+  },
+  {
+   "file": "Желтая стрела.epub",
+   "section": "Рассказы/Бубен верхнего мира",
+   "reason": "duplicate (98% of its 8-grams already kept)",
+   "duplicateOf": "pv-buben-verhnego-mira"
+  },
+  {
+   "file": "Желтая стрела.epub",
+   "section": "Рассказы/Вести из Непала",
+   "reason": "duplicate (98% of its 8-grams already kept)",
+   "duplicateOf": "pv-vesti-iz-nepala"
+  },
+  {
+   "file": "Желтая стрела.epub",
+   "section": "Рассказы/Встроенный напоминатель",
+   "reason": "duplicate (84% of its 8-grams already kept)",
+   "duplicateOf": "pv-vstroennyi-napominatel"
+  },
+  {
+   "file": "Желтая стрела.epub",
+   "section": "Рассказы/Девятый сон Веры Павловны",
+   "reason": "duplicate (89% of its 8-grams already kept)",
+   "duplicateOf": "pv-devyatyi-son-very-pavlovny"
+  },
+  {
+   "file": "Желтая стрела.epub",
+   "section": "Рассказы/День бульдозериста",
+   "reason": "duplicate (91% of its 8-grams already kept)",
+   "duplicateOf": "pv-den-buldozerista"
+  },
+  {
+   "file": "Желтая стрела.epub",
+   "section": "Рассказы/Зигмунд в кафе",
+   "reason": "duplicate (90% of its 8-grams already kept)",
+   "duplicateOf": "pv-zigmund-v-kafe"
+  },
+  {
+   "file": "Желтая стрела.epub",
+   "section": "Рассказы/Иван Кублаханов",
+   "reason": "duplicate (90% of its 8-grams already kept)",
+   "duplicateOf": "pv-ivan-kublahanov"
+  },
+  {
+   "file": "Желтая стрела.epub",
+   "section": "Рассказы/Мардонги",
+   "reason": "duplicate (96% of its 8-grams already kept)",
+   "duplicateOf": "pv-mardongi"
+  },
+  {
+   "file": "Желтая стрела.epub",
+   "section": "Рассказы/Ника",
+   "reason": "duplicate (96% of its 8-grams already kept)",
+   "duplicateOf": "pv-nika"
+  },
+  {
+   "file": "Желтая стрела.epub",
+   "section": "Рассказы/Онтология детства",
+   "reason": "duplicate (84% of its 8-grams already kept)",
+   "duplicateOf": "pv-ontologiya-detstva"
+  },
+  {
+   "file": "Желтая стрела.epub",
+   "section": "Рассказы/Оружие возмездия",
+   "reason": "duplicate (88% of its 8-grams already kept)",
+   "duplicateOf": "pv-oruzhie-vozmezdiya"
+  },
+  {
+   "file": "Желтая стрела.epub",
+   "section": "Рассказы/Проблема верволка в Средней полосе",
+   "reason": "alternate edition or overlapping cut (48% shared)",
+   "duplicateOf": "pv-problema-verwolka"
+  },
+  {
+   "file": "Желтая стрела.epub",
+   "section": "Рассказы/Происхождение видов",
+   "reason": "duplicate (98% of its 8-grams already kept)",
+   "duplicateOf": "pv-proishozhdenie-vidov"
+  },
+  {
+   "file": "Желтая стрела.epub",
+   "section": "Рассказы/Реконструктор",
+   "reason": "duplicate (81% of its 8-grams already kept)",
+   "duplicateOf": "pv-rekonstruktor"
+  },
+  {
+   "file": "Желтая стрела.epub",
+   "section": "Рассказы/Синий фонарь",
+   "reason": "duplicate (95% of its 8-grams already kept)",
+   "duplicateOf": "pv-sinii-fonar"
+  },
+  {
+   "file": "Желтая стрела.epub",
+   "section": "Рассказы/Спи",
+   "reason": "duplicate (89% of its 8-grams already kept)",
+   "duplicateOf": "pv-spi"
+  },
+  {
+   "file": "Желтая стрела.epub",
+   "section": "Рассказы/Тарзанка",
+   "reason": "duplicate (99% of its 8-grams already kept)",
+   "duplicateOf": "pv-tarzanka"
+  },
+  {
+   "file": "Желтая стрела.epub",
+   "section": "Рассказы/Ухряб",
+   "reason": "duplicate (85% of its 8-grams already kept)",
+   "duplicateOf": "pv-uhryab"
+  },
+  {
+   "file": "Желтая стрела.epub",
+   "section": "Рассказы/Хрустальный мир",
+   "reason": "duplicate (81% of its 8-grams already kept)",
+   "duplicateOf": "pv-hrustalnyi-mir"
+  },
+  {
+   "file": "Жужукины дети, или Притча о недостойном соседе.epub",
+   "reason": "anthology (anthology of short prose): works by other authors skipped"
+  },
+  {
+   "file": "Жужукины дети, или Притча о недостойном соседе.epub",
+   "section": "Виктор ПЕЛЕВИН [58]",
+   "reason": "duplicate (84% of its 8-grams already kept)",
+   "duplicateOf": "pv-vstroennyi-napominatel"
+  },
+  {
+   "file": "Интервью с Виктором Пелевиным (2).epub",
+   "reason": "duplicate (89% of its 8-grams already kept)",
+   "duplicateOf": "pv-46-intervyu"
+  },
+  {
+   "file": "Интервью с Виктором Пелевиным.epub",
+   "reason": "duplicate (94% of its 8-grams already kept)",
+   "duplicateOf": "pv-46-intervyu"
+  },
+  {
+   "file": "Луноход (отр. из повести «Омон Ра»).epub",
+   "reason": "duplicate (86% of its 8-grams already kept)",
+   "duplicateOf": "pv-omon-ra"
+  },
+  {
+   "file": "Македонская критика французской мысли.epub",
+   "section": "День бульдозериста",
+   "reason": "duplicate (92% of its 8-grams already kept)",
+   "duplicateOf": "pv-den-buldozerista"
+  },
+  {
+   "file": "Македонская критика французской мысли.epub",
+   "section": "Ника/Бубен верхнего мира",
+   "reason": "duplicate (99% of its 8-grams already kept)",
+   "duplicateOf": "pv-buben-verhnego-mira"
+  },
+  {
+   "file": "Македонская критика французской мысли.epub",
+   "section": "Ника/Бубен нижнего мира (Зеленая коробочка)",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-buben-nizhnego-mira"
+  },
+  {
+   "file": "Македонская критика французской мысли.epub",
+   "section": "Ника/Иван Кублаханов",
+   "reason": "duplicate (90% of its 8-grams already kept)",
+   "duplicateOf": "pv-ivan-kublahanov"
+  },
+  {
+   "file": "Македонская критика французской мысли.epub",
+   "section": "Ника/Ника",
+   "reason": "duplicate (96% of its 8-grams already kept)",
+   "duplicateOf": "pv-nika"
+  },
+  {
+   "file": "Македонская критика французской мысли.epub",
+   "section": "Ника/Происхождение видов",
+   "reason": "duplicate (98% of its 8-grams already kept)",
+   "duplicateOf": "pv-proishozhdenie-vidov"
+  },
+  {
+   "file": "Македонская критика французской мысли.epub",
+   "section": "Ника/Тарзанка",
+   "reason": "duplicate (99% of its 8-grams already kept)",
+   "duplicateOf": "pv-tarzanka"
+  },
+  {
+   "file": "Македонская критика французской мысли.epub",
+   "section": "Память огненных лет/Музыка со столба",
+   "reason": "duplicate (99% of its 8-grams already kept)",
+   "duplicateOf": "pv-muzyka-so-stolba"
+  },
+  {
+   "file": "Македонская критика французской мысли.epub",
+   "section": "Память огненных лет/Оружие возмездия",
+   "reason": "duplicate (89% of its 8-grams already kept)",
+   "duplicateOf": "pv-oruzhie-vozmezdiya"
+  },
+  {
+   "file": "Македонская критика французской мысли.epub",
+   "section": "Память огненных лет/Откровение Крегера (комплект документации)",
+   "reason": "duplicate (95% of its 8-grams already kept)",
+   "duplicateOf": "pv-otkrovenie-kregera"
+  },
+  {
+   "file": "Македонская критика французской мысли.epub",
+   "section": "Память огненных лет/Реконструктор (Об исследованиях П. Стецюка)",
+   "reason": "duplicate (81% of its 8-grams already kept)",
+   "duplicateOf": "pv-rekonstruktor"
+  },
+  {
+   "file": "Македонская критика французской мысли.epub",
+   "section": "Память огненных лет/Хрустальный мир",
+   "reason": "duplicate (81% of its 8-grams already kept)",
+   "duplicateOf": "pv-hrustalnyi-mir"
+  },
+  {
+   "file": "НФ —  Альманах научной фантастики. Выпуск 35.epub",
+   "reason": "anthology (science-fiction almanac): works by other authors skipped"
+  },
+  {
+   "file": "НФ —  Альманах научной фантастики. Выпуск 35.epub",
+   "section": "Виктор Пелевин ВЕРВОЛКИ СРЕДНЕЙ ПОЛОСЫ",
+   "reason": "alternate edition or overlapping cut (49% shared)",
+   "duplicateOf": "pv-problema-verwolka"
+  },
+  {
+   "file": "НФ —  Альманах научной фантастики. Выпуск 35.epub",
+   "section": "Виктор Пелевин СПИ",
+   "reason": "duplicate (87% of its 8-grams already kept)",
+   "duplicateOf": "pv-spi"
+  },
+  {
+   "file": "П5 —  Прощальные песни политических пигмеев Пиндостана.epub",
+   "section": "Ассасин (суфийская легенда)",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-assasin"
+  },
+  {
+   "file": "П5 —  Прощальные песни политических пигмеев Пиндостана.epub",
+   "section": "Зал поющих кариатид",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-zal-poyushchih-kariatid"
+  },
+  {
+   "file": "П5 —  Прощальные песни политических пигмеев Пиндостана.epub",
+   "section": "Кормление крокодила Хуфу",
+   "reason": "duplicate (98% of its 8-grams already kept)",
+   "duplicateOf": "pv-kormlenie-krokodila-hufu"
+  },
+  {
+   "file": "П5 —  Прощальные песни политических пигмеев Пиндостана.epub",
+   "section": "Некромент",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-nekroment"
+  },
+  {
+   "file": "П5 —  Прощальные песни политических пигмеев Пиндостана.epub",
+   "section": "Пространство Фридмана",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-prostranstvo-fridmana"
+  },
+  {
+   "file": "Пелевин  Виктор.epub",
+   "section": "БУБЕН НИЖНЕГО МИРА",
+   "reason": "duplicate (98% of its 8-grams already kept)",
+   "duplicateOf": "pv-buben-nizhnego-mira"
+  },
+  {
+   "file": "Пелевин  Виктор.epub",
+   "section": "ВОДОНАПОРНАЯ БАШНЯ",
+   "reason": "duplicate (98% of its 8-grams already kept)",
+   "duplicateOf": "pv-vodonapornaya-bashnya"
+  },
+  {
+   "file": "Пелевин  Виктор.epub",
+   "section": "ЖИЗНЬ И ПРИКЛЮЧЕНИЯ САРАЯ НОМЕР XII",
+   "reason": "duplicate (87% of its 8-grams already kept)",
+   "duplicateOf": "pv-sarai-nomer-xii"
+  },
+  {
+   "file": "Пелевин  Виктор.epub",
+   "section": "ЗАТВОРНИК И ШЕСТИПАЛЫЙ",
+   "reason": "duplicate (98% of its 8-grams already kept)",
+   "duplicateOf": "pv-zatvornik-i-shestipalyi"
+  },
+  {
+   "file": "Пелевин  Виктор.epub",
+   "section": "МАКЕДОНСКАЯ КРИТИКА ФРАНЦУЗСКОЙ МЫСЛИ",
+   "reason": "duplicate (99% of its 8-grams already kept)",
+   "duplicateOf": "pv-makedonskaya-kritika"
+  },
+  {
+   "file": "Пелевин  Виктор.epub",
+   "section": "НИЖНЯЯ ТУНДРА",
+   "reason": "duplicate (90% of its 8-grams already kept)",
+   "duplicateOf": "pv-nizhnyaya-tundra"
+  },
+  {
+   "file": "Пелевин  Виктор.epub",
+   "section": "ОДИН ВОГ",
+   "reason": "duplicate (97% of its 8-grams already kept)",
+   "duplicateOf": "pv-akiko"
+  },
+  {
+   "file": "Пелевин  Виктор.epub",
+   "section": "ОМОН РА Героям Советского Космоса",
+   "reason": "duplicate (96% of its 8-grams already kept)",
+   "duplicateOf": "pv-omon-ra"
+  },
+  {
+   "file": "Пелевин  Виктор.epub",
+   "section": "ПРИНЦ ГОСПЛАНА",
+   "reason": "duplicate (97% of its 8-grams already kept)",
+   "duplicateOf": "pv-prints-gosplana"
+  },
+  {
+   "file": "Пелевин  Виктор.epub",
+   "section": "ФОКУС-ГРУППА",
+   "reason": "duplicate (99% of its 8-grams already kept)",
+   "duplicateOf": "pv-fokus-gruppa"
+  },
+  {
+   "file": "Пелевин  Виктор.epub",
+   "section": "GENERATION Р",
+   "reason": "duplicate (98% of its 8-grams already kept)",
+   "duplicateOf": "pv-generation-p"
+  },
+  {
+   "file": "Пелевин  Виктор.epub",
+   "section": "INFO",
+   "reason": "too short (159 words): poem, epigraph or section title"
+  },
+  {
+   "file": "Пелевин  Виктор.epub",
+   "section": "TIME OUT",
+   "reason": "duplicate (99% of its 8-grams already kept)",
+   "duplicateOf": "pv-time-out"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/46 интервью с Пелевиным. 46 интервью с писателем, который никогда не дает интервью by Виктор Пелевин",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-46-intervyu"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Ананасная вода для прекрасной дамы by Виктор Пелевин/Виктор Пелевин Ананасная вода для прекрасной дамы/Часть I БОГИ И МЕХАНИЗМЫ/Зенитные кодексы Аль-Эфесби",
+   "reason": "duplicate (99% of its 8-grams already kept)",
+   "duplicateOf": "pv-zenitnye-kodeksy"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Ананасная вода для прекрасной дамы by Виктор Пелевин/Виктор Пелевин Ананасная вода для прекрасной дамы/Часть I БОГИ И МЕХАНИЗМЫ/Операция «Burning Вush» [1]",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-operatsiya-burning-bush"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Ананасная вода для прекрасной дамы by Виктор Пелевин/Виктор Пелевин Ананасная вода для прекрасной дамы/Часть II МЕХАНИЗМЫ И БОГИ/Отель хороших воплощений Святочный рассказ",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-otel-horoshih-voploshchenii"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Ананасная вода для прекрасной дамы by Виктор Пелевин/Виктор Пелевин Ананасная вода для прекрасной дамы/Часть II МЕХАНИЗМЫ И БОГИ/Созерцатель тени",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-sozertsatel-teni"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Ананасная вода для прекрасной дамы by Виктор Пелевин/Виктор Пелевин Ананасная вода для прекрасной дамы/Часть II МЕХАНИЗМЫ И БОГИ/Тхаги",
+   "reason": "duplicate (99% of its 8-grams already kept)",
+   "duplicateOf": "pv-thagi"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Ассасин by Виктор Олегович Пелевин",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-assasin"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Диалектика Переходного Периода из Ниоткуда в Никуда (Сборник) by Виктор Пелевин/Жизнь замечательных людей/Гость на празднике Бон",
+   "reason": "duplicate (99% of its 8-grams already kept)",
+   "duplicateOf": "pv-gost-na-prazdnike-bon"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Диалектика Переходного Периода из Ниоткуда в Никуда (Сборник) by Виктор Пелевин/Жизнь замечательных людей/Запись о поиске ветра",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-zapis-o-poiske-vetra"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Диалектика Переходного Периода из Ниоткуда в Никуда (Сборник) by Виктор Пелевин/Мощь Великого/Акико",
+   "reason": "duplicate (99% of its 8-grams already kept)",
+   "duplicateOf": "pv-akiko"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Диалектика Переходного Периода из Ниоткуда в Никуда (Сборник) by Виктор Пелевин/Мощь Великого/Македонская критика французской мысли",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-makedonskaya-kritika"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Диалектика Переходного Периода из Ниоткуда в Никуда (Сборник) by Виктор Пелевин/Мощь Великого/Один вог",
+   "reason": "duplicate (94% of its 8-grams already kept)",
+   "duplicateOf": "pv-odin-vog"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Диалектика Переходного Периода из Ниоткуда в Никуда (Сборник) by Виктор Пелевин/Мощь Великого/Фокус-группа",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-fokus-gruppa"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Диалектика Переходного Периода из Ниоткуда в Никуда (Сборник) by Виктор Пелевин/Мощь Великого/Числа",
+   "reason": "duplicate (99% of its 8-grams already kept)",
+   "duplicateOf": "pv-chisla"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Диалектика Переходного Периода из Ниоткуда в Никуда (Сборник) by Виктор Пелевин/Элегия 2",
+   "reason": "too short (173 words): poem, epigraph or section title"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Желтая стрела (сборник) by Виктор Пелевин/Повести/Желтая стрела",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-zheltaya-strela"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Желтая стрела (сборник) by Виктор Пелевин/Повести/Затворник и Шестипалый",
+   "reason": "duplicate (98% of its 8-grams already kept)",
+   "duplicateOf": "pv-zatvornik-i-shestipalyi"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Желтая стрела (сборник) by Виктор Пелевин/Повести/Принц Госплана",
+   "reason": "duplicate (98% of its 8-grams already kept)",
+   "duplicateOf": "pv-prints-gosplana"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Желтая стрела (сборник) by Виктор Пелевин/Рассказы/Бубен верхнего мира",
+   "reason": "duplicate (98% of its 8-grams already kept)",
+   "duplicateOf": "pv-buben-verhnego-mira"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Желтая стрела (сборник) by Виктор Пелевин/Рассказы/Вести из Непала",
+   "reason": "duplicate (98% of its 8-grams already kept)",
+   "duplicateOf": "pv-vesti-iz-nepala"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Желтая стрела (сборник) by Виктор Пелевин/Рассказы/Встроенный напоминатель",
+   "reason": "duplicate (84% of its 8-grams already kept)",
+   "duplicateOf": "pv-vstroennyi-napominatel"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Желтая стрела (сборник) by Виктор Пелевин/Рассказы/Девятый сон Веры Павловны",
+   "reason": "duplicate (89% of its 8-grams already kept)",
+   "duplicateOf": "pv-devyatyi-son-very-pavlovny"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Желтая стрела (сборник) by Виктор Пелевин/Рассказы/День бульдозериста",
+   "reason": "duplicate (91% of its 8-grams already kept)",
+   "duplicateOf": "pv-den-buldozerista"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Желтая стрела (сборник) by Виктор Пелевин/Рассказы/Зигмунд в кафе",
+   "reason": "duplicate (90% of its 8-grams already kept)",
+   "duplicateOf": "pv-zigmund-v-kafe"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Желтая стрела (сборник) by Виктор Пелевин/Рассказы/Иван Кублаханов",
+   "reason": "duplicate (90% of its 8-grams already kept)",
+   "duplicateOf": "pv-ivan-kublahanov"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Желтая стрела (сборник) by Виктор Пелевин/Рассказы/Мардонги",
+   "reason": "duplicate (96% of its 8-grams already kept)",
+   "duplicateOf": "pv-mardongi"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Желтая стрела (сборник) by Виктор Пелевин/Рассказы/Ника",
+   "reason": "duplicate (96% of its 8-grams already kept)",
+   "duplicateOf": "pv-nika"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Желтая стрела (сборник) by Виктор Пелевин/Рассказы/Онтология детства",
+   "reason": "duplicate (84% of its 8-grams already kept)",
+   "duplicateOf": "pv-ontologiya-detstva"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Желтая стрела (сборник) by Виктор Пелевин/Рассказы/Оружие возмездия",
+   "reason": "duplicate (88% of its 8-grams already kept)",
+   "duplicateOf": "pv-oruzhie-vozmezdiya"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Желтая стрела (сборник) by Виктор Пелевин/Рассказы/Проблема верволка в Средней полосе",
+   "reason": "alternate edition or overlapping cut (48% shared)",
+   "duplicateOf": "pv-problema-verwolka"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Желтая стрела (сборник) by Виктор Пелевин/Рассказы/Происхождение видов",
+   "reason": "duplicate (98% of its 8-grams already kept)",
+   "duplicateOf": "pv-proishozhdenie-vidov"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Желтая стрела (сборник) by Виктор Пелевин/Рассказы/Реконструктор",
+   "reason": "duplicate (81% of its 8-grams already kept)",
+   "duplicateOf": "pv-rekonstruktor"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Желтая стрела (сборник) by Виктор Пелевин/Рассказы/Синий фонарь",
+   "reason": "duplicate (95% of its 8-grams already kept)",
+   "duplicateOf": "pv-sinii-fonar"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Желтая стрела (сборник) by Виктор Пелевин/Рассказы/Спи",
+   "reason": "duplicate (89% of its 8-grams already kept)",
+   "duplicateOf": "pv-spi"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Желтая стрела (сборник) by Виктор Пелевин/Рассказы/Тарзанка",
+   "reason": "duplicate (99% of its 8-grams already kept)",
+   "duplicateOf": "pv-tarzanka"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Желтая стрела (сборник) by Виктор Пелевин/Рассказы/Ухряб",
+   "reason": "duplicate (85% of its 8-grams already kept)",
+   "duplicateOf": "pv-uhryab"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Желтая стрела (сборник) by Виктор Пелевин/Рассказы/Хрустальный мир",
+   "reason": "duplicate (81% of its 8-grams already kept)",
+   "duplicateOf": "pv-hrustalnyi-mir"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Зал поющих кариатид by Виктор Олегович Пелевин",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-zal-poyushchih-kariatid"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Искусство легких касаний by Виктор Олегович Пелевин/Часть вторая Бой после победы/Столыпин",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-stolypin"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Искусство легких касаний by Виктор Олегович Пелевин/Часть первая Сатурн почти не виден/Иакинф",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-iakinf"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Искусство легких касаний by Виктор Олегович Пелевин/Часть первая Сатурн почти не виден/Искусство легких касаний",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-iskusstvo-legkih-kasanii"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Кормление крокодила Хуфу by Виктор Олегович Пелевин",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-kormlenie-krokodila-hufu"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Македонская критика французской мысли (Сборник) by Виктор Пелевин/День бульдозериста",
+   "reason": "duplicate (92% of its 8-grams already kept)",
+   "duplicateOf": "pv-den-buldozerista"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Македонская критика французской мысли (Сборник) by Виктор Пелевин/Македонская критика французской мысли",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-makedonskaya-kritika"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Македонская критика французской мысли (Сборник) by Виктор Пелевин/Ника/Бубен верхнего мира",
+   "reason": "duplicate (99% of its 8-grams already kept)",
+   "duplicateOf": "pv-buben-verhnego-mira"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Македонская критика французской мысли (Сборник) by Виктор Пелевин/Ника/Бубен нижнего мира (Зеленая коробочка)",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-buben-nizhnego-mira"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Македонская критика французской мысли (Сборник) by Виктор Пелевин/Ника/Иван Кублаханов",
+   "reason": "duplicate (90% of its 8-grams already kept)",
+   "duplicateOf": "pv-ivan-kublahanov"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Македонская критика французской мысли (Сборник) by Виктор Пелевин/Ника/Ника",
+   "reason": "duplicate (96% of its 8-grams already kept)",
+   "duplicateOf": "pv-nika"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Македонская критика французской мысли (Сборник) by Виктор Пелевин/Ника/Происхождение видов",
+   "reason": "duplicate (98% of its 8-grams already kept)",
+   "duplicateOf": "pv-proishozhdenie-vidov"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Македонская критика французской мысли (Сборник) by Виктор Пелевин/Ника/Тарзанка",
+   "reason": "duplicate (99% of its 8-grams already kept)",
+   "duplicateOf": "pv-tarzanka"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Македонская критика французской мысли (Сборник) by Виктор Пелевин/Память огненных лет/Музыка со столба",
+   "reason": "duplicate (99% of its 8-grams already kept)",
+   "duplicateOf": "pv-muzyka-so-stolba"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Македонская критика французской мысли (Сборник) by Виктор Пелевин/Память огненных лет/Оружие возмездия",
+   "reason": "duplicate (89% of its 8-grams already kept)",
+   "duplicateOf": "pv-oruzhie-vozmezdiya"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Македонская критика французской мысли (Сборник) by Виктор Пелевин/Память огненных лет/Откровение Крегера (комплект документации)",
+   "reason": "duplicate (95% of its 8-grams already kept)",
+   "duplicateOf": "pv-otkrovenie-kregera"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Македонская критика французской мысли (Сборник) by Виктор Пелевин/Память огненных лет/Реконструктор (Об исследованиях П. Стецюка)",
+   "reason": "duplicate (81% of its 8-grams already kept)",
+   "duplicateOf": "pv-rekonstruktor"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Македонская критика французской мысли (Сборник) by Виктор Пелевин/Память огненных лет/Хрустальный мир",
+   "reason": "duplicate (81% of its 8-grams already kept)",
+   "duplicateOf": "pv-hrustalnyi-mir"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Некромент by Виктор Олегович Пелевин",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-nekroment"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Пространство Фридмана by Виктор Олегович Пелевин",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-prostranstvo-fridmana"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Синий фонарь by Виктор Олегович Пелевин/Виктор Пелевин Синий фонарь/Часть вторая Спи/Вести из Непала",
+   "reason": "duplicate (97% of its 8-grams already kept)",
+   "duplicateOf": "pv-vesti-iz-nepala"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Синий фонарь by Виктор Олегович Пелевин/Виктор Пелевин Синий фонарь/Часть вторая Спи/Девятый сон Веры Павловны",
+   "reason": "duplicate (94% of its 8-grams already kept)",
+   "duplicateOf": "pv-devyatyi-son-very-pavlovny"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Синий фонарь by Виктор Олегович Пелевин/Виктор Пелевин Синий фонарь/Часть вторая Спи/Мардонги",
+   "reason": "duplicate (98% of its 8-grams already kept)",
+   "duplicateOf": "pv-mardongi"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Синий фонарь by Виктор Олегович Пелевин/Виктор Пелевин Синий фонарь/Часть вторая Спи/Синий фонарь",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-sinii-fonar"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Синий фонарь by Виктор Олегович Пелевин/Виктор Пелевин Синий фонарь/Часть вторая Спи/Спи",
+   "reason": "duplicate (93% of its 8-grams already kept)",
+   "duplicateOf": "pv-spi"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Синий фонарь by Виктор Олегович Пелевин/Виктор Пелевин Синий фонарь/Часть вторая Спи/СССР Тайшоу Чжуань",
+   "reason": "duplicate (95% of its 8-grams already kept)",
+   "duplicateOf": "pv-sssr-taishou-chzhuan"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Синий фонарь by Виктор Олегович Пелевин/Виктор Пелевин Синий фонарь/Часть первая Принц Госплана/Жизнь и приключения сарая Номер XII",
+   "reason": "duplicate (85% of its 8-grams already kept)",
+   "duplicateOf": "pv-sarai-nomer-xii"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Синий фонарь by Виктор Олегович Пелевин/Виктор Пелевин Синий фонарь/Часть первая Принц Госплана/Затворник и Шестипалый",
+   "reason": "duplicate (92% of its 8-grams already kept)",
+   "duplicateOf": "pv-zatvornik-i-shestipalyi"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Синий фонарь by Виктор Олегович Пелевин/Виктор Пелевин Синий фонарь/Часть первая Принц Госплана/Принц Госплана",
+   "reason": "duplicate (94% of its 8-grams already kept)",
+   "duplicateOf": "pv-prints-gosplana"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Синий фонарь by Виктор Олегович Пелевин/Виктор Пелевин Синий фонарь/Часть первая Принц Госплана/Проблема верволка в Средней полосе",
+   "reason": "alternate edition or overlapping cut (56% shared)",
+   "duplicateOf": "pv-problema-verwolka"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Синий фонарь by Виктор Олегович Пелевин/Виктор Пелевин Синий фонарь/Часть пятая Память огненных лет/Луноход",
+   "reason": "duplicate (82% of its 8-grams already kept)",
+   "duplicateOf": "pv-omon-ra"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Синий фонарь by Виктор Олегович Пелевин/Виктор Пелевин Синий фонарь/Часть пятая Память огненных лет/Музыка со столба",
+   "reason": "duplicate (89% of its 8-grams already kept)",
+   "duplicateOf": "pv-muzyka-so-stolba"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Синий фонарь by Виктор Олегович Пелевин/Виктор Пелевин Синий фонарь/Часть пятая Память огненных лет/Оружие возмездия",
+   "reason": "duplicate (90% of its 8-grams already kept)",
+   "duplicateOf": "pv-oruzhie-vozmezdiya"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Синий фонарь by Виктор Олегович Пелевин/Виктор Пелевин Синий фонарь/Часть пятая Память огненных лет/Откровение Крегера (комплект документов)",
+   "reason": "duplicate (87% of its 8-grams already kept)",
+   "duplicateOf": "pv-otkrovenie-kregera"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Синий фонарь by Виктор Олегович Пелевин/Виктор Пелевин Синий фонарь/Часть пятая Память огненных лет/Реконструктор (об исследованиях П. Стецюка)",
+   "reason": "duplicate (83% of its 8-grams already kept)",
+   "duplicateOf": "pv-rekonstruktor"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Синий фонарь by Виктор Олегович Пелевин/Виктор Пелевин Синий фонарь/Часть пятая Память огненных лет/Хрустальный мир",
+   "reason": "duplicate (84% of its 8-grams already kept)",
+   "duplicateOf": "pv-hrustalnyi-mir"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Синий фонарь by Виктор Олегович Пелевин/Виктор Пелевин Синий фонарь/Часть третья День бульдозериста/Встроенный напоминатель",
+   "reason": "duplicate (85% of its 8-grams already kept)",
+   "duplicateOf": "pv-vstroennyi-napominatel"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Синий фонарь by Виктор Олегович Пелевин/Виктор Пелевин Синий фонарь/Часть третья День бульдозериста/День бульдозериста",
+   "reason": "duplicate (97% of its 8-grams already kept)",
+   "duplicateOf": "pv-den-buldozerista"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Синий фонарь by Виктор Олегович Пелевин/Виктор Пелевин Синий фонарь/Часть третья День бульдозериста/Миттельшпиль",
+   "reason": "duplicate (97% of its 8-grams already kept)",
+   "duplicateOf": "pv-mittelshpil"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Синий фонарь by Виктор Олегович Пелевин/Виктор Пелевин Синий фонарь/Часть третья День бульдозериста/Онтология детства",
+   "reason": "duplicate (91% of its 8-grams already kept)",
+   "duplicateOf": "pv-ontologiya-detstva"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Синий фонарь by Виктор Олегович Пелевин/Виктор Пелевин Синий фонарь/Часть четвертая Ухряб/Ухряб",
+   "reason": "duplicate (95% of its 8-grams already kept)",
+   "duplicateOf": "pv-uhryab"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Relics. Раннее и неизданное (Сборник) by Виктор Олегович Пелевин/Бубен нижнего мира",
+   "reason": "duplicate (98% of its 8-grams already kept)",
+   "duplicateOf": "pv-buben-nizhnego-mira"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Relics. Раннее и неизданное (Сборник) by Виктор Олегович Пелевин/Водонапорная башня",
+   "reason": "duplicate (98% of its 8-grams already kept)",
+   "duplicateOf": "pv-vodonapornaya-bashnya"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Relics. Раннее и неизданное (Сборник) by Виктор Олегович Пелевин/ГКЧП как тетраграмматон",
+   "reason": "duplicate (85% of its 8-grams already kept)",
+   "duplicateOf": "pv-gkchp-kak-tetragrammaton"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Relics. Раннее и неизданное (Сборник) by Виктор Олегович Пелевин/Греческий вариант",
+   "reason": "duplicate (88% of its 8-grams already kept)",
+   "duplicateOf": "pv-grecheskii-variant"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Relics. Раннее и неизданное (Сборник) by Виктор Олегович Пелевин/Джон Фаулз и трагедия русского либерализма",
+   "reason": "duplicate (82% of its 8-grams already kept)",
+   "duplicateOf": "pv-dzhon-faulz"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Relics. Раннее и неизданное (Сборник) by Виктор Олегович Пелевин/Жизнь и приключения сарая номер XII",
+   "reason": "duplicate (88% of its 8-grams already kept)",
+   "duplicateOf": "pv-sarai-nomer-xii"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Relics. Раннее и неизданное (Сборник) by Виктор Олегович Пелевин/Зомбификация Опыт сравнительной антропологии",
+   "reason": "duplicate (82% of its 8-grams already kept)",
+   "duplicateOf": "pv-zombifikatsiya"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Relics. Раннее и неизданное (Сборник) by Виктор Олегович Пелевин/Икстлан – Петушки",
+   "reason": "duplicate (94% of its 8-grams already kept)",
+   "duplicateOf": "pv-ikstlan-petushki"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Relics. Раннее и неизданное (Сборник) by Виктор Олегович Пелевин/Имена олигархов на карте Родины",
+   "reason": "duplicate (86% of its 8-grams already kept)",
+   "duplicateOf": "pv-imena-oligarhov"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Relics. Раннее и неизданное (Сборник) by Виктор Олегович Пелевин/Колдун Игнат и люди",
+   "reason": "duplicate (93% of its 8-grams already kept)",
+   "duplicateOf": "pv-koldun-ignat-i-lyudi"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Relics. Раннее и неизданное (Сборник) by Виктор Олегович Пелевин/Краткая история пэйнтбола в Москве",
+   "reason": "duplicate (83% of its 8-grams already kept)",
+   "duplicateOf": "pv-kratkaya-istoriya-peintbola"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Relics. Раннее и неизданное (Сборник) by Виктор Олегович Пелевин/Миттельшпиль",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-mittelshpil"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Relics. Раннее и неизданное (Сборник) by Виктор Олегович Пелевин/Мост, который я хотел перейти",
+   "reason": "duplicate (92% of its 8-grams already kept)",
+   "duplicateOf": "pv-most-kotoryi-ya-hotel-pereiti"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Relics. Раннее и неизданное (Сборник) by Виктор Олегович Пелевин/Музыка со столба",
+   "reason": "duplicate (91% of its 8-grams already kept)",
+   "duplicateOf": "pv-muzyka-so-stolba"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Relics. Раннее и неизданное (Сборник) by Виктор Олегович Пелевин/Нижняя тундра",
+   "reason": "duplicate (84% of its 8-grams already kept)",
+   "duplicateOf": "pv-nizhnyaya-tundra"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Relics. Раннее и неизданное (Сборник) by Виктор Олегович Пелевин/Оружие возмездия",
+   "reason": "duplicate (89% of its 8-grams already kept)",
+   "duplicateOf": "pv-oruzhie-vozmezdiya"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Relics. Раннее и неизданное (Сборник) by Виктор Олегович Пелевин/Откровение Крегера",
+   "reason": "duplicate (88% of its 8-grams already kept)",
+   "duplicateOf": "pv-otkrovenie-kregera"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Relics. Раннее и неизданное (Сборник) by Виктор Олегович Пелевин/Психическая атака сонет",
+   "reason": "too short (12 words): poem, epigraph or section title"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Relics. Раннее и неизданное (Сборник) by Виктор Олегович Пелевин/Святочный киберпанк, или Рождественская ночь-117.DIR",
+   "reason": "alternate edition or overlapping cut (78% shared)",
+   "duplicateOf": "pv-svyatochnyi-kiberpank"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Relics. Раннее и неизданное (Сборник) by Виктор Олегович Пелевин/СССР Тайшоу Чжуань",
+   "reason": "duplicate (94% of its 8-grams already kept)",
+   "duplicateOf": "pv-sssr-taishou-chzhuan"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Relics. Раннее и неизданное (Сборник) by Виктор Олегович Пелевин/Time out",
+   "reason": "duplicate (99% of its 8-grams already kept)",
+   "duplicateOf": "pv-time-out"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Рассказы-повести/Relics. Раннее и неизданное (Сборник) by Виктор Олегович Пелевин/Who by fire",
+   "reason": "duplicate (98% of its 8-grams already kept)",
+   "duplicateOf": "pv-who-by-fire"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Романы/Бэтман Аполло by Виктор Олегович Пелевин",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-betman-apollo"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Романы/Жизнь насекомых by Виктор Олегович Пелевин",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-zhizn-nasekomyh"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Романы/Лампа Мафусаила, или Крайняя битва чекистов с масонами by Виктор Олегович Пелевин",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-lampa-mafusaila"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Романы/Любовь к трем цукербринам by Виктор Олегович Пелевин",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-lyubov-k-trem-tsukerbrinam"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Романы/Непобедимое солнце by Виктор Олегович Пелевин",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-nepobedimoe-solntse"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Романы/Омон Ра by Виктор Олегович Пелевин",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-omon-ra"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Романы/Священная книга оборотня by Виктор Олегович Пелевин",
+   "reason": "duplicate (99% of its 8-grams already kept)",
+   "duplicateOf": "pv-svyashchennaya-kniga-oborotnya"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Романы/Смотритель. Книга 2. Железная бездна by Виктор Олегович Пелевин",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-zheleznaya-bezdna"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Романы/Смотритель. Том 1. Орден желтого флага by Виктор Олегович Пелевин",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-orden-zheltogo-flaga"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Романы/Тайные виды на гору Фудзи by Виктор Олегович Пелевин",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-tainye-vidy-na-goru-fudzi"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Романы/Чапаев и Пустота by Виктор Пелевин",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-chapaev-i-pustota"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Романы/Числа by Виктор Пелевин",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-chisla"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Романы/Шлем ужаса by Виктор Олегович Пелевин",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-shlem-uzhasa"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Романы/Empire V by Виктор Пелевин",
+   "reason": "duplicate (92% of its 8-grams already kept)",
+   "duplicateOf": "pv-empire-v"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Романы/Generation П by Виктор Пелевин",
+   "reason": "duplicate (99% of its 8-grams already kept)",
+   "duplicateOf": "pv-generation-p"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Романы/iPhuck 10 by Виктор Олегович Пелевин",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-iphuck-10"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Романы/KGBT+ (КГБТ+) by Виктор Олегович Пелевин",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-kgbt"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Романы/S.N.U.F.F. by Виктор Пелевин",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-snuff"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Романы/t by Виктор Олегович Пелевин",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-t"
+  },
+  {
+   "file": "Рассказы-Повести-Романы.epub",
+   "section": "Романы/TRANSHUMANISM INC. by Виктор Олегович Пелевин",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-transhumanism-inc"
+  },
+  {
+   "file": "Русские цветы зла.epub",
+   "reason": "anthology (anthology compiled by V. Erofeyev): works by other authors skipped"
+  },
+  {
+   "file": "Русские цветы зла.epub",
+   "section": "Виктор Пелевин Хрустальный мир",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-hrustalnyi-mir"
+  },
+  {
+   "file": "Свой путь.epub",
+   "reason": "anthology (anthology): works by other authors skipped"
+  },
+  {
+   "file": "Свой путь.epub",
+   "section": "Виктор Пелевин Греческий вариант",
+   "reason": "duplicate (88% of its 8-grams already kept)",
+   "duplicateOf": "pv-grecheskii-variant"
+  },
+  {
+   "file": "Семнадцать о Семнадцатом.epub",
+   "reason": "anthology (anthology): works by other authors skipped"
+  },
+  {
+   "file": "Семнадцать о Семнадцатом.epub",
+   "section": "Виктор Пелевин Хрустальный мир",
+   "reason": "duplicate (81% of its 8-grams already kept)",
+   "duplicateOf": "pv-hrustalnyi-mir"
+  },
+  {
+   "file": "Синий фонарь.epub",
+   "section": "Виктор Пелевин Синий фонарь/Часть вторая Спи/Вести из Непала",
+   "reason": "duplicate (97% of its 8-grams already kept)",
+   "duplicateOf": "pv-vesti-iz-nepala"
+  },
+  {
+   "file": "Синий фонарь.epub",
+   "section": "Виктор Пелевин Синий фонарь/Часть вторая Спи/Девятый сон Веры Павловны",
+   "reason": "duplicate (94% of its 8-grams already kept)",
+   "duplicateOf": "pv-devyatyi-son-very-pavlovny"
+  },
+  {
+   "file": "Синий фонарь.epub",
+   "section": "Виктор Пелевин Синий фонарь/Часть вторая Спи/Мардонги",
+   "reason": "duplicate (98% of its 8-grams already kept)",
+   "duplicateOf": "pv-mardongi"
+  },
+  {
+   "file": "Синий фонарь.epub",
+   "section": "Виктор Пелевин Синий фонарь/Часть вторая Спи/Спи",
+   "reason": "duplicate (93% of its 8-grams already kept)",
+   "duplicateOf": "pv-spi"
+  },
+  {
+   "file": "Синий фонарь.epub",
+   "section": "Виктор Пелевин Синий фонарь/Часть вторая Спи/СССР Тайшоу Чжуань",
+   "reason": "duplicate (95% of its 8-grams already kept)",
+   "duplicateOf": "pv-sssr-taishou-chzhuan"
+  },
+  {
+   "file": "Синий фонарь.epub",
+   "section": "Виктор Пелевин Синий фонарь/Часть первая Принц Госплана/Жизнь и приключения сарая Номер XII",
+   "reason": "duplicate (85% of its 8-grams already kept)",
+   "duplicateOf": "pv-sarai-nomer-xii"
+  },
+  {
+   "file": "Синий фонарь.epub",
+   "section": "Виктор Пелевин Синий фонарь/Часть первая Принц Госплана/Затворник и Шестипалый",
+   "reason": "duplicate (92% of its 8-grams already kept)",
+   "duplicateOf": "pv-zatvornik-i-shestipalyi"
+  },
+  {
+   "file": "Синий фонарь.epub",
+   "section": "Виктор Пелевин Синий фонарь/Часть первая Принц Госплана/Принц Госплана",
+   "reason": "duplicate (94% of its 8-grams already kept)",
+   "duplicateOf": "pv-prints-gosplana"
+  },
+  {
+   "file": "Синий фонарь.epub",
+   "section": "Виктор Пелевин Синий фонарь/Часть первая Принц Госплана/Проблема верволка в Средней полосе",
+   "reason": "alternate edition or overlapping cut (56% shared)",
+   "duplicateOf": "pv-problema-verwolka"
+  },
+  {
+   "file": "Синий фонарь.epub",
+   "section": "Виктор Пелевин Синий фонарь/Часть пятая Память огненных лет/Луноход",
+   "reason": "duplicate (82% of its 8-grams already kept)",
+   "duplicateOf": "pv-omon-ra"
+  },
+  {
+   "file": "Синий фонарь.epub",
+   "section": "Виктор Пелевин Синий фонарь/Часть пятая Память огненных лет/Музыка со столба",
+   "reason": "duplicate (89% of its 8-grams already kept)",
+   "duplicateOf": "pv-muzyka-so-stolba"
+  },
+  {
+   "file": "Синий фонарь.epub",
+   "section": "Виктор Пелевин Синий фонарь/Часть пятая Память огненных лет/Оружие возмездия",
+   "reason": "duplicate (90% of its 8-grams already kept)",
+   "duplicateOf": "pv-oruzhie-vozmezdiya"
+  },
+  {
+   "file": "Синий фонарь.epub",
+   "section": "Виктор Пелевин Синий фонарь/Часть пятая Память огненных лет/Откровение Крегера (комплект документов)",
+   "reason": "duplicate (87% of its 8-grams already kept)",
+   "duplicateOf": "pv-otkrovenie-kregera"
+  },
+  {
+   "file": "Синий фонарь.epub",
+   "section": "Виктор Пелевин Синий фонарь/Часть пятая Память огненных лет/Реконструктор (об исследованиях П. Стецюка)",
+   "reason": "duplicate (83% of its 8-grams already kept)",
+   "duplicateOf": "pv-rekonstruktor"
+  },
+  {
+   "file": "Синий фонарь.epub",
+   "section": "Виктор Пелевин Синий фонарь/Часть пятая Память огненных лет/Хрустальный мир",
+   "reason": "duplicate (84% of its 8-grams already kept)",
+   "duplicateOf": "pv-hrustalnyi-mir"
+  },
+  {
+   "file": "Синий фонарь.epub",
+   "section": "Виктор Пелевин Синий фонарь/Часть третья День бульдозериста/Встроенный напоминатель",
+   "reason": "duplicate (85% of its 8-grams already kept)",
+   "duplicateOf": "pv-vstroennyi-napominatel"
+  },
+  {
+   "file": "Синий фонарь.epub",
+   "section": "Виктор Пелевин Синий фонарь/Часть третья День бульдозериста/День бульдозериста",
+   "reason": "duplicate (97% of its 8-grams already kept)",
+   "duplicateOf": "pv-den-buldozerista"
+  },
+  {
+   "file": "Синий фонарь.epub",
+   "section": "Виктор Пелевин Синий фонарь/Часть третья День бульдозериста/Миттельшпиль",
+   "reason": "duplicate (97% of its 8-grams already kept)",
+   "duplicateOf": "pv-mittelshpil"
+  },
+  {
+   "file": "Синий фонарь.epub",
+   "section": "Виктор Пелевин Синий фонарь/Часть третья День бульдозериста/Онтология детства",
+   "reason": "duplicate (91% of its 8-grams already kept)",
+   "duplicateOf": "pv-ontologiya-detstva"
+  },
+  {
+   "file": "Синий фонарь.epub",
+   "section": "Виктор Пелевин Синий фонарь/Часть четвертая Ухряб/Ухряб",
+   "reason": "duplicate (95% of its 8-grams already kept)",
+   "duplicateOf": "pv-uhryab"
+  },
+  {
+   "file": "Сочинения в двух томах. Том второй.epub",
+   "section": "Бубен верхнего мира/Бубен верхнего мира",
+   "reason": "duplicate (99% of its 8-grams already kept)",
+   "duplicateOf": "pv-buben-verhnego-mira"
+  },
+  {
+   "file": "Сочинения в двух томах. Том второй.epub",
+   "section": "Бубен верхнего мира/Жизнь и приключения сарая номер XII",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-sarai-nomer-xii"
+  },
+  {
+   "file": "Сочинения в двух томах. Том второй.epub",
+   "section": "Бубен верхнего мира/Ника",
+   "reason": "duplicate (96% of its 8-grams already kept)",
+   "duplicateOf": "pv-nika"
+  },
+  {
+   "file": "Сочинения в двух томах. Том второй.epub",
+   "section": "Бубен верхнего мира/Проблема верволка в средней полосе",
+   "reason": "alternate edition or overlapping cut (48% shared)",
+   "duplicateOf": "pv-problema-verwolka"
+  },
+  {
+   "file": "Сочинения в двух томах. Том второй.epub",
+   "section": "Бубен верхнего мира/Синий фонарь",
+   "reason": "duplicate (96% of its 8-grams already kept)",
+   "duplicateOf": "pv-sinii-fonar"
+  },
+  {
+   "file": "Сочинения в двух томах. Том второй.epub",
+   "section": "Бубен верхнего мира/Тарзанка",
+   "reason": "duplicate (99% of its 8-grams already kept)",
+   "duplicateOf": "pv-tarzanka"
+  },
+  {
+   "file": "Сочинения в двух томах. Том второй.epub",
+   "section": "Виктор Пелевин Сочинения в двух томах. Том второй.",
+   "reason": "too short (6 words): poem, epigraph or section title"
+  },
+  {
+   "file": "Сочинения в двух томах. Том второй.epub",
+   "section": "Желтая стрела",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-zheltaya-strela"
+  },
+  {
+   "file": "Сочинения в двух томах. Том второй.epub",
+   "section": "Жизнь насекомых",
+   "reason": "duplicate (99% of its 8-grams already kept)",
+   "duplicateOf": "pv-zhizn-nasekomyh"
+  },
+  {
+   "file": "Сочинения в двух томах. Том второй.epub",
+   "section": "Затворник и шестипалый",
+   "reason": "duplicate (98% of its 8-grams already kept)",
+   "duplicateOf": "pv-zatvornik-i-shestipalyi"
+  },
+  {
+   "file": "Сочинения в двух томах. Том второй.epub",
+   "section": "Принц госплана",
+   "reason": "duplicate (98% of its 8-grams already kept)",
+   "duplicateOf": "pv-prints-gosplana"
+  },
+  {
+   "file": "Сочинения в двух томах. Том первый.epub",
+   "section": "Бубен нижнего мира рассказы/Бубен нижнего мира",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-buben-nizhnego-mira"
+  },
+  {
+   "file": "Сочинения в двух томах. Том первый.epub",
+   "section": "Бубен нижнего мира рассказы/Вести из Непала",
+   "reason": "duplicate (99% of its 8-grams already kept)",
+   "duplicateOf": "pv-vesti-iz-nepala"
+  },
+  {
+   "file": "Сочинения в двух томах. Том первый.epub",
+   "section": "Бубен нижнего мира рассказы/Водонапорная башня",
+   "reason": "duplicate (99% of its 8-grams already kept)",
+   "duplicateOf": "pv-vodonapornaya-bashnya"
+  },
+  {
+   "file": "Сочинения в двух томах. Том первый.epub",
+   "section": "Бубен нижнего мира рассказы/Встроенный напоминатель",
+   "reason": "duplicate (84% of its 8-grams already kept)",
+   "duplicateOf": "pv-vstroennyi-napominatel"
+  },
+  {
+   "file": "Сочинения в двух томах. Том первый.epub",
+   "section": "Бубен нижнего мира рассказы/Девятый сон Веры Павловны",
+   "reason": "duplicate (89% of its 8-grams already kept)",
+   "duplicateOf": "pv-devyatyi-son-very-pavlovny"
+  },
+  {
+   "file": "Сочинения в двух томах. Том первый.epub",
+   "section": "Бубен нижнего мира рассказы/День бульдозериста",
+   "reason": "duplicate (92% of its 8-grams already kept)",
+   "duplicateOf": "pv-den-buldozerista"
+  },
+  {
+   "file": "Сочинения в двух томах. Том первый.epub",
+   "section": "Бубен нижнего мира рассказы/Зигмунд в кафе",
+   "reason": "duplicate (90% of its 8-grams already kept)",
+   "duplicateOf": "pv-zigmund-v-kafe"
+  },
+  {
+   "file": "Сочинения в двух томах. Том первый.epub",
+   "section": "Бубен нижнего мира рассказы/Иван Кублаханов",
+   "reason": "duplicate (90% of its 8-grams already kept)",
+   "duplicateOf": "pv-ivan-kublahanov"
+  },
+  {
+   "file": "Сочинения в двух томах. Том первый.epub",
+   "section": "Бубен нижнего мира рассказы/Мардонги",
+   "reason": "duplicate (96% of its 8-grams already kept)",
+   "duplicateOf": "pv-mardongi"
+  },
+  {
+   "file": "Сочинения в двух томах. Том первый.epub",
+   "section": "Бубен нижнего мира рассказы/Миттельшпиль",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-mittelshpil"
+  },
+  {
+   "file": "Сочинения в двух томах. Том первый.epub",
+   "section": "Бубен нижнего мира рассказы/Музыка со столба",
+   "reason": "duplicate (99% of its 8-grams already kept)",
+   "duplicateOf": "pv-muzyka-so-stolba"
+  },
+  {
+   "file": "Сочинения в двух томах. Том первый.epub",
+   "section": "Бубен нижнего мира рассказы/Онтология детства",
+   "reason": "duplicate (84% of its 8-grams already kept)",
+   "duplicateOf": "pv-ontologiya-detstva"
+  },
+  {
+   "file": "Сочинения в двух томах. Том первый.epub",
+   "section": "Бубен нижнего мира рассказы/Оружие возмездия",
+   "reason": "duplicate (89% of its 8-grams already kept)",
+   "duplicateOf": "pv-oruzhie-vozmezdiya"
+  },
+  {
+   "file": "Сочинения в двух томах. Том первый.epub",
+   "section": "Бубен нижнего мира рассказы/Откровение Крегера (комплект документации)",
+   "reason": "duplicate (95% of its 8-grams already kept)",
+   "duplicateOf": "pv-otkrovenie-kregera"
+  },
+  {
+   "file": "Сочинения в двух томах. Том первый.epub",
+   "section": "Бубен нижнего мира рассказы/Происхождение видов",
+   "reason": "duplicate (98% of its 8-grams already kept)",
+   "duplicateOf": "pv-proishozhdenie-vidov"
+  },
+  {
+   "file": "Сочинения в двух томах. Том первый.epub",
+   "section": "Бубен нижнего мира рассказы/Реконструктор",
+   "reason": "duplicate (81% of its 8-grams already kept)",
+   "duplicateOf": "pv-rekonstruktor"
+  },
+  {
+   "file": "Сочинения в двух томах. Том первый.epub",
+   "section": "Бубен нижнего мира рассказы/Спи",
+   "reason": "duplicate (90% of its 8-grams already kept)",
+   "duplicateOf": "pv-spi"
+  },
+  {
+   "file": "Сочинения в двух томах. Том первый.epub",
+   "section": "Бубен нижнего мира рассказы/СССР Тайшоу Чжуань",
+   "reason": "duplicate (99% of its 8-grams already kept)",
+   "duplicateOf": "pv-sssr-taishou-chzhuan"
+  },
+  {
+   "file": "Сочинения в двух томах. Том первый.epub",
+   "section": "Бубен нижнего мира рассказы/Ухряб",
+   "reason": "duplicate (85% of its 8-grams already kept)",
+   "duplicateOf": "pv-uhryab"
+  },
+  {
+   "file": "Сочинения в двух томах. Том первый.epub",
+   "section": "Бубен нижнего мира рассказы/Хрустальный мир",
+   "reason": "duplicate (81% of its 8-grams already kept)",
+   "duplicateOf": "pv-hrustalnyi-mir"
+  },
+  {
+   "file": "Сочинения в двух томах. Том первый.epub",
+   "section": "Виктор Пелевин. Сочинения в двух томах. Том первый",
+   "reason": "too short (8 words): poem, epigraph or section title"
+  },
+  {
+   "file": "Сочинения в двух томах. Том первый.epub",
+   "section": "Омон Ра роман",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-omon-ra"
+  },
+  {
+   "file": "Сумасшедший по фамилии Пустота.epub",
+   "section": "ГРЕЧЕСКИЙ ВАРИАНТ/Греческий вариант",
+   "reason": "duplicate (87% of its 8-grams already kept)",
+   "duplicateOf": "pv-grecheskii-variant"
+  },
+  {
+   "file": "Сумасшедший по фамилии Пустота.epub",
+   "section": "ГРЕЧЕСКИЙ ВАРИАНТ/Зигмунд в кафе",
+   "reason": "duplicate (90% of its 8-grams already kept)",
+   "duplicateOf": "pv-zigmund-v-kafe"
+  },
+  {
+   "file": "Сумасшедший по фамилии Пустота.epub",
+   "section": "ГРЕЧЕСКИЙ ВАРИАНТ/Краткая история пэйнтбола в Москве",
+   "reason": "duplicate (86% of its 8-grams already kept)",
+   "duplicateOf": "pv-kratkaya-istoriya-peintbola"
+  },
+  {
+   "file": "Сумасшедший по фамилии Пустота.epub",
+   "section": "ГРЕЧЕСКИЙ ВАРИАНТ/Нижняя тундра",
+   "reason": "duplicate (91% of its 8-grams already kept)",
+   "duplicateOf": "pv-nizhnyaya-tundra"
+  },
+  {
+   "file": "Сумасшедший по фамилии Пустота.epub",
+   "section": "ГРЕЧЕСКИЙ ВАРИАНТ/Святочный киберпанк, или рождественская ночь-117.DIR",
+   "reason": "alternate edition or overlapping cut (77% shared)",
+   "duplicateOf": "pv-svyatochnyi-kiberpank"
+  },
+  {
+   "file": "Сумасшедший по фамилии Пустота.epub",
+   "section": "ГРЕЧЕСКИЙ ВАРИАНТ/Time out",
+   "reason": "duplicate (99% of its 8-grams already kept)",
+   "duplicateOf": "pv-time-out"
+  },
+  {
+   "file": "Сумасшедший по фамилии Пустота.epub",
+   "section": "МИТТЕЛЬШПИЛЬ/Водонапорная башня",
+   "reason": "duplicate (99% of its 8-grams already kept)",
+   "duplicateOf": "pv-vodonapornaya-bashnya"
+  },
+  {
+   "file": "Сумасшедший по фамилии Пустота.epub",
+   "section": "МИТТЕЛЬШПИЛЬ/Встроенный напоминатель",
+   "reason": "duplicate (81% of its 8-grams already kept)",
+   "duplicateOf": "pv-vstroennyi-napominatel"
+  },
+  {
+   "file": "Сумасшедший по фамилии Пустота.epub",
+   "section": "МИТТЕЛЬШПИЛЬ/Миттельшпиль",
+   "reason": "duplicate (99% of its 8-grams already kept)",
+   "duplicateOf": "pv-mittelshpil"
+  },
+  {
+   "file": "Сумасшедший по фамилии Пустота.epub",
+   "section": "МИТТЕЛЬШПИЛЬ/Онтология детства",
+   "reason": "duplicate (84% of its 8-grams already kept)",
+   "duplicateOf": "pv-ontologiya-detstva"
+  },
+  {
+   "file": "Сумасшедший по фамилии Пустота.epub",
+   "section": "МИТТЕЛЬШПИЛЬ/Ухряб",
+   "reason": "duplicate (84% of its 8-grams already kept)",
+   "duplicateOf": "pv-uhryab"
+  },
+  {
+   "file": "Сумасшедший по фамилии Пустота.epub",
+   "section": "НИКА/Бубен верхнего мира",
+   "reason": "duplicate (99% of its 8-grams already kept)",
+   "duplicateOf": "pv-buben-verhnego-mira"
+  },
+  {
+   "file": "Сумасшедший по фамилии Пустота.epub",
+   "section": "НИКА/Бубен нижнего мира (Зеленая коробочка)",
+   "reason": "duplicate (99% of its 8-grams already kept)",
+   "duplicateOf": "pv-buben-nizhnego-mira"
+  },
+  {
+   "file": "Сумасшедший по фамилии Пустота.epub",
+   "section": "НИКА/Иван Кублаханов",
+   "reason": "duplicate (90% of its 8-grams already kept)",
+   "duplicateOf": "pv-ivan-kublahanov"
+  },
+  {
+   "file": "Сумасшедший по фамилии Пустота.epub",
+   "section": "НИКА/Ника",
+   "reason": "duplicate (96% of its 8-grams already kept)",
+   "duplicateOf": "pv-nika"
+  },
+  {
+   "file": "Сумасшедший по фамилии Пустота.epub",
+   "section": "НИКА/Происхождение видов",
+   "reason": "duplicate (96% of its 8-grams already kept)",
+   "duplicateOf": "pv-proishozhdenie-vidov"
+  },
+  {
+   "file": "Сумасшедший по фамилии Пустота.epub",
+   "section": "НИКА/Тарзанка",
+   "reason": "duplicate (99% of its 8-grams already kept)",
+   "duplicateOf": "pv-tarzanka"
+  },
+  {
+   "file": "Сумасшедший по фамилии Пустота.epub",
+   "section": "ПАМЯТЬ ОГНЕННЫХ ЛЕТ/Музыка со столба",
+   "reason": "duplicate (99% of its 8-grams already kept)",
+   "duplicateOf": "pv-muzyka-so-stolba"
+  },
+  {
+   "file": "Сумасшедший по фамилии Пустота.epub",
+   "section": "ПАМЯТЬ ОГНЕННЫХ ЛЕТ/Оружие возмездия",
+   "reason": "duplicate (88% of its 8-grams already kept)",
+   "duplicateOf": "pv-oruzhie-vozmezdiya"
+  },
+  {
+   "file": "Сумасшедший по фамилии Пустота.epub",
+   "section": "ПАМЯТЬ ОГНЕННЫХ ЛЕТ/Откровение Крегера (Комплект документации)",
+   "reason": "duplicate (92% of its 8-grams already kept)",
+   "duplicateOf": "pv-otkrovenie-kregera"
+  },
+  {
+   "file": "Сумасшедший по фамилии Пустота.epub",
+   "section": "ПАМЯТЬ ОГНЕННЫХ ЛЕТ/Реконструктор",
+   "reason": "duplicate (81% of its 8-grams already kept)",
+   "duplicateOf": "pv-rekonstruktor"
+  },
+  {
+   "file": "Сумасшедший по фамилии Пустота.epub",
+   "section": "ПАМЯТЬ ОГНЕННЫХ ЛЕТ/Хрустальный мир",
+   "reason": "duplicate (81% of its 8-grams already kept)",
+   "duplicateOf": "pv-hrustalnyi-mir"
+  },
+  {
+   "file": "Сумасшедший по фамилии Пустота.epub",
+   "section": "СПИ/Вести из Непала",
+   "reason": "duplicate (98% of its 8-grams already kept)",
+   "duplicateOf": "pv-vesti-iz-nepala"
+  },
+  {
+   "file": "Сумасшедший по фамилии Пустота.epub",
+   "section": "СПИ/Девятый сон Веры Павловны",
+   "reason": "duplicate (89% of its 8-grams already kept)",
+   "duplicateOf": "pv-devyatyi-son-very-pavlovny"
+  },
+  {
+   "file": "Сумасшедший по фамилии Пустота.epub",
+   "section": "СПИ/Жизнь и приключения сарая номер XII",
+   "reason": "duplicate (97% of its 8-grams already kept)",
+   "duplicateOf": "pv-sarai-nomer-xii"
+  },
+  {
+   "file": "Сумасшедший по фамилии Пустота.epub",
+   "section": "СПИ/Колдун Игнат и люди",
+   "reason": "duplicate (90% of its 8-grams already kept)",
+   "duplicateOf": "pv-koldun-ignat-i-lyudi"
+  },
+  {
+   "file": "Сумасшедший по фамилии Пустота.epub",
+   "section": "СПИ/Мардонги",
+   "reason": "duplicate (95% of its 8-grams already kept)",
+   "duplicateOf": "pv-mardongi"
+  },
+  {
+   "file": "Сумасшедший по фамилии Пустота.epub",
+   "section": "СПИ/Синий фонарь",
+   "reason": "duplicate (95% of its 8-grams already kept)",
+   "duplicateOf": "pv-sinii-fonar"
+  },
+  {
+   "file": "Сумасшедший по фамилии Пустота.epub",
+   "section": "СПИ/Спи",
+   "reason": "duplicate (89% of its 8-grams already kept)",
+   "duplicateOf": "pv-spi"
+  },
+  {
+   "file": "Сумасшедший по фамилии Пустота.epub",
+   "section": "СПИ/СССР Тайшоу Чжуань",
+   "reason": "duplicate (99% of its 8-grams already kept)",
+   "duplicateOf": "pv-sssr-taishou-chzhuan"
+  },
+  {
+   "file": "Сумасшедший по фамилии Пустота.epub",
+   "section": "ФОКУС-ГРУППА/Акико",
+   "reason": "duplicate (98% of its 8-grams already kept)",
+   "duplicateOf": "pv-akiko"
+  },
+  {
+   "file": "Сумасшедший по фамилии Пустота.epub",
+   "section": "ФОКУС-ГРУППА/Запись о поиске ветра",
+   "reason": "duplicate (99% of its 8-grams already kept)",
+   "duplicateOf": "pv-zapis-o-poiske-vetra"
+  },
+  {
+   "file": "Сумасшедший по фамилии Пустота.epub",
+   "section": "ФОКУС-ГРУППА/Свет горизонта",
+   "reason": "duplicate (99% of its 8-grams already kept)",
+   "duplicateOf": "pv-svet-gorizonta"
+  },
+  {
+   "file": "Сумасшедший по фамилии Пустота.epub",
+   "section": "ФОКУС-ГРУППА/Фокус-группа",
+   "reason": "duplicate (99% of its 8-grams already kept)",
+   "duplicateOf": "pv-fokus-gruppa"
+  },
+  {
+   "file": "Фантастический альманах «Завтра».  Выпуск 2.epub",
+   "reason": "anthology (almanac): works by other authors skipped"
+  },
+  {
+   "file": "Фантастический альманах «Завтра».  Выпуск 2.epub",
+   "section": "Виктор ПЕЛЕВИН",
+   "reason": "duplicate (91% of its 8-grams already kept)",
+   "duplicateOf": "pv-den-buldozerista"
+  },
+  {
+   "file": "Фантастический альманах «Завтра».  Выпуск 4.epub",
+   "reason": "anthology (almanac): works by other authors skipped"
+  },
+  {
+   "file": "Фантастический альманах «Завтра».  Выпуск 4.epub",
+   "section": "Виктор Пелевин Девятый сон Веры Павловны",
+   "reason": "duplicate (88% of its 8-grams already kept)",
+   "duplicateOf": "pv-devyatyi-son-very-pavlovny"
+  },
+  {
+   "file": "Фокус-группа.epub",
+   "section": "Греческий вариант/Греческий вариант",
+   "reason": "duplicate (88% of its 8-grams already kept)",
+   "duplicateOf": "pv-grecheskii-variant"
+  },
+  {
+   "file": "Фокус-группа.epub",
+   "section": "Греческий вариант/Зигмунд в кафе",
+   "reason": "duplicate (90% of its 8-grams already kept)",
+   "duplicateOf": "pv-zigmund-v-kafe"
+  },
+  {
+   "file": "Фокус-группа.epub",
+   "section": "Греческий вариант/Краткая история пэйнтбола в Москве",
+   "reason": "duplicate (86% of its 8-grams already kept)",
+   "duplicateOf": "pv-kratkaya-istoriya-peintbola"
+  },
+  {
+   "file": "Фокус-группа.epub",
+   "section": "Греческий вариант/Нижняя тундра",
+   "reason": "duplicate (84% of its 8-grams already kept)",
+   "duplicateOf": "pv-nizhnyaya-tundra"
+  },
+  {
+   "file": "Фокус-группа.epub",
+   "section": "Греческий вариант/Святочный киберпанк, или Рождественская ночь-117.DIR",
+   "reason": "alternate edition or overlapping cut (78% shared)",
+   "duplicateOf": "pv-svyatochnyi-kiberpank"
+  },
+  {
+   "file": "Фокус-группа.epub",
+   "section": "Греческий вариант/Time out",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-time-out"
+  },
+  {
+   "file": "Фокус-группа.epub",
+   "section": "Фокус-группа/Акико",
+   "reason": "duplicate (99% of its 8-grams already kept)",
+   "duplicateOf": "pv-akiko"
+  },
+  {
+   "file": "Фокус-группа.epub",
+   "section": "Фокус-группа/Гость на празднике Бон",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-gost-na-prazdnike-bon"
+  },
+  {
+   "file": "Фокус-группа.epub",
+   "section": "Фокус-группа/Запись о поиске ветра",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-zapis-o-poiske-vetra"
+  },
+  {
+   "file": "Фокус-группа.epub",
+   "section": "Фокус-группа/Один вог",
+   "reason": "duplicate (94% of its 8-grams already kept)",
+   "duplicateOf": "pv-odin-vog"
+  },
+  {
+   "file": "Фокус-группа.epub",
+   "section": "Фокус-группа/Свет горизонта",
+   "reason": "duplicate (99% of its 8-grams already kept)",
+   "duplicateOf": "pv-svet-gorizonta"
+  },
+  {
+   "file": "Фокус-группа.epub",
+   "section": "Фокус-группа/Фокус-группа",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-fokus-gruppa"
+  },
+  {
+   "file": "Фокус-группа.epub",
+   "section": "Эссе/ГКЧП как тетраграмматон",
+   "reason": "duplicate (85% of its 8-grams already kept)",
+   "duplicateOf": "pv-gkchp-kak-tetragrammaton"
+  },
+  {
+   "file": "Фокус-группа.epub",
+   "section": "Эссе/Джон Фаулз и трагедия русского либерализма",
+   "reason": "duplicate (82% of its 8-grams already kept)",
+   "duplicateOf": "pv-dzhon-faulz"
+  },
+  {
+   "file": "Фокус-группа.epub",
+   "section": "Эссе/Зомбификация Опыт сравнительной антропологии",
+   "reason": "duplicate (82% of its 8-grams already kept)",
+   "duplicateOf": "pv-zombifikatsiya"
+  },
+  {
+   "file": "Фокус-группа.epub",
+   "section": "Эссе/Икстлан – Петушки",
+   "reason": "duplicate (94% of its 8-grams already kept)",
+   "duplicateOf": "pv-ikstlan-petushki"
+  },
+  {
+   "file": "Фокус-группа.epub",
+   "section": "Эссе/Имена олигархов на карте Родины",
+   "reason": "duplicate (86% of its 8-grams already kept)",
+   "duplicateOf": "pv-imena-oligarhov"
+  },
+  {
+   "file": "Фокус-группа.epub",
+   "section": "Эссе/Мост, который я хотел перейти",
+   "reason": "duplicate (94% of its 8-grams already kept)",
+   "duplicateOf": "pv-most-kotoryi-ya-hotel-pereiti"
+  },
+  {
+   "file": "Эссе, статьи.epub",
+   "section": "Виктор Пелевин спрашивает PRов",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-sprashivaet-prov"
+  },
+  {
+   "file": "Эссе, статьи.epub",
+   "section": "Гадание на рунах или рунический оракул Ральфа Блума",
+   "reason": "translation of Ralph Blum's The Book of Runes, not Pelevin's own work"
+  },
+  {
+   "file": "Эссе, статьи.epub",
+   "section": "ГКЧП как тетраграмматон",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-gkchp-kak-tetragrammaton"
+  },
+  {
+   "file": "Эссе, статьи.epub",
+   "section": "Джон Фаулз и трагедия русского либерализма",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-dzhon-faulz"
+  },
+  {
+   "file": "Эссе, статьи.epub",
+   "section": "Икстлан – Петушки",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-ikstlan-petushki"
+  },
+  {
+   "file": "Эссе, статьи.epub",
+   "section": "Имена олигархов на карте Родины",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-imena-oligarhov"
+  },
+  {
+   "file": "Эссе, статьи.epub",
+   "section": "Код Мира",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-kod-mira"
+  },
+  {
+   "file": "Эссе, статьи.epub",
+   "section": "Мардонги",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-mardongi"
+  },
+  {
+   "file": "Эссе, статьи.epub",
+   "section": "Мост, который я хотел перейти",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-most-kotoryi-ya-hotel-pereiti"
+  },
+  {
+   "file": "Эссе, статьи.epub",
+   "section": "Подземное небо",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-podzemnoe-nebo"
+  },
+  {
+   "file": "Эссе, статьи.epub",
+   "section": "Последняя шутка воина",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-poslednyaya-shutka-voina"
+  },
+  {
+   "file": "Эссе, статьи.epub",
+   "section": "Ultima Тулеев, или Дао выборов",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-ultima-tuleev"
+  },
+  {
+   "file": "Empire V. Бэтман Аполло.epub",
+   "section": "Виктор Пелевин Бэтман Аполло",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-betman-apollo"
+  },
+  {
+   "file": "Empire V. Бэтман Аполло.epub",
+   "section": "Виктор Пелевин EMPIRE V (Ампир В)",
+   "reason": "duplicate (92% of its 8-grams already kept)",
+   "duplicateOf": "pv-empire-v"
+  },
+  {
+   "file": "Relics. Раннее и неизданное.epub",
+   "section": "Бубен нижнего мира",
+   "reason": "duplicate (98% of its 8-grams already kept)",
+   "duplicateOf": "pv-buben-nizhnego-mira"
+  },
+  {
+   "file": "Relics. Раннее и неизданное.epub",
+   "section": "Водонапорная башня",
+   "reason": "duplicate (98% of its 8-grams already kept)",
+   "duplicateOf": "pv-vodonapornaya-bashnya"
+  },
+  {
+   "file": "Relics. Раннее и неизданное.epub",
+   "section": "ГКЧП как тетраграмматон",
+   "reason": "duplicate (85% of its 8-grams already kept)",
+   "duplicateOf": "pv-gkchp-kak-tetragrammaton"
+  },
+  {
+   "file": "Relics. Раннее и неизданное.epub",
+   "section": "Греческий вариант",
+   "reason": "duplicate (88% of its 8-grams already kept)",
+   "duplicateOf": "pv-grecheskii-variant"
+  },
+  {
+   "file": "Relics. Раннее и неизданное.epub",
+   "section": "Джон Фаулз и трагедия русского либерализма",
+   "reason": "duplicate (83% of its 8-grams already kept)",
+   "duplicateOf": "pv-dzhon-faulz"
+  },
+  {
+   "file": "Relics. Раннее и неизданное.epub",
+   "section": "Жизнь и приключения сарая номер XII",
+   "reason": "duplicate (88% of its 8-grams already kept)",
+   "duplicateOf": "pv-sarai-nomer-xii"
+  },
+  {
+   "file": "Relics. Раннее и неизданное.epub",
+   "section": "Зомбификация Опыт сравнительной антропологии",
+   "reason": "duplicate (82% of its 8-grams already kept)",
+   "duplicateOf": "pv-zombifikatsiya"
+  },
+  {
+   "file": "Relics. Раннее и неизданное.epub",
+   "section": "Икстлан – Петушки",
+   "reason": "duplicate (94% of its 8-grams already kept)",
+   "duplicateOf": "pv-ikstlan-petushki"
+  },
+  {
+   "file": "Relics. Раннее и неизданное.epub",
+   "section": "Имена олигархов на карте Родины",
+   "reason": "duplicate (86% of its 8-grams already kept)",
+   "duplicateOf": "pv-imena-oligarhov"
+  },
+  {
+   "file": "Relics. Раннее и неизданное.epub",
+   "section": "Колдун Игнат и люди",
+   "reason": "duplicate (93% of its 8-grams already kept)",
+   "duplicateOf": "pv-koldun-ignat-i-lyudi"
+  },
+  {
+   "file": "Relics. Раннее и неизданное.epub",
+   "section": "Краткая история пэйнтбола в Москве",
+   "reason": "duplicate (83% of its 8-grams already kept)",
+   "duplicateOf": "pv-kratkaya-istoriya-peintbola"
+  },
+  {
+   "file": "Relics. Раннее и неизданное.epub",
+   "section": "Миттельшпиль",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-mittelshpil"
+  },
+  {
+   "file": "Relics. Раннее и неизданное.epub",
+   "section": "Мост, который я хотел перейти",
+   "reason": "duplicate (92% of its 8-grams already kept)",
+   "duplicateOf": "pv-most-kotoryi-ya-hotel-pereiti"
+  },
+  {
+   "file": "Relics. Раннее и неизданное.epub",
+   "section": "Музыка со столба",
+   "reason": "duplicate (91% of its 8-grams already kept)",
+   "duplicateOf": "pv-muzyka-so-stolba"
+  },
+  {
+   "file": "Relics. Раннее и неизданное.epub",
+   "section": "Нижняя тундра",
+   "reason": "duplicate (84% of its 8-grams already kept)",
+   "duplicateOf": "pv-nizhnyaya-tundra"
+  },
+  {
+   "file": "Relics. Раннее и неизданное.epub",
+   "section": "Оружие возмездия",
+   "reason": "duplicate (89% of its 8-grams already kept)",
+   "duplicateOf": "pv-oruzhie-vozmezdiya"
+  },
+  {
+   "file": "Relics. Раннее и неизданное.epub",
+   "section": "Откровение Крегера",
+   "reason": "duplicate (88% of its 8-grams already kept)",
+   "duplicateOf": "pv-otkrovenie-kregera"
+  },
+  {
+   "file": "Relics. Раннее и неизданное.epub",
+   "section": "Психическая атака сонет",
+   "reason": "too short (12 words): poem, epigraph or section title"
+  },
+  {
+   "file": "Relics. Раннее и неизданное.epub",
+   "section": "Святочный киберпанк, или Рождественская ночь-117.DIR",
+   "reason": "alternate edition or overlapping cut (78% shared)",
+   "duplicateOf": "pv-svyatochnyi-kiberpank"
+  },
+  {
+   "file": "Relics. Раннее и неизданное.epub",
+   "section": "СССР Тайшоу Чжуань",
+   "reason": "duplicate (94% of its 8-grams already kept)",
+   "duplicateOf": "pv-sssr-taishou-chzhuan"
+  },
+  {
+   "file": "Relics. Раннее и неизданное.epub",
+   "section": "Time out",
+   "reason": "duplicate (99% of its 8-grams already kept)",
+   "duplicateOf": "pv-time-out"
+  },
+  {
+   "file": "Relics. Раннее и неизданное.epub",
+   "section": "Who by fire",
+   "reason": "duplicate (100% of its 8-grams already kept)",
+   "duplicateOf": "pv-who-by-fire"
+  }
+ ]
+}

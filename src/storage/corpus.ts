@@ -8,7 +8,9 @@ import type { BookContent, BookMeta } from "./library.ts";
 
 /** Read-only repository for the server-side canon; nothing here is written to IndexedDB. */
 export type CorpusList = { available: boolean; books: CorpusEntry[] };
-export type CorpusView = { meta: BookMeta; content: BookContent; segments: Segment[]; rank: number | null };
+/** `excerpt`: the server sent a short opening per page instead of the copyrighted text (see CorpusBook). */
+export type CorpusExtra = { excerpt: boolean; year: number | null; kind: CorpusEntry["kind"] | null; titleEn: string | null };
+export type CorpusView = { meta: BookMeta; content: BookContent; segments: Segment[]; rank: number | null } & CorpusExtra;
 
 const MAX_CACHED = 3;
 const EMPTY: CorpusList = { available: false, books: [] };
@@ -71,7 +73,8 @@ export function useCorpusStats() {
 
 /** Uses the stored page boundaries, never re-paginates: every answer belongs to exactly the text Jev was given. */
 function toView(book: CorpusBook): CorpusView {
-  const segments = book.segments.map(([start, end], i) => ({ id: i + 1, start, end, text: book.text.slice(start, end) }));
+  const full = typeof book.text === "string";
+  const segments = book.segments.map(([start, end], i) => ({ id: i + 1, start, end, text: full ? book.text!.slice(start, end) : (book.excerpts?.[i] ?? "") }));
   const profile = book.profile ?? undefined;
   const meta: BookMeta = {
     id: book.id,
@@ -87,7 +90,16 @@ function toView(book: CorpusBook): CorpusView {
     analyzed: book.analyses.filter(Boolean).length,
     fingerprint: fingerprintFrom(segments, book.analyses, profile),
   };
-  return { meta, content: { id: book.id, text: book.text, analyses: book.analyses, profile, brief: book.brief ?? undefined }, segments, rank: book.rank };
+  return {
+    meta,
+    content: { id: book.id, text: book.text ?? "", analyses: book.analyses, profile, briefs: book.briefs ?? (book.brief ? { en: book.brief } : {}), brief: book.brief ?? undefined },
+    segments,
+    rank: book.rank,
+    excerpt: !full,
+    year: book.year ?? null,
+    kind: book.kind ?? null,
+    titleEn: book.titleEn ?? null,
+  };
 }
 
 const cache = new Map<string, Promise<CorpusView>>();
@@ -120,5 +132,66 @@ export function useCorpusBook(id: string | null) {
     };
   }, [id]);
   const current = state?.id === id ? state : null;
-  return { meta: current?.view?.meta, content: current?.view?.content, segments: current?.view?.segments ?? NO_SEGMENTS, rank: current?.view?.rank ?? null, missing: !!current?.missing };
+  const view = current?.view;
+  return {
+    meta: view?.meta,
+    content: view?.content,
+    segments: view?.segments ?? NO_SEGMENTS,
+    rank: view?.rank ?? null,
+    missing: !!current?.missing,
+    excerpt: view?.excerpt ?? false,
+    year: view?.year ?? null,
+    kind: view?.kind ?? null,
+    titleEn: view?.titleEn ?? null,
+  };
+}
+
+/** One page of a corpus book with its full text; the book payload itself carries only excerpts. */
+export type CorpusPageText = { page: number; text: string; start: number; end: number };
+
+const PAGE_CACHE = 12;
+const pages = new Map<string, Promise<CorpusPageText>>();
+
+/** Fetches a single page (1-based) on demand; a small cache keeps back-and-forth reading instant. */
+export function loadCorpusPage(id: string, page: number) {
+  const key = `${id}#${page}`;
+  let p = pages.get(key);
+  if (p) pages.delete(key);
+  else {
+    p = fetch(`/api/corpus/${encodeURIComponent(id)}/page/${page}`).then(async (r) => {
+      if (!r.ok) throw new Error((await r.json().catch(() => null))?.error ?? `HTTP ${r.status}`);
+      return (await r.json()) as CorpusPageText;
+    });
+    p.catch(() => pages.delete(key));
+  }
+  pages.set(key, p);
+  for (const old of pages.keys()) if (pages.size > PAGE_CACHE) pages.delete(old);
+  return p;
+}
+
+/**
+ * Full text of the open page of a corpus book, fetched only while `enabled` (the reader is open on an
+ * excerpt-only book). Neighbouring pages are prefetched so paging feels immediate; never the whole book.
+ */
+export function useCorpusPage(id: string, page: number | null, total: number, enabled: boolean) {
+  const [state, setState] = useState<{ key: string; text?: string; error?: string } | null>(null);
+  const key = `${id}#${page}`;
+  useEffect(() => {
+    if (!enabled || page == null) return;
+    let alive = true;
+    setState((s) => (s?.key === key ? s : { key }));
+    loadCorpusPage(id, page).then(
+      (p) => alive && setState({ key, text: p.text }),
+      (e: Error) => alive && setState({ key, error: e.message }),
+    );
+    const prefetch = setTimeout(() => {
+      for (const n of [page + 1, page - 1]) if (n >= 1 && n <= total) void loadCorpusPage(id, n).catch(() => {});
+    }, 250);
+    return () => {
+      alive = false;
+      clearTimeout(prefetch);
+    };
+  }, [id, page, total, enabled, key]);
+  const current = state?.key === key ? state : null;
+  return { text: current?.text ?? null, loading: enabled && page != null && !current?.text && !current?.error, error: current?.error ?? null };
 }

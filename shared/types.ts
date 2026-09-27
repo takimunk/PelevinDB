@@ -1,13 +1,4 @@
-import type {
-  EmotionId,
-  EraId,
-  GenreId,
-  ModeId,
-  MoodId,
-  ProfileScaleId,
-  TextureId,
-  ThemeId,
-} from "./catalog.ts";
+import type { EmotionId, EraId, GenreId, ModeId, MoodId, ProfileScaleId, TextureId, ThemeId } from "./catalog.ts";
 
 export type Distribution<K extends string> = Record<K, number>;
 
@@ -62,6 +53,10 @@ export type BriefDossier = {
   neighbours: { title: string; author: string; similarity: number }[];
 };
 
+/** Languages a reader's brief is written in. */
+export const BRIEF_LANGS = ["en", "ru"] as const;
+export type BriefLang = (typeof BRIEF_LANGS)[number];
+
 /** A reader's brief written by an LLM from the dossier. */
 export type BookBrief = {
   logline: string;
@@ -72,7 +67,13 @@ export type BookBrief = {
   model: string;
   usage: { prompt_tokens: number; completion_tokens: number; cost: number };
   createdAt: number;
+  /** Language of every text field; absent on briefs written before briefs were bilingual (those are English). */
+  lang?: BriefLang;
 };
+
+/** What kind of work a corpus book is (set by the Pelevin store; absent for older stores). */
+export const BOOK_KINDS = ["novel", "novella", "story", "essay", "interview"] as const;
+export type BookKind = (typeof BOOK_KINDS)[number];
 
 /** A canon book in the server store (data/xbook.db), as listed by GET /api/corpus. */
 export type CorpusEntry = {
@@ -85,15 +86,32 @@ export type CorpusEntry = {
   chars: number;
   analysed: number;
   complete: boolean;
+  /** Briefs exist in every language of BRIEF_LANGS. */
   briefed: boolean;
+  /** Languages that have a stored brief. */
+  briefedLangs?: BriefLang[];
+  /** First publication year, when the store knows it. */
+  year?: number;
+  kind?: BookKind;
+  /** English title of a Russian book (or the other way round), when the store knows it. */
+  titleEn?: string;
 };
 
-/** GET /api/corpus/:id: the stored text, its exact page boundaries and every stored answer in page order. */
-export type CorpusBook = Omit<CorpusEntry, "analysed" | "complete" | "briefed"> & {
-  text: string;
+/**
+ * GET /api/corpus/:id: exact page boundaries and every stored answer in page order.
+ * The corpus is copyrighted, so by default `text` is null and `excerpts` holds a short opening (≤ 220 chars)
+ * of each page; the server sends the full `text` (and no excerpts) only with CORPUS_FULL_TEXT=1.
+ * Page boundaries stay offsets into the stored text either way, so page and char counts are exact.
+ */
+export type CorpusBook = Omit<CorpusEntry, "analysed" | "complete" | "briefed" | "briefedLangs"> & {
+  text: string | null;
+  excerpts?: string[];
   segments: [start: number, end: number][];
   analyses: (SegmentAnalysis | null)[];
   profile: BookProfile | null;
+  /** Latest brief per language. */
+  briefs: Partial<Record<BriefLang, BookBrief>>;
+  /** The English brief; kept for older clients. */
   brief: BookBrief | null;
 };
 
@@ -127,11 +145,4 @@ export type CorpusStats = {
   climaxByTenth: number[];
   /** The single most extreme page of the canon on each scale. */
   records: { tension: PageRef; light: PageRef; dark: PageRef; humor: PageRef; sadness: PageRef; ideas: PageRef };
-};
-
-export type CatalogHit = {
-  id: string;
-  title: string;
-  author: string;
-  source: "gutenberg";
 };

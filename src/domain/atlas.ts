@@ -1,11 +1,12 @@
 import type { Fingerprint } from "./fingerprint.ts";
 
-/** A reference book measured by Jev with `npm run atlas` (public/atlas.json). */
+/** A book on the map, measured by Jev and exported by `npm run corpus` (public/atlas.json or XBOOK_ATLAS). */
 export type AtlasBook = {
   id: string;
   title: string;
   author: string;
-  gutenberg: number;
+  /** Absent for works that are not on Project Gutenberg (the Pelevin corpus). */
+  gutenberg?: number | null;
   chars: number;
   /** Pages Jev actually read; the atlas samples evenly spaced pages. */
   pagesRead: number;

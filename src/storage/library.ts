@@ -1,5 +1,6 @@
+import { isLocalMode, localModeReady } from "../services/mode.ts";
 import { useEffect, useState, useSyncExternalStore } from "react";
-import type { BookBrief, BookProfile, SegmentAnalysis } from "../../shared/types.ts";
+import type { BookBrief, BookProfile, BriefLang, SegmentAnalysis } from "../../shared/types.ts";
 import type { Analyses } from "../domain/analysis.ts";
 import { fingerprintFrom, type Fingerprint } from "../domain/fingerprint.ts";
 import { segmentText, type Segment } from "../domain/text.ts";
@@ -28,8 +29,19 @@ export type BookContent = {
   text: string;
   analyses: Analyses;
   profile?: BookProfile;
+  /** Latest brief per language. */
+  briefs?: Partial<Record<BriefLang, BookBrief>>;
+  /** Stored before briefs were per language (English unless it says otherwise); still set for English briefs. */
   brief?: BookBrief;
 };
+
+/** The brief in `lang`, or failing that the one in the other language (`fallback: true`). */
+export function briefFor(content: Pick<BookContent, "brief" | "briefs">, lang: BriefLang): { brief: BookBrief; lang: BriefLang; fallback: boolean } | null {
+  const all: Partial<Record<BriefLang, BookBrief>> = { ...(content.brief && { [content.brief.lang ?? "en"]: content.brief }), ...content.briefs };
+  if (all[lang]) return { brief: all[lang]!, lang, fallback: false };
+  const other = (Object.keys(all) as BriefLang[]).find((l) => all[l]);
+  return other ? { brief: all[other]!, lang: other, fallback: true } : null;
+}
 
 let books: BookMeta[] = [];
 let ready = false;
@@ -50,6 +62,12 @@ function subscribe(listener: () => void) {
 
 export function initLibrary() {
   initializing ??= (async () => {
+    // The public site has no personal library: no IndexedDB at all unless the server runs in local mode.
+    if (!(await localModeReady())) {
+      ready = true;
+      emit();
+      return;
+    }
     books = sorted(await db.all<BookMeta>("books"));
     // Older versions seeded a sample book with synthetic scores.
     for (const stale of books.filter((b) => (b as { demo?: boolean }).demo)) await removeBook(stale.id);
@@ -125,6 +143,7 @@ export async function loadContent(id: string) {
   const cached = contents.get(id);
   if (cached) return cached;
   await initLibrary();
+  if (!isLocalMode()) return undefined;
   const content = contents.get(id) ?? (await db.get<BookContent>("content", id));
   if (!content) return content;
   contents.set(id, content);
@@ -194,7 +213,8 @@ export function setProfile(id: string, profile: BookProfile) {
 export function setBrief(id: string, brief: BookBrief) {
   const content = contents.get(id);
   if (!content) return;
-  contents.set(id, { ...content, brief });
+  const lang = brief.lang ?? "en";
+  contents.set(id, { ...content, briefs: { ...content.briefs, [lang]: brief }, ...(lang === "en" && { brief }) });
   void db.put("content", contents.get(id));
   emitContent(id);
 }

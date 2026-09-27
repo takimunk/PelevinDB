@@ -1,6 +1,28 @@
 import { FEATURE_GROUPS, type Feature } from "../../domain/fingerprint.ts";
 import type { Embedding } from "../../domain/pca.ts";
+import type { Lang } from "../../i18n/index.ts";
 import type { Star } from "./corpus.ts";
+
+const T = {
+  en: {
+    pcs: "principal components",
+    variance: "of variance",
+    needs: "needs at least 2 books",
+    more: (l: string) => `more ${l}`,
+    less: (l: string) => `less ${l}`,
+    raw: (l: string, lo: string, hi: string, mean: string) => `${l} · raw Jev value ${lo} → ${hi} · centred on the mean ${mean}`,
+  },
+  ru: {
+    pcs: "главные компоненты",
+    variance: "дисперсии",
+    needs: "нужно хотя бы 2 книги",
+    more: (l: string) => `больше: ${l}`,
+    less: (l: string) => `меньше: ${l}`,
+    raw: (l: string, lo: string, hi: string, mean: string) => `${l} · ответ Jev от ${lo} до ${hi} · центр — среднее ${mean}`,
+  },
+};
+const nameOf = (f: { label: string; ru?: string }, lang: Lang) => ((lang === "ru" && f.ru) || f.label).toLowerCase();
+const fixed = (v: number, lang: Lang) => (lang === "ru" ? v.toFixed(2).replace(".", ",") : v.toFixed(2));
 
 /** "pc0".."pc2" for principal components, or "group:key" for a single fingerprint feature. */
 export type AxisChoice = string;
@@ -17,18 +39,23 @@ export type GraphAxis = {
 };
 
 const features = new Map<string, Feature>(FEATURE_GROUPS.flatMap((g) => g.features.map((f) => [`${g.id}:${f.key}`, f] as const)));
-const names = (list: Feature[]) => list.map((f) => f.label.toLowerCase()).join(" · ");
+/** Loadings carry the feature label only; look the Russian one up by the English label. */
+const ruByLabel = new Map(FEATURE_GROUPS.flatMap((g) => g.features.map((f) => [f.label, f.ru] as const)));
+const loadingName = (f: { label: string }, lang: Lang) => nameOf({ label: f.label, ru: ruByLabel.get(f.label) }, lang);
+const names = (list: { label: string }[], lang: Lang) => list.map((f) => loadingName(f, lang)).join(" · ");
 
-export function axisOptions(embedding: Embedding) {
+export function axisOptions(embedding: Embedding, lang: Lang = "en") {
   return [
     {
-      group: "principal components",
+      group: T[lang].pcs,
       options: [0, 1, 2].map((k) => ({
         id: `pc${k}`,
-        label: embedding.axes[k] ? `PC${k + 1} · ${Math.round(embedding.axes[k].explained * 100)}% · ${embedding.axes[k].positive[0]?.label.toLowerCase() ?? "—"}` : `PC${k + 1}`,
+        label: embedding.axes[k]
+          ? `PC${k + 1} · ${Math.round(embedding.axes[k].explained * 100)}% · ${embedding.axes[k].positive[0] ? loadingName(embedding.axes[k].positive[0], lang) : "—"}`
+          : `PC${k + 1}`,
       })),
     },
-    ...FEATURE_GROUPS.map((g) => ({ group: g.label.toLowerCase(), options: g.features.map((f) => ({ id: `${g.id}:${f.key}`, label: f.label.toLowerCase() })) })),
+    ...FEATURE_GROUPS.map((g) => ({ group: (lang === "ru" ? g.ru : g.label).toLowerCase(), options: g.features.map((f) => ({ id: `${g.id}:${f.key}`, label: nameOf(f, lang) })) })),
   ];
 }
 
@@ -41,16 +68,17 @@ export function placeStars(ids: string[], axes: GraphAxis[], dims: number) {
   return new Map(ids.map((id) => [id, fitters.map((f) => f(id))]));
 }
 
-export function buildAxis(choice: AxisChoice, stars: Star[], embedding: Embedding): GraphAxis {
+export function buildAxis(choice: AxisChoice, stars: Star[], embedding: Embedding, lang: Lang = "en"): GraphAxis {
+  const t = T[lang];
   const pc = /^pc(\d)$/.exec(choice);
   if (pc) {
     const k = Number(pc[1]);
     const axis = embedding.axes[k];
     const coord = (["x", "y", "z"] as const)[k];
     return {
-      plus: axis?.positive[0]?.label.toLowerCase() ?? "—",
-      minus: axis?.negative[0]?.label.toLowerCase() ?? "—",
-      legend: axis ? `PC${k + 1} · ${Math.round(axis.explained * 100)}% of variance · − ${names(axis.negative) || "—"} / + ${names(axis.positive) || "—"}` : `PC${k + 1} · needs at least 2 books`,
+      plus: axis?.positive[0] ? loadingName(axis.positive[0], lang) : "—",
+      minus: axis?.negative[0] ? loadingName(axis.negative[0], lang) : "—",
+      legend: axis ? `PC${k + 1} · ${Math.round(axis.explained * 100)}% ${t.variance} · − ${names(axis.negative, lang) || "—"} / + ${names(axis.positive, lang) || "—"}` : `PC${k + 1} · ${t.needs}`,
       values: new Map(embedding.points.map((p) => [p.id, p[coord]])),
     };
   }
@@ -60,11 +88,11 @@ export function buildAxis(choice: AxisChoice, stars: Star[], embedding: Embeddin
   const mean = known.length ? known.reduce((s, v) => s + v, 0) / known.length : 0;
   const lo = known.length ? Math.min(...known) : 0,
     hi = known.length ? Math.max(...known) : 0;
-  const label = feature.label.toLowerCase();
+  const label = nameOf(feature, lang);
   return {
-    plus: `more ${label}`,
-    minus: `less ${label}`,
-    legend: `${label} · raw jev value ${lo.toFixed(2)} → ${hi.toFixed(2)} · centred on the mean ${mean.toFixed(2)}`,
+    plus: t.more(label),
+    minus: t.less(label),
+    legend: t.raw(label, fixed(lo, lang), fixed(hi, lang), fixed(mean, lang)),
     values: new Map(stars.map((s, i) => [s.id, (Number.isFinite(raw[i]) ? raw[i] : mean) - mean])),
   };
 }

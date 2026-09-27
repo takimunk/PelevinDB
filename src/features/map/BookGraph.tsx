@@ -5,16 +5,101 @@ import { argmax } from "../../domain/analysis.ts";
 import type { Region } from "../../domain/clusters.ts";
 import { fingerprintValues } from "../../domain/fingerprint.ts";
 import { cosine, type Embedding } from "../../domain/pca.ts";
+import { useLang, useT, useTheme } from "../../i18n/index.ts";
 import { PixelStrip } from "../../ui/PixelStrip.tsx";
 import type { GraphAxis } from "./axes.ts";
 import type { Star } from "./corpus.ts";
+import { KIND_COLORS, decadeColor } from "./encoding.ts";
 
 const SPREAD = 10;
 const K = 3;
-const AXIS_COLORS = ["#ff4538", "#3ddc84", "#4d7cff"];
-const REGION_COLORS = ["#ff6bb5", "#5ad1ff", "#ffd166", "#8cff7a", "#b28dff", "#ff9f43", "#4de8c2"];
-const FONT = `11px "JetBrains Mono", ui-monospace, monospace`;
-const REGION_FONT = `700 11px "JetBrains Mono", ui-monospace, monospace`;
+const REGION_COLORS = ["#d6589a", "#2f8fd8", "#c99400", "#3f9b4f", "#8e5cd0", "#e4632a", "#17998a"];
+const FONT = `400 11px "IBM Plex Sans", system-ui, sans-serif`;
+const AXIS_FONT = `500 10.5px "IBM Plex Mono", ui-monospace, monospace`;
+const regionFont = (px: number) => `italic 700 ${px}px "Literata", Georgia, serif`;
+
+const T = {
+  en: {
+    yourBook: "your book",
+    corpusAll: (n: number) => `corpus · Jev read all ${n} pages`,
+    corpusSome: (a: number, n: number) => `corpus · Jev read ${a} of ${n} pages`,
+    atlas: (n: string) => `atlas · Jev read ${n} sampled pages`,
+    coverage: "coverage",
+    coords: "85 coordinates · click to select",
+    fingerprint: "fingerprint coordinates",
+    map: (m: string) => `${m} map of books`,
+    move: "move",
+    pan: "pan",
+    zoom: "zoom",
+    downUp: "down/up",
+    drag: "drag",
+    orbit: "orbit",
+    scroll: "scroll",
+    reset: "reset",
+    touch: (flat: boolean) => `Drag to ${flat ? "pan" : "rotate"} · pinch to zoom · tap a book`,
+    own: "your book",
+    corpus: "corpus book",
+    ref: "measured only",
+    edge: "edge label = similarity",
+    camera: "Map camera",
+    zoomIn: "Zoom in",
+    zoomOut: "Zoom out",
+    resetView: "Reset map view",
+    resetText: "Reset",
+    regions: "Regions",
+    regionsTitle: "Regions · books close on this view",
+    fly: "click to fly there",
+  },
+  ru: {
+    yourBook: "ваша книга",
+    corpusAll: (n: number) => `корпус · Jev прочитал все ${n} стр.`,
+    corpusSome: (a: number, n: number) => `корпус · Jev прочитал ${a} из ${n} стр.`,
+    atlas: (n: string) => `атлас · Jev прочитал ${n} стр. выборочно`,
+    coverage: "охват",
+    coords: "85 координат · нажмите, чтобы выбрать",
+    fingerprint: "координат отпечатка",
+    map: (m: string) => `Карта книг, ${m}`,
+    move: "движение",
+    pan: "сдвиг",
+    zoom: "масштаб",
+    downUp: "вниз/вверх",
+    drag: "перетаскивание —",
+    orbit: "вращение",
+    scroll: "колесо —",
+    reset: "сброс",
+    touch: (flat: boolean) => `Проведите, чтобы ${flat ? "сдвинуть" : "повернуть"} · щипок — масштаб · нажмите на книгу`,
+    own: "ваша книга",
+    corpus: "книга корпуса",
+    ref: "только замеры",
+    edge: "число на связи = сходство",
+    camera: "Камера карты",
+    zoomIn: "Приблизить",
+    zoomOut: "Отдалить",
+    resetView: "Сбросить вид карты",
+    resetText: "Сброс",
+    regions: "Области",
+    regionsTitle: "Области · книги, близкие на этом виде",
+    fly: "нажмите, чтобы перелететь",
+  },
+};
+
+export type ColorBy = "emotion" | "decade" | "kind";
+/** Canvas colours come from the theme tokens, re-read whenever the theme changes. */
+type Ink = { ink: string; ink2: string; muted: string; faint: string; line: string; line2: string; paper: string; veil: string };
+const readInk = (): Ink => {
+  const css = getComputedStyle(document.documentElement);
+  const v = (name: string, fallback: string) => css.getPropertyValue(name).trim() || fallback;
+  return {
+    ink: v("--ink", "#141413"),
+    ink2: v("--ink-2", "#3d3c39"),
+    muted: v("--muted", "#74716a"),
+    faint: v("--faint", "#b4b0a6"),
+    line: v("--line", "rgba(20,20,19,.12)"),
+    line2: v("--line-2", "rgba(20,20,19,.28)"),
+    paper: v("--paper", "#f6f4ef"),
+    veil: v("--veil", "rgba(246,244,239,.9)"),
+  };
+};
 const HOME = { yaw: 0.7, pitch: 0.42, distance: 34 };
 const HOME_2D = { yaw: 0, pitch: 0, distance: 30 };
 const TAN_HALF_FOV = Math.tan((45 * Math.PI) / 360);
@@ -25,6 +110,11 @@ export const regionColor = (i: number) => REGION_COLORS[i % REGION_COLORS.length
 
 export type GraphMode = "2d" | "3d";
 type Props = {
+  /** Local mode shows your own books; the public legend omits them. */
+  local?: boolean;
+  colorBy?: ColorBy;
+  /** Region names in the interface language (same order as `regions`). */
+  regionNames?: string[];
   stars: Star[];
   embedding: Embedding;
   axes: GraphAxis[];
@@ -40,7 +130,9 @@ type Props = {
 };
 type Screen = { x: number; y: number; depth: number; visible: boolean };
 
-const starColor = (s: Star) => EMOTIONS.find((e) => e.id === argmax(s.fingerprint.emotions))!.color;
+const emotionOf = (s: Star) => EMOTIONS.find((e) => e.id === argmax(s.fingerprint.emotions))!.color;
+/** The node's data colour under the chosen encoding; books without the field fall back to the leading emotion. */
+export const starColor = (s: Star, by: ColorBy = "emotion") => (by === "decade" && s.year != null ? decadeColor(s.year) : by === "kind" && s.work ? KIND_COLORS[s.work] : emotionOf(s));
 const typing = (t: EventTarget | null) => t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
 
 /** Convex hull (monotone chain) of screen points. */
@@ -79,7 +171,11 @@ function blob(g: CanvasRenderingContext2D, shape: { x: number; y: number }[], pa
  * Books on two or three chosen axes: square nodes, nearest-neighbour edges, named axes and named translucent regions.
  * 3D: drag orbits, WASD moves in the ground plane. 2D: a flat chart, drag and WASD pan.
  */
-export function BookGraph({ stars, embedding, axes, coords, regions, mode, selected, onSelect, labels, threads, showRegions }: Props) {
+export function BookGraph({ stars, embedding, axes, coords, regions, mode, selected, onSelect, labels, threads, showRegions, colorBy = "emotion", regionNames, local = false }: Props) {
+  const t = useT(T);
+  const lang = useLang();
+  const theme = useTheme();
+  const ink = useRef<Ink | null>(null);
   const wrap = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const overlay = useRef<HTMLDivElement>(null);
@@ -115,6 +211,9 @@ export function BookGraph({ stars, embedding, axes, coords, regions, mode, selec
     mode,
     showRegions,
     spot,
+    colorBy,
+    names: regionNames,
+    lang,
   });
   live.current = {
     selected,
@@ -124,6 +223,9 @@ export function BookGraph({ stars, embedding, axes, coords, regions, mode, selec
     mode,
     showRegions,
     spot,
+    colorBy,
+    names: regionNames,
+    lang,
   };
 
   const byId = useMemo(() => new Map(stars.map((s) => [s.id, s])), [stars]);
@@ -163,7 +265,12 @@ export function BookGraph({ stars, embedding, axes, coords, regions, mode, selec
   }, [selected, positions]);
   useEffect(() => {
     view.current.dirty = true;
-  }, [labels, threads, edges, axisNames, showRegions, spot]);
+  }, [labels, threads, edges, axisNames, showRegions, spot, colorBy, regionNames]);
+  useEffect(() => {
+    // Tokens switch with data-theme on <html>; read them after the attribute has changed.
+    ink.current = readInk();
+    view.current.dirty = true;
+  }, [theme]);
   useEffect(() => {
     Object.assign(view.current, mode === "2d" ? HOME_2D : HOME, {
       target: new THREE.Vector3(),
@@ -269,7 +376,9 @@ export function BookGraph({ stars, embedding, axes, coords, regions, mode, selec
       camera.lookAt(v.target);
       camera.updateMatrixWorld();
 
-      const { selected: sel, threads: showEdges, labels: allLabels } = live.current;
+      const { selected: sel, threads: showEdges, labels: allLabels, colorBy: by, names } = live.current;
+      const c = (ink.current ??= readInk());
+      const colorOf = (s: Star) => starColor(s, by);
       const focus = v.hover ?? sel;
       const near = new Set<string>();
       if (focus)
@@ -283,7 +392,7 @@ export function BookGraph({ stars, embedding, axes, coords, regions, mode, selec
 
       // Floor grid in 3D, chart grid in 2D.
       const floor = -SPREAD - 1;
-      ctx.strokeStyle = flat ? "rgba(255, 255, 255, 0.08)" : "rgba(255, 255, 255, 0.05)";
+      ctx.strokeStyle = c.line;
       for (let i = -SPREAD; i <= SPREAD; i += 2) {
         if (flat) {
           line(new THREE.Vector3(i, -SPREAD, 0), new THREE.Vector3(i, SPREAD, 0));
@@ -299,8 +408,8 @@ export function BookGraph({ stars, embedding, axes, coords, regions, mode, selec
       const axisBoxes: [number, number, number, number][] = [];
       for (let a = 0; a < axisNames.length; a++) {
         const unit = new THREE.Vector3(a === 0 ? 1 : 0, a === 1 ? 1 : 0, a === 2 ? 1 : 0);
-        ctx.strokeStyle = AXIS_COLORS[a];
-        ctx.globalAlpha = 0.35;
+        ctx.strokeStyle = c.muted;
+        ctx.globalAlpha = 0.6;
         ctx.setLineDash([3, 4]);
         line(unit.clone().multiplyScalar(-reach), unit.clone().multiplyScalar(reach));
         ctx.setLineDash([]);
@@ -313,17 +422,18 @@ export function BookGraph({ stars, embedding, axes, coords, regions, mode, selec
         ] as const) {
           const p = project(unit.clone().multiplyScalar(sign * (reach + 0.4)));
           if (!p.visible) continue;
-          ctx.globalAlpha = 0.95;
-          ctx.fillStyle = AXIS_COLORS[a];
+          ctx.globalAlpha = 1;
+          ctx.font = AXIS_FONT;
           const label = `${sign > 0 ? "+" : "−"}${letter} ${text}`;
           const tw = ctx.measureText(label).width;
           const x = Math.max(4, Math.min(w - tw - 4, p.x - tw / 2));
           const y = Math.max(64, Math.min(h - 70, p.y));
           axisBoxes.push([x - 3, y - 11, x + tw + 3, y + 4]);
-          ctx.fillStyle = "rgba(8, 8, 8, 0.85)";
+          ctx.fillStyle = c.veil;
           ctx.fillRect(x - 3, y - 11, tw + 6, 15);
-          ctx.fillStyle = AXIS_COLORS[a];
+          ctx.fillStyle = c.ink2;
           ctx.fillText(label, x, y);
+          ctx.font = FONT;
         }
       }
       ctx.globalAlpha = 1;
@@ -336,6 +446,21 @@ export function BookGraph({ stars, embedding, axes, coords, regions, mode, selec
       const dMin = Math.min(...depths),
         dMax = Math.max(...depths);
       const fade = (d: number) => (flat ? 1 : 1 - 0.55 * Math.max(0, Math.min(1, (d - dMin) / Math.max(1e-6, dMax - dMin))));
+      // Depth fade, recomputed every frame: nearest nodes are opaque, farther ones fade smoothly to a floor.
+      // 3D uses view-space depth normalised over the visible nodes; 2D is flat, so it uses the distance from
+      // the view centre (where zoom focuses) with a gentler curve. Hovered, selected and their neighbours stay opaque.
+      const smooth = (t: number) => t * t * (3 - 2 * t);
+      const visibleDepths = [...screen.values()].filter((q) => q.visible).map((q) => (flat ? Math.hypot(q.x - w / 2, q.y - h / 2) : q.depth));
+      const vMin = visibleDepths.length ? Math.min(...visibleDepths) : 0,
+        vMax = visibleDepths.length ? Math.max(...visibleDepths) : 1;
+      const opacity = new Map<string, number>();
+      for (const [id, q] of screen) {
+        const keep = id === focus || id === sel || near.has(id);
+        const d = flat ? Math.hypot(q.x - w / 2, q.y - h / 2) : q.depth;
+        const t = Math.max(0, Math.min(1, (d - vMin) / Math.max(1e-6, vMax - vMin)));
+        opacity.set(id, keep ? 1 : flat ? 1 - 0.45 * smooth(t) : 1 - 0.88 * smooth(t));
+      }
+      const op = (id: string) => opacity.get(id) ?? 1;
       const pxPerUnit = (depth: number) => h / (2 * depth * TAN_HALF_FOV);
 
       // Regions: padded translucent hulls of the members on screen. In 3D the hull of the projected points is
@@ -348,7 +473,7 @@ export function BookGraph({ stars, embedding, axes, coords, regions, mode, selec
         for (const i of order) {
           const shape = hull(regions[i].members.flatMap((id) => (screen.get(id)?.visible ? [screen.get(id)!] : [])));
           if (!shape.length) continue;
-          const strength = (lit == null ? 1 : lit === i ? 1.8 : 0.35) * fade(centres[i].depth);
+          const strength = (lit == null ? 1 : lit === i ? 1.8 : 0.35) * fade(centres[i].depth) * 0.8;
           const pad = PAD * pxPerUnit(flat ? v.distance : centres[i].depth);
           lctx.clearRect(0, 0, w, h);
           lctx.fillStyle = lctx.strokeStyle = regionColor(i);
@@ -371,8 +496,8 @@ export function BookGraph({ stars, embedding, axes, coords, regions, mode, selec
         const pa = screen.get(e.a)!,
           pb = screen.get(e.b)!;
         if (!pa.visible || !pb.visible) continue;
-        ctx.strokeStyle = on ? "#ededed" : "#6e6e6e";
-        ctx.globalAlpha = on ? 0.9 : focus ? 0.08 : 0.12 + Math.max(0, e.sim) * 0.25;
+        ctx.strokeStyle = on ? c.ink : c.muted;
+        ctx.globalAlpha = on ? 0.85 : (focus ? 0.08 : 0.14 + Math.max(0, e.sim) * 0.25) * Math.min(op(e.a), op(e.b));
         ctx.beginPath();
         ctx.moveTo(pa.x, pa.y);
         ctx.lineTo(pb.x, pb.y);
@@ -383,83 +508,15 @@ export function BookGraph({ stars, embedding, axes, coords, regions, mode, selec
             my = (pa.y + pb.y) / 2;
           const tw = ctx.measureText(label).width;
           ctx.globalAlpha = 1;
-          ctx.fillStyle = "#080808";
+          ctx.fillStyle = c.paper;
           ctx.fillRect(mx - tw / 2 - 3, my - 8, tw + 6, 14);
-          ctx.fillStyle = "#ededed";
+          ctx.fillStyle = c.ink;
           ctx.fillText(label, mx - tw / 2, my + 3);
         }
       }
 
-      // Nodes, far to near. Stems to the floor give depth.
-      const order = [...screen.entries()].sort((a, b) => b[1].depth - a[1].depth);
-      for (const [id, s] of order) {
-        if (!s.visible) continue;
-        const star = byId.get(id)!;
-        const p = positions.get(id)!;
-        const isFocus = id === focus || id === sel;
-        const dim = (focus != null && !isFocus && !near.has(id)) || (spotted != null && !spotted.has(id));
-        const alpha = dim ? 0.25 : fade(s.depth);
-        if (!flat) {
-          const base = project(new THREE.Vector3(p.x, floor, p.z));
-          ctx.globalAlpha = alpha * 0.25;
-          ctx.strokeStyle = starColor(star);
-          ctx.setLineDash([1, 3]);
-          ctx.beginPath();
-          ctx.moveTo(s.x, s.y);
-          ctx.lineTo(base.x, base.y);
-          ctx.stroke();
-          ctx.setLineDash([]);
-        }
-        ctx.globalAlpha = alpha;
-        const size = Math.round((star.kind === "library" ? 9 : 7) * (isFocus ? 1.4 : 1) * (0.75 + 0.25 * fade(s.depth)));
-        const x = Math.round(s.x - size / 2) + 0.5,
-          y = Math.round(s.y - size / 2) + 0.5;
-        ctx.fillStyle = "#080808";
-        ctx.fillRect(x, y, size, size);
-        ctx.strokeStyle = starColor(star);
-        ctx.lineWidth = star.kind === "library" ? 2 : 1;
-        if (star.kind === "library") {
-          ctx.fillStyle = starColor(star);
-          ctx.fillRect(x, y, size, size);
-        } else ctx.strokeRect(x, y, size, size);
-        if (star.canon?.complete) {
-          ctx.fillStyle = starColor(star);
-          ctx.fillRect(x + 2, y + 2, size - 4, size - 4);
-        }
-        ctx.lineWidth = 1;
-        if (isFocus) {
-          ctx.globalAlpha = 1;
-          ctx.strokeStyle = "#ffffff";
-          ctx.strokeRect(x - 4, y - 4, size + 8, size + 8);
-        }
-      }
-      ctx.globalAlpha = 1;
-
-      // Region names at their centres; book labels keep clear of them.
-      const regionBoxes: [number, number, number, number][] = [];
-      if (drawRegions) {
-        ctx.font = REGION_FONT;
-        regions.forEach((r, i) => {
-          const s = project(new THREE.Vector3(...[0, 1, 2].map((d) => (r.centre[d] ?? 0) * SPREAD)));
-          if (!s.visible) return;
-          const tw = ctx.measureText(r.name).width;
-          const x = Math.max(4, Math.min(w - tw - 4, s.x - tw / 2));
-          let y = Math.max(70, Math.min(h - 74, s.y));
-          const box = (): [number, number, number, number] => [x - 4, y - 12, x + tw + 4, y + 5];
-          for (let tries = 0; tries < 4 && regionBoxes.some((b) => box()[0] < b[2] && box()[2] > b[0] && box()[1] < b[3] && box()[3] > b[1]); tries++) y += 17;
-          regionBoxes.push(box());
-          ctx.globalAlpha = lit == null || lit === i ? 1 : 0.4;
-          ctx.fillStyle = "rgba(8, 8, 8, 0.8)";
-          ctx.fillRect(x - 4, y - 12, tw + 8, 17);
-          ctx.fillStyle = regionColor(i);
-          ctx.fillText(r.name, x, y);
-        });
-        ctx.globalAlpha = 1;
-        ctx.font = FONT;
-      }
-
-      // Labels: place by priority, skip overlaps.
-      const placed: [number, number, number, number][] = [...axisBoxes, ...regionBoxes, [0, 0, w, 56], [0, h - 66, w, h]];
+      // Book labels first: they have priority over region names. Place by priority, skip overlaps.
+      const placed: [number, number, number, number][] = [...axisBoxes, [0, 0, w, 56], [0, h - 66, w, h]];
       const priority = (id: string) => (id === focus || id === sel ? 0 : near.has(id) ? 1 : byId.get(id)!.kind === "library" ? 2 : 3 + screen.get(id)!.depth / 1000);
       const ids = [...screen.keys()].sort((a, b) => priority(a) - priority(b));
       const els = new Map<string, HTMLElement>();
@@ -470,8 +527,14 @@ export function BookGraph({ stars, embedding, axes, coords, regions, mode, selec
         if (!node) continue;
         node.style.transform = `translate(${Math.round(s.x)}px, ${Math.round(s.y)}px)`;
         node.style.visibility = s.visible ? "visible" : "hidden";
-        const title = byId.get(id)!.title;
-        const bw = Math.min(28, title.length) * 6.6 + 10,
+        node.style.opacity = String(op(id));
+        const region = drawRegions ? regionOf.get(id) : undefined;
+        node.style.setProperty("--label", region != null ? regionColor(region) : "");
+        node.classList.toggle("regioned", region != null);
+        const star = byId.get(id)!;
+        const title = live.current.lang === "ru" || !star.titleEn ? star.title : star.titleEn;
+        // Title at 12px serif plus the year at ~60% size in mono.
+        const bw = Math.min(28, title.length) * 6.6 + 10 + (star.year ? 22 : 0),
           bx = s.x + 9,
           by = s.y - 8;
         const box: [number, number, number, number] = [bx, by, bx + bw, by + 16];
@@ -484,6 +547,117 @@ export function BookGraph({ stars, embedding, axes, coords, regions, mode, selec
         node.classList.toggle("dim", !!focus && !important);
         if (show) placed.push(box);
       }
+
+      // Region names: bold, in the region colour, under the nodes and book labels. They go through the same
+      // collision pass after the book labels: near the centroid first, then offsets and member positions along
+      // the hull, then a smaller size; if nothing is free the name is hidden (its legend entry stays).
+      if (drawRegions) {
+        const blocked: [number, number, number, number][] = [...placed];
+        for (const [id, q] of screen) if (q.visible && op(id) > 0.35) blocked.push([q.x - 6, q.y - 6, q.x + 6, q.y + 6]);
+        const hit = (b: [number, number, number, number]) => b[0] < 4 || b[2] > w - 4 || b[1] < 60 || b[3] > h - 70 || blocked.some((o) => b[0] < o[2] && b[2] > o[0] && b[1] < o[3] && b[3] > o[1]);
+        ctx.lineJoin = "round";
+        regions.forEach((r, i) => {
+          const s = project(new THREE.Vector3(...[0, 1, 2].map((d) => (r.centre[d] ?? 0) * SPREAD)));
+          if (!s.visible) return;
+          const label = names?.[i] ?? r.name;
+          const members = r.members.flatMap((id) => (screen.get(id)?.visible ? [screen.get(id)!] : []));
+          const spots = [
+            [s.x, s.y],
+            [s.x, s.y - 18],
+            [s.x, s.y + 18],
+            [s.x - 40, s.y],
+            [s.x + 40, s.y],
+            [s.x, s.y - 36],
+            [s.x, s.y + 36],
+            ...members.flatMap((m) => [
+              [m.x, m.y - 16],
+              [m.x, m.y + 18],
+            ]),
+          ];
+          for (const size of [12.5, 10.5]) {
+            ctx.font = regionFont(size);
+            const tw = ctx.measureText(label).width;
+            const found = spots.find(([x, y]) => !hit([x - tw / 2 - 3, y - size, x + tw / 2 + 3, y + 4]));
+            if (!found) continue;
+            const [x, y] = found;
+            blocked.push([x - tw / 2 - 3, y - size, x + tw / 2 + 3, y + 4]);
+            ctx.globalAlpha = (lit == null || lit === i ? 1 : 0.35) * (flat ? 1 : 0.55 + 0.45 * fade(s.depth));
+            ctx.textAlign = "center";
+            ctx.strokeStyle = c.paper;
+            ctx.lineWidth = 3;
+            ctx.strokeText(label, x, y);
+            ctx.fillStyle = regionColor(i);
+            ctx.fillText(label, x, y);
+            ctx.textAlign = "start";
+            break;
+          }
+        });
+        ctx.globalAlpha = 1;
+        ctx.lineWidth = 1;
+        ctx.font = FONT;
+      }
+
+      // Nodes, far to near. Stems to the floor give depth.
+      const order = [...screen.entries()].sort((a, b) => b[1].depth - a[1].depth);
+      for (const [id, s] of order) {
+        if (!s.visible) continue;
+        const star = byId.get(id)!;
+        const p = positions.get(id)!;
+        const isFocus = id === focus || id === sel;
+        const dim = (focus != null && !isFocus && !near.has(id)) || (spotted != null && !spotted.has(id));
+        const alpha = isFocus || near.has(id) ? 1 : (dim ? 0.3 : 1) * op(id);
+        if (!flat) {
+          const base = project(new THREE.Vector3(p.x, floor, p.z));
+          ctx.globalAlpha = alpha * 0.35;
+          ctx.strokeStyle = colorOf(star);
+          ctx.setLineDash([1, 3]);
+          ctx.beginPath();
+          ctx.moveTo(s.x, s.y);
+          ctx.lineTo(base.x, base.y);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+        ctx.globalAlpha = alpha;
+        // Size grows gently with length (log of characters); corpus books are filled discs, your books
+        // filled squares, measured-only books open rings.
+        const length = Math.max(0, Math.min(1, (Math.log10(Math.max(1e4, star.chars)) - 4) / 2.2));
+        const size = (star.kind === "library" ? 9 : 7 + 5 * length) * (isFocus ? 1.35 : 1) * (0.75 + 0.25 * fade(s.depth));
+        const color = colorOf(star);
+        ctx.fillStyle = c.paper;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.5;
+        if (star.kind === "library") {
+          const x = Math.round(s.x - size / 2),
+            y = Math.round(s.y - size / 2);
+          ctx.fillStyle = color;
+          ctx.fillRect(x, y, size, size);
+          ctx.strokeStyle = c.ink;
+          ctx.lineWidth = 1;
+          ctx.strokeRect(x + 0.5, y + 0.5, size - 1, size - 1);
+        } else {
+          ctx.beginPath();
+          ctx.arc(s.x, s.y, size / 2, 0, Math.PI * 2);
+          if (star.canon) {
+            ctx.fillStyle = color;
+            ctx.fill();
+            ctx.strokeStyle = c.paper;
+            ctx.lineWidth = 1;
+            ctx.stroke();
+          } else {
+            ctx.fill();
+            ctx.stroke();
+          }
+        }
+        ctx.lineWidth = 1;
+        if (isFocus) {
+          ctx.globalAlpha = 1;
+          ctx.strokeStyle = c.ink;
+          ctx.beginPath();
+          ctx.arc(s.x, s.y, size / 2 + 4.5, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      }
+      ctx.globalAlpha = 1;
 
       // Picking.
       let best: { id: string; d: number; x: number; y: number } | null = null;
@@ -506,7 +680,7 @@ export function BookGraph({ stars, embedding, axes, coords, regions, mode, selec
       cancelAnimationFrame(raf);
       ro.disconnect();
     };
-  }, [positions, edges, axisNames, byId, regions]);
+  }, [positions, edges, axisNames, byId, regions, regionOf]);
 
   // Mouse and keyboard.
   useEffect(() => {
@@ -640,11 +814,14 @@ export function BookGraph({ stars, embedding, axes, coords, regions, mode, selec
   return (
     <div className="graph-layout">
       <div className="graph" ref={wrap} tabIndex={-1}>
-        <canvas ref={canvas} role="img" aria-label={`${mode === "2d" ? "2D" : "3D"} map of books`} />
+        <canvas ref={canvas} role="img" aria-label={t.map(mode === "2d" ? "2D" : "3D")} />
         <div className="graph-overlay" ref={overlay}>
           {stars.map((s) => (
             <span key={s.id} data-node={s.id} className={`node-label ${s.kind}`} aria-hidden="true">
-              <span>{s.title}</span>
+              <span className="nl-text">
+                <span className="nl-title">{lang === "ru" || !s.titleEn ? s.title : s.titleEn}</span>
+                {s.year != null && <small className="nl-year">{s.year}</small>}
+              </span>
             </span>
           ))}
         </div>
@@ -652,20 +829,36 @@ export function BookGraph({ stars, embedding, axes, coords, regions, mode, selec
           <div
             className="node-card"
             style={{
-              left: Math.min(hover.x + 18, (wrap.current?.clientWidth ?? 800) - 330),
+              left: Math.max(8, Math.min(hover.x + 18, (wrap.current?.clientWidth ?? 800) - 330)),
               top: Math.max(8, hover.y - 20),
             }}
           >
             <div className="node-card-title">
-              <b>{hovered.title}</b>
-              <span className="dim"> · {hovered.author}</span>
+              <b>{lang === "ru" || !hovered.titleEn ? hovered.title : hovered.titleEn}</b>
+              <span className="dim">
+                {" "}
+                · {hovered.author}
+                {hovered.year ? ` · ${hovered.year}` : ""}
+              </span>
             </div>
             <div className="node-card-meta">
-              {hovered.kind === "library" ? "your book" : hovered.canon?.complete ? `canon · jev read all ${hovered.canon.pages} pages` : `atlas · jev read ${hovered.pagesRead ?? "?"} sampled pages`}{" "}
-              · coverage {Math.round(hovered.fingerprint.coverage * 100)}%
-              {hoveredRegion != null && <span style={{ color: regionColor(hoveredRegion) }}> · {regions[hoveredRegion].name.toLowerCase()}</span>}
+              {hovered.kind === "library"
+                ? t.yourBook
+                : hovered.canon
+                  ? hovered.canon.complete
+                    ? t.corpusAll(hovered.canon.pages)
+                    : t.corpusSome(hovered.canon.analysed, hovered.canon.pages)
+                  : t.atlas(String(hovered.pagesRead ?? "?"))}{" "}
+              · {t.coverage} {Math.round(hovered.fingerprint.coverage * 100)}%
+              {hoveredRegion != null && (
+                <span>
+                  {" "}
+                  · <i className="key-swatch" style={{ background: regionColor(hoveredRegion) }} />
+                  {(regionNames?.[hoveredRegion] ?? regions[hoveredRegion].name).toLowerCase()}
+                </span>
+              )}
             </div>
-            <PixelStrip values={fingerprintValues(hovered.fingerprint)} size={6} label="fingerprint coordinates" idle="85 coordinates · click to select" />
+            <PixelStrip values={fingerprintValues(hovered.fingerprint)} size={6} label={t.fingerprint} idle={t.coords} />
           </div>
         )}
         <div className="graph-hud">
@@ -673,17 +866,28 @@ export function BookGraph({ stars, embedding, axes, coords, regions, mode, selec
             <kbd>W</kbd>
             <kbd>A</kbd>
             <kbd>S</kbd>
-            <kbd>D</kbd> {mode === "2d" ? "pan" : "move"} <kbd>Q</kbd>
-            <kbd>E</kbd> {mode === "2d" ? "zoom" : "down/up"} · drag {mode === "2d" ? "pan" : "orbit"} · scroll zoom · <kbd>R</kbd> reset
+            <kbd>D</kbd> {mode === "2d" ? t.pan : t.move} · <kbd>Q</kbd>
+            <kbd>E</kbd> {mode === "2d" ? t.zoom : t.downUp} · {t.drag} {mode === "2d" ? t.pan : t.orbit} · {t.scroll} {t.zoom} · <kbd>R</kbd> {t.reset}
           </span>
-          <span className="graph-touch-help">Drag to {mode === "2d" ? "pan" : "rotate"} · pinch to zoom · tap a book</span>
+          <span className="graph-touch-help">{t.touch(mode === "2d")}</span>
           <span className="graph-legend">
-            <i className="own" /> your book <i className="canon" /> canon, read in full <i className="ref" /> atlas · colour = leading emotion · edge label = similarity
+            <span>
+              <i className="glyph canon" /> {t.corpus}
+            </span>
+            {local && (
+              <span>
+                <i className="glyph own" /> {t.own}
+              </span>
+            )}
+            <span>
+              <i className="glyph ref" /> {t.ref}
+            </span>
+            <span>{t.edge}</span>
           </span>
         </div>
-        <div className="graph-controls" role="group" aria-label="Map camera">
+        <div className="graph-controls" role="group" aria-label={t.camera}>
           <button
-            aria-label="Zoom in"
+            aria-label={t.zoomIn}
             onClick={() => {
               view.current.distance = Math.max(6, view.current.distance / 1.25);
               view.current.dirty = true;
@@ -692,7 +896,7 @@ export function BookGraph({ stars, embedding, axes, coords, regions, mode, selec
             +
           </button>
           <button
-            aria-label="Zoom out"
+            aria-label={t.zoomOut}
             onClick={() => {
               view.current.distance = Math.min(90, view.current.distance * 1.25);
               view.current.dirty = true;
@@ -701,7 +905,7 @@ export function BookGraph({ stars, embedding, axes, coords, regions, mode, selec
             −
           </button>
           <button
-            aria-label="Reset map view"
+            aria-label={t.resetView}
             onClick={() => {
               Object.assign(view.current, mode === "2d" ? HOME_2D : HOME, {
                 goal: new THREE.Vector3(),
@@ -709,25 +913,25 @@ export function BookGraph({ stars, embedding, axes, coords, regions, mode, selec
               });
             }}
           >
-            Reset
+            {t.resetText}
           </button>
         </div>
         <div className="graph-axes">
           {axisNames.map((a, i) => (
             <span key={i}>
-              <b style={{ color: AXIS_COLORS[i] }}>{"xyz"[i]}</b> {a.legend}
+              <b>{"xyz"[i]}</b> {a.legend}
             </span>
           ))}
         </div>
       </div>
       {showRegions && regions.length > 0 && (
-        <div className="graph-regions" role="group" aria-label="Regions">
-          <span className="eyebrow">regions · books close on this view</span>
+        <div className="graph-regions" role="group" aria-label={t.regions}>
+          <span className="eyebrow">{t.regionsTitle}</span>
           {regions.map((r, i) => (
             <button
               key={r.name}
               className={spot === i ? "on" : ""}
-              title={`${r.traits.join(" · ")} · click to fly there`}
+              title={`${(lang === "ru" ? r.ru.traits : r.traits).join(" · ")} · ${t.fly}`}
               onMouseEnter={() => setSpot(i)}
               onMouseLeave={() => setSpot(null)}
               onFocus={() => setSpot(i)}
@@ -735,7 +939,7 @@ export function BookGraph({ stars, embedding, axes, coords, regions, mode, selec
               onClick={() => glide(i)}
             >
               <i style={{ background: regionColor(i) }} />
-              <span>{r.name}</span>
+              <span>{regionNames?.[i] ?? r.name}</span>
               <em>{r.members.length}</em>
             </button>
           ))}

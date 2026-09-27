@@ -1,15 +1,39 @@
 import { useState } from "react";
-import { PROFILE_SCALES, TEXTURES, type ProfileScaleId, type TextureId } from "../../../../shared/catalog.ts";
+import { highOf, labelOf, lowOf, PROFILE_SCALES, TEXTURES, type ProfileScaleId, type TextureId } from "../../../../shared/catalog.ts";
 import type { Fingerprint } from "../../../domain/fingerprint.ts";
+import { useLang, useT, type Lang } from "../../../i18n/index.ts";
+
+const T = {
+  en: {
+    emotion: "emotion",
+    emotionHint: "strongest mean emotion",
+    whole: "whole book",
+    mean: "library mean",
+    idle: "0 centre → 100 rim",
+    dashed: "dashed",
+    hover: "hover a spoke",
+    chart: "Star chart",
+  },
+  ru: {
+    emotion: "эмоция",
+    emotionHint: "самая сильная средняя эмоция",
+    whole: "вся книга",
+    mean: "среднее по библиотеке",
+    idle: "0 в центре → 100 на краю",
+    dashed: "пунктир",
+    hover: "наведите на луч",
+    chart: "Звёздная диаграмма",
+  },
+};
 
 export type RadarAxis = { id: string; label: string; hint: string; value: number; ref?: number };
 
 const TEXTURE_AXES: TextureId[] = ["tension", "pace", "valence", "humor", "imagery", "ideas", "interiority"];
-const PROFILE_AXES: { id: ProfileScaleId; label: string }[] = [
-  { id: "complexity", label: "dense" },
-  { id: "scope", label: "epic" },
-  { id: "drive", label: "plot" },
-  { id: "realism", label: "fantastic" },
+const PROFILE_AXES: { id: ProfileScaleId; label: string; ru: string }[] = [
+  { id: "complexity", label: "dense", ru: "плотность" },
+  { id: "scope", label: "epic", ru: "размах" },
+  { id: "drive", label: "plot", ru: "сюжет" },
+  { id: "realism", label: "fantastic", ru: "фантастика" },
 ];
 
 type Source = Pick<Fingerprint, "emotions" | "texture"> & { profile?: { scales: NonNullable<Fingerprint["profile"]>["scales"] } };
@@ -27,26 +51,35 @@ export function meanSource(list: Fingerprint[]): Source | undefined {
 }
 
 /** Book-level axes where outward always means "more": texture, emotional charge and the whole-book scales. */
-export function radarAxes(f: Source, ref?: Source): RadarAxis[] {
+export function radarAxes(f: Source, ref?: Source, lang: Lang = "en"): RadarAxis[] {
+  const t = T[lang];
   const charge = (x: Source) => Math.max(...Object.values<number>(x.emotions));
   const axes: RadarAxis[] = TEXTURE_AXES.map((id) => {
-    const t = TEXTURES.find((x) => x.id === id)!;
-    return { id, label: t.label.toLowerCase(), hint: `${t.low.toLowerCase()} → ${t.high.toLowerCase()}`, value: f.texture[id], ref: ref?.texture[id] };
+    const tx = TEXTURES.find((x) => x.id === id)!;
+    return { id, label: labelOf(tx, lang).toLowerCase(), hint: `${lowOf(tx, lang).toLowerCase()} → ${highOf(tx, lang).toLowerCase()}`, value: f.texture[id], ref: ref?.texture[id] };
   });
-  axes.splice(2, 0, { id: "emotion", label: "emotion", hint: "strongest mean emotion", value: charge(f), ref: ref && charge(ref) });
+  axes.splice(2, 0, { id: "emotion", label: t.emotion, hint: t.emotionHint, value: charge(f), ref: ref && charge(ref) });
   if (f.profile)
     for (const p of PROFILE_AXES) {
       const s = PROFILE_SCALES.find((x) => x.id === p.id)!;
-      axes.push({ id: p.id, label: p.label, hint: `${s.low.toLowerCase()} → ${s.high.toLowerCase()} · whole book`, value: f.profile.scales[p.id], ref: ref?.profile?.scales[p.id] });
+      axes.push({
+        id: p.id,
+        label: lang === "ru" ? p.ru : p.label,
+        hint: `${lowOf(s, lang).toLowerCase()} → ${highOf(s, lang).toLowerCase()} · ${t.whole}`,
+        value: f.profile.scales[p.id],
+        ref: ref?.profile?.scales[p.id],
+      });
     }
   return axes;
 }
 
-const SIZE = 300;
-const R = 96;
+const SIZE = 320;
+const R = 100;
 
 /** Star chart: one spoke per axis, 0 at the centre, 1 at the rim. The dashed outline is the library mean. */
-export function Radar({ axes, color = "#7dff9a", refLabel }: { axes: RadarAxis[]; color?: string; refLabel?: string }) {
+export function Radar({ axes, color = "var(--d1)", refLabel }: { axes: RadarAxis[]; color?: string; refLabel?: string }) {
+  const t = useT(T);
+  useLang();
   const [hover, setHover] = useState<number | null>(null);
   const n = axes.length;
   const c = SIZE / 2;
@@ -59,7 +92,7 @@ export function Radar({ axes, color = "#7dff9a", refLabel }: { axes: RadarAxis[]
   const h = hover != null ? axes[hover] : null;
   return (
     <figure className="radar">
-      <svg viewBox={`0 0 ${SIZE} ${SIZE}`} role="img" aria-label={`Star chart: ${axes.map((a) => `${a.label} ${Math.round(a.value * 100)}`).join(", ")}`}>
+      <svg viewBox={`-56 0 ${SIZE + 112} ${SIZE}`} role="img" aria-label={`${t.chart}: ${axes.map((a) => `${a.label} ${Math.round(a.value * 100)}`).join(", ")}`}>
         {[0.25, 0.5, 0.75, 1].map((r) => (
           <polygon key={r} points={poly(axes.map(() => r))} className={r === 1 ? "rim" : "ring"} />
         ))}
@@ -87,10 +120,17 @@ export function Radar({ axes, color = "#7dff9a", refLabel }: { axes: RadarAxis[]
       <figcaption className="readout">
         {h ? (
           <>
-            <b>{h.label}</b> {Math.round(h.value * 100)} <span className="dim">· {h.hint}{h.ref != null ? ` · library mean ${Math.round(h.ref * 100)}` : ""}</span>
+            <b>{h.label}</b> {Math.round(h.value * 100)}{" "}
+            <span className="dim">
+              · {h.hint}
+              {h.ref != null ? ` · ${t.mean} ${Math.round(h.ref * 100)}` : ""}
+            </span>
           </>
         ) : (
-          <span className="dim">0 centre → 100 rim{hasRef ? ` · dashed = ${refLabel ?? "library mean"}` : ""} · hover a spoke</span>
+          <span className="dim">
+            {t.idle}
+            {hasRef ? ` · ${t.dashed} = ${refLabel ?? t.mean}` : ""} · {t.hover}
+          </span>
         )}
       </figcaption>
     </figure>

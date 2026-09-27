@@ -3,7 +3,9 @@ import { isParatext } from "../domain/analysis.ts";
 import { buildDossier } from "../domain/dossier.ts";
 import { DEFAULT_WEIGHTS } from "../domain/fingerprint.ts";
 import { embed, neighbours } from "../domain/pca.ts";
-import { flush, getBooks, loadContent, segmentsOf, setAnalysis, setBrief, setProfile } from "../storage/library.ts";
+import { briefFor, flush, getBooks, loadContent, segmentsOf, setAnalysis, setBrief, setProfile } from "../storage/library.ts";
+import { getLang } from "../i18n/index.ts";
+import type { BriefLang } from "../../shared/types.ts";
 import { api, ApiError, serverStatus } from "./api.ts";
 
 const WORKERS = 4;
@@ -74,7 +76,9 @@ export async function startAnalysis(id: string) {
     await ensureProfile(id, controller.signal);
     await flush();
     update(id, { status: "done", done, total: segments.length });
-    if (!content.brief && (await serverStatus()).brief) void requestBrief(id);
+    // Write the brief in the current UI language unless it already exists in that language.
+    const have = briefFor(content, getLang());
+    if ((!have || have.fallback) && (await serverStatus()).brief) void requestBrief(id);
   } catch (error) {
     controller.abort();
     await flush();
@@ -131,7 +135,7 @@ function setBriefJob(id: string, job: BriefJob | null) {
 }
 
 /** Asks the LLM for a reader's brief built only from measured data and a few short quotes. */
-export async function requestBrief(id: string) {
+export async function requestBrief(id: string, lang: BriefLang = getLang()) {
   if (briefJobs.get(id)?.status === "running") return;
   const content = await loadContent(id);
   const meta = getBooks().find((b) => b.id === id);
@@ -146,7 +150,7 @@ export async function requestBrief(id: string) {
       similarity: n.similarity,
     }));
     const dossier = buildDossier(meta, segmentsOf(id, content.text), content.analyses, content.profile, near);
-    setBrief(id, await api.brief(dossier));
+    setBrief(id, { ...(await api.brief(dossier, lang)), lang });
     setBriefJob(id, null);
   } catch (error) {
     setBriefJob(id, { status: "error", error: error instanceof Error ? error.message : "The brief could not be written." });

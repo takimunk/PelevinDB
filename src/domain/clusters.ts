@@ -1,11 +1,13 @@
 import { ALL_FEATURES, vectorize, type Fingerprint, type Weights } from "./fingerprint.ts";
-import { PLACES, REGION_WORDS } from "./region-words.ts";
+import { agree, PLACES, PLACES_RU, REGION_WORDS, REGION_WORDS_RU } from "./region-words.ts";
 
 /** A group of books that sit together on the current view, named after what sets them apart. */
 export type Region = {
   name: string;
   /** Adjectives of the features that most distinguish the region, strongest first. */
   traits: string[];
+  /** The same name and traits in Russian, with the adjective agreeing with the place word. */
+  ru: { name: string; traits: string[] };
   members: string[];
   /** Mean position in the clustered coordinates. */
   centre: number[];
@@ -44,7 +46,7 @@ export function kmeans(points: number[][], k: number, restarts = 8, seed = 7) {
       let changed = false;
       points.forEach((p, i) => {
         const j = nearest(p, centroids);
-        if (j !== labels[i]) (labels[i] = j), (changed = true);
+        if (j !== labels[i]) ((labels[i] = j), (changed = true));
       });
       if (!changed) break;
       centroids.forEach((c, j) => {
@@ -95,7 +97,7 @@ export function cluster(points: number[][]) {
   return best?.labels ?? null;
 }
 
-type Pick = { noun: string; adj: string; score: number };
+type Pick = { noun: string; adj: string; ruNoun: string; ruAdj: string; score: number };
 
 /** Features ranked by how far the members' mean sits from the corpus mean, in standard deviations. */
 function distinctive(members: number[][], stats: { mean: number; std: number }[], focus: RegionFocus, everything = false): Pick[] {
@@ -108,7 +110,8 @@ function distinctive(members: number[][], stats: { mean: number; std: number }[]
     if (!values.length) return [];
     const z = (mean(values) - stats[j].mean) / stats[j].std;
     const side = z >= 0 ? words : words.low;
-    return side ? [{ noun: side.noun, adj: side.adj, score: Math.abs(z) * weight }] : [];
+    const ru = z >= 0 ? REGION_WORDS_RU[id] : REGION_WORDS_RU[id]?.low;
+    return side ? [{ noun: side.noun, adj: side.adj, ruNoun: ru?.noun ?? side.noun, ruAdj: ru?.adj ?? side.adj, score: Math.abs(z) * weight }] : [];
   });
   if (!picks.length && !everything) return distinctive(members, stats, focus, true);
   return picks.sort((a, b) => b.score - a.score);
@@ -142,17 +145,22 @@ export function findRegions(items: { id: string; fingerprint: Fingerprint }[], c
     );
     const noun = ranked.find((p) => !nouns.has(p.noun)) ?? ranked[0];
     const adj = ranked.find((p) => p !== noun && p.adj !== noun?.adj && p.noun !== noun?.noun);
-    const tier = group.length / placed.length < 0.12 ? PLACES.small : group.length / placed.length < 0.25 ? PLACES.medium : PLACES.large;
+    const size = group.length / placed.length < 0.12 ? "small" : group.length / placed.length < 0.25 ? "medium" : "large";
+    const tier = PLACES[size];
     const start = hash(noun?.noun ?? "") % tier.length;
-    const place = tier.map((_, i) => tier[(start + i) % tier.length]).find((p) => !places.has(p)) ?? tier[start];
+    const slot = tier.map((_, i) => (start + i) % tier.length).find((k) => !places.has(tier[k])) ?? start;
+    const place = tier[slot],
+      ruPlace = PLACES_RU[size][slot];
     if (noun) nouns.add(noun.noun);
     places.add(place);
     const name = noun ? (adj ? `${capital(adj.adj)} ${place} of ${noun.noun}` : `${capital(place)} of ${noun.noun}`) : capital(place);
+    const ruName = noun ? (adj ? `${capital(agree(adj.ruAdj, ruPlace.gender))} ${ruPlace.word} ${noun.ruNoun}` : `${capital(ruPlace.word)} ${noun.ruNoun}`) : capital(ruPlace.word);
     const ids = group.map((i) => placed[i].id);
     const dims = coords.get(ids[0])!.length;
     return {
       name,
       traits: [...new Set(ranked.map((p) => p.adj))].slice(0, 3),
+      ru: { name: ruName, traits: [...new Set(ranked.map((p) => agree(p.ruAdj, "p")))].slice(0, 3) },
       members: ids,
       centre: Array.from({ length: dims }, (_, d) => mean(ids.map((id) => coords.get(id)![d]))),
     };
