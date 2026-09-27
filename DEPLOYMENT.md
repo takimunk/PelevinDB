@@ -1,20 +1,20 @@
-# xbook on Coolify
+# PelevinDB on Coolify
 
 ## Application
 
-Use a Coolify **Docker Image** application with image `ghcr.io/takimunk/xbook`,
+Use a Coolify **Docker Image** application with image `ghcr.io/takimunk/pelevindb`,
 tag `latest`, exposed port `5173`. A separate preview application uses tag `preview`
 and its own domain and volume. Configure GHCR read access on the Coolify server if
-the package is private. CircleCI publishes images; Coolify only pulls and runs them.
-Set the domain to `https://xbookx.xyz`. Do not publish port 5173 on the host.
+the package is private. GitHub Actions publishes images; Coolify only pulls and runs them.
+Set the domain to `https://pelevindb.xyz`. Do not publish port 5173 on the host.
 The image binds to `0.0.0.0` and runs as the unprivileged `node` user.
 Set the Coolify health check to Container command: `node /app/server/healthcheck.ts`.
 It checks GET `/api/health` and uses the Node runtime already in the image.
 
 Runtime environment:
 
-- `APP_ORIGIN=https://xbookx.xyz`
-- `OPENPANEL_CLIENT_ID`: public client ID from the OpenPanel xbook project
+- `APP_ORIGIN=https://pelevindb.xyz`
+- `OPENPANEL_CLIENT_ID`: public client ID from the OpenPanel PelevinDB project
 - `OPENPANEL_API_URL`: API URL shown by your OpenPanel installation (cloud default: `https://api.openpanel.dev`)
 - `XBOOK_DB=/app/data/xbook.db` (image default)
 
@@ -54,42 +54,52 @@ unset in previews, or give previews an independently approved allowance.
 
 ## CI and deployment
 
-CircleCI runs TypeScript/build, unit and browser tests on each branch. On `codex/`
-branches it builds and deploys a preview; on `main` it deploys production. The deploy
-job builds a production image and checks its health before publishing to GHCR.
-GitHub Actions is removed to avoid duplicate checks and account billing failures.
+GitHub Actions runs TypeScript/build, unit tests and Chromium/WebKit browser tests.
+Trusted pushes to `codex/` branches deploy the shared preview; `main` deploys
+production after checks pass. Pull requests run checks without deployment secrets.
+CircleCI is removed. Actions run on standard `ubuntu-24.04` hosted runners.
 
-Add these **project environment variables** in CircleCI (never commit secrets):
+Workflow: `.github/workflows/ci.yml`. Deploy script: `scripts/github-deploy.ts`.
+Actions are pinned to verified release commit SHAs. The deployment job alone gets
+`packages: write` and publishes with its short-lived `GITHUB_TOKEN`; no GHCR PAT is
+needed. Coolify only pulls and runs the image. Disable independent Git auto-deploys.
 
-- `GHCR_USERNAME`, `GHCR_TOKEN`: a publisher with package write permission
-- `COOLIFY_TOKEN`: a Coolify token with deploy permission
-- `COOLIFY_WEBHOOK`: production authenticated deploy URL, including `uuid`
-- `COOLIFY_WEBHOOK_PREVIEW`: deploy URL for a different preview application
-- `DEPLOY_URL=https://xbookx.xyz`
-- `DEPLOY_URL_PREVIEW`: HTTPS URL of the preview application
+Configured **GitHub Actions repository variables**:
 
-The Coolify origin is restricted to `https://flcl.stickies.fun`. Keep secrets limited
-to trusted project branches; do not enable passing secrets to forked PRs. Disable
-Coolify's independent Git auto-deployments. Merging a PR to main enables production
-publishing, so review and authorize the merge first.
+- `COOLIFY_WEBHOOK=https://flcl.stickies.fun/api/v1/deploy?uuid=mdthw5l4cnhjz8dygwlz3mh3`
+- `COOLIFY_WEBHOOK_PREVIEW=https://flcl.stickies.fun/api/v1/deploy?uuid=sia2wmarhmkvfyzgqkebpdgl`
+- `DEPLOY_URL=https://pelevindb.xyz`
+- `DEPLOY_URL_PREVIEW=https://sia2wmarhmkvfyzgqkebpdgl.179.61.227.96.sslip.io`
 
-Like Sticky, images have immutable commit tags and a moving `preview`/`latest` tag.
-CircleCI serializes deployment jobs per target, covering publishing and deployment
-together. After Coolify accepts the request, CI waits up to ten minutes for the
-public health endpoint to return the **expected commit SHA**, so an old healthy
-container cannot make a failed rollout pass. Missing credentials, shared preview
-and production UUIDs, or a production run from a PR fail before publishing.
+Repository **secret**: `COOLIFY_TOKEN`, a token with deploy permission only.
+The registry credentials are provided automatically by the workflow.
+Never commit credentials or enable deployment secrets for untrusted pull requests.
+
+Coolify applications `PelevinDB` and `PelevinDB-preview` use separate persistent
+volumes and `latest`/`preview` image tags. Neither application inherits xbook's paid
+provider keys or OpenPanel client ID. Configure these separately when needed;
+previews should keep paid keys unset. Existing corpus analyses may be copied via
+SQLite's backup API, without copying the spending ledger or private credentials.
+
+Images have immutable commit tags plus a moving `latest` or `preview` tag. GitHub
+Actions serializes the publish/deploy jobs per target. The script builds an image,
+starts it locally and verifies its health before publishing it. After Coolify queues
+the rollout, it waits up to ten minutes for the public `/api/health` endpoint to
+return the expected commit SHA, preventing an old healthy container from passing.
+Missing credentials, shared preview/production UUIDs and untrusted events fail
+before publication. Initial deployment is authorized for this new application;
+subsequent production releases follow reviewed merges into `main`.
 
 ## Domain
 
 At the domain's DNS provider, point the apex (`@`) A record at the **application
 server's** public IPv4 address from Coolify. A control-panel address may refer to a
 different server. Add AAAA only if that server has working IPv6. Once DNS resolves,
-Coolify can issue the Let's Encrypt certificate for `https://xbookx.xyz`.
+Coolify can issue the Let's Encrypt certificate for `https://pelevindb.xyz`.
 
 ## OpenPanel
 
-Create an xbook project and a web client allowing `https://xbookx.xyz`. Copy its public
+Create a PelevinDB project and a web client allowing `https://pelevindb.xyz`. Copy its public
 client ID into Coolify's runtime environment; do not expose a client secret. For a
 self-hosted installation use its API endpoint in `OPENPANEL_API_URL` and ensure its
 HTTPS certificate works. Restart xbook after changing runtime values; no rebuild is

@@ -14,12 +14,7 @@ import "./home.css";
 
 const FractalField = lazy(() => import("../../ui/FractalField.tsx").then((m) => ({ default: m.FractalField })));
 
-const LOGO = String.raw`██╗  ██╗██████╗  ██████╗  ██████╗ ██╗  ██╗
-╚██╗██╔╝██╔══██╗██╔═══██╗██╔═══██╗██║ ██╔╝
- ╚███╔╝ ██████╔╝██║   ██║██║   ██║█████╔╝
- ██╔██╗ ██╔══██╗██║   ██║██║   ██║██╔═██╗
-██╔╝ ██╗██████╔╝╚██████╔╝╚██████╔╝██║  ██╗
-╚═╝  ╚═╝╚═════╝  ╚═════╝  ╚═════╝ ╚═╝  ╚═╝`;
+const LOGO = "PELEVINDB";
 
 const PAGE_VALUES = EMOTIONS.length + TEXTURES.length + MOODS.length + MODES.length + THEMES.length;
 const PROFILE_QUESTIONS = 2 + PROFILE_SCALES.length;
@@ -266,7 +261,7 @@ export function HomePage() {
           <FractalField className="hero-field" />
         </Suspense>
         <div className="hero-copy">
-          <h1 className="logo" aria-label="xbook">
+          <h1 className="logo" aria-label="PelevinDB">
             {LOGO}
           </h1>
           <p className="hero-lede">

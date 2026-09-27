@@ -123,7 +123,7 @@ test("home search finds the library, the atlas and the Gutenberg catalog", async
     route.fulfill({ json: { hits: [{ id: "205", title: "Walden, and On The Duty Of Civil Disobedience", author: "Henry David Thoreau", language: "en" }] } }),
   );
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1, name: "xbook" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "PelevinDB" })).toBeVisible();
   await expect(page.getByRole("button", { name: "upload epub · fb2 · txt" })).toBeVisible();
 
   const search = page.getByRole("combobox", { name: "Search books" });
@@ -297,7 +297,8 @@ test("analysis survives a partial failure and resumes without recomputing finish
   await button(page, "resume").click();
   await expect(page.locator(".data-badge")).toContainText("complete");
   expect(count).toBe(before + 1);
-  expect(profiles).toBe(1);
+  // Page completion can render before the subsequent whole-book profile request.
+  await expect.poll(() => profiles).toBe(1);
   await expect(page.getByRole("heading", { name: "SPECTROGRAM" })).toBeVisible();
   await expect(button(page, "map")).toBeEnabled();
 });
