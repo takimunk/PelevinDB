@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useState, type ComponentType } from "react";
 import { EMOTIONS, labelOf, type EmotionId } from "../../../shared/catalog.ts";
-import { href } from "../../app/router.ts";
+import { href, navigate } from "../../app/router.ts";
+import { rememberLens } from "../book/SentenceText.tsx";
 import { useLang, useT, type Lang } from "../../i18n/index.ts";
 import { dec } from "../../ui/format.ts";
 import { Wordmark } from "../../ui/Wordmark.tsx";
@@ -8,7 +9,7 @@ import { AUTHOR_URL, GitHubMark, REPO_URL, XMark } from "../../ui/Social.tsx";
 import { primaryTitle } from "../library/labels.ts";
 import "./home.css";
 
-type SceneModule = { UralScene: ComponentType<{ className?: string }> };
+type SceneModule = { UralScene: ComponentType<{ className?: string; onSign?: () => void }> };
 // The scene is optional: if src/ui/UralScene.tsx is missing the glob is empty and the stage is left out.
 const sceneLoader = Object.values(import.meta.glob<SceneModule>("../../ui/UralScene.tsx"))[0];
 const UralScene = sceneLoader ? lazy(() => sceneLoader().then((m) => ({ default: m.UralScene }))) : null;
@@ -152,6 +153,16 @@ function TopPagesShowcase({ t, lang }: { t: Dict; lang: Lang }) {
   );
 }
 
+/**
+ * Easter egg: the «УРАЛ» sign opens «Чапаев и Пустота» at the rainbow stream, page 305, second sentence ("Просто
+ * глядеть на эти постоянно возникающие разноцветные огни…"), highlighted as the page's brightest.
+ */
+const STREAM = "/book/pv-chapaev-i-pustota?page=305&s=2";
+function toTheStream() {
+  rememberLens("light");
+  navigate(STREAM);
+}
+
 export function HomePage() {
   const t = useT(T);
   const lang = useLang();
@@ -160,7 +171,7 @@ export function HomePage() {
       {UralScene && (
         <div className="stage-frame">
           <Suspense fallback={null}>
-            <UralScene className="stage-scene" />
+            <UralScene className="stage-scene" onSign={toTheStream} />
           </Suspense>
         </div>
       )}

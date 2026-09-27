@@ -362,8 +362,10 @@ function cssColor(name: string, fallback: string) {
 type Controller = { setTheme: (dark: boolean) => void };
 
 /** Full-box particle scene: the man, the towel, the sand, the river and the «УРАЛ» sign. */
-export function UralScene({ className }: { className?: string }) {
+export function UralScene({ className, onSign }: { className?: string; onSign?: () => void }) {
   const host = useRef<HTMLDivElement>(null);
+  const onSignRef = useRef(onSign);
+  onSignRef.current = onSign;
   const ctl = useRef<Controller | null>(null);
   const theme = useTheme();
   const themeRef = useRef(theme);
@@ -540,6 +542,37 @@ export function UralScene({ className }: { className?: string }) {
     };
     if (!still) window.addEventListener("pointermove", move, { passive: true });
 
+    // The «УРАЛ» sign is a door: its board, projected with the current camera, is clickable (see HomePage).
+    const corner = new THREE.Vector3();
+    const overSign = (clientX: number, clientY: number) => {
+      const r = canvas.getBoundingClientRect();
+      let x0 = Infinity,
+        x1 = -Infinity,
+        y0 = Infinity,
+        y1 = -Infinity;
+      for (const lx of [-SIGN.width / 2, SIGN.width / 2])
+        for (const ly of [SIGN.bottom, SIGN.bottom + SIGN.height]) {
+          // The board's local x runs along the river; facing π mirrors it (see `sign` in ural-scene.ts).
+          corner.set(SIGN.x + lx * Math.cos(SIGN_FACING), ly, SIGN.z - lx * Math.sin(SIGN_FACING)).project(camera);
+          const sx = r.left + ((corner.x + 1) / 2) * r.width;
+          const sy = r.top + ((1 - corner.y) / 2) * r.height;
+          x0 = Math.min(x0, sx);
+          x1 = Math.max(x1, sx);
+          y0 = Math.min(y0, sy);
+          y1 = Math.max(y1, sy);
+        }
+      const pad = 6;
+      return clientX >= x0 - pad && clientX <= x1 + pad && clientY >= y0 - pad && clientY <= y1 + pad;
+    };
+    const hover = (e: PointerEvent) => {
+      canvas.style.cursor = onSignRef.current && overSign(e.clientX, e.clientY) ? "pointer" : "";
+    };
+    const click = (e: MouseEvent) => {
+      if (onSignRef.current && overSign(e.clientX, e.clientY)) onSignRef.current();
+    };
+    canvas.addEventListener("pointermove", hover, { passive: true });
+    canvas.addEventListener("click", click);
+
     const head = headPlanner();
     const offset = new THREE.Vector3();
     let raf = 0;
@@ -657,6 +690,8 @@ export function UralScene({ className }: { className?: string }) {
       io.disconnect();
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("pointermove", move);
+      canvas.removeEventListener("pointermove", hover);
+      canvas.removeEventListener("click", click);
       canvas.removeEventListener("webglcontextlost", lost);
       canvas.removeEventListener("webglcontextrestored", restored);
       geometry?.dispose();

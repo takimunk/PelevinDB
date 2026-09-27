@@ -98,6 +98,7 @@ export function Reader({
   onClose,
   excerpt = false,
   page,
+  point,
 }: {
   segment: Segment;
   analysis: SegmentAnalysis | null;
@@ -107,6 +108,8 @@ export function Reader({
   excerpt?: boolean;
   /** Full text of this page for excerpt-only books, fetched on demand. */
   page?: { text: string | null; sentences?: PageSentences | null; loading: boolean; error: string | null };
+  /** A sentence of this page (1-based, from the URL's `s`) to scroll to and mark. */
+  point?: number;
 }) {
   const t = useT(T);
   const lang = useLang();
@@ -173,7 +176,7 @@ export function Reader({
       <div className="reader-text" ref={textRef}>
         {excerpt && page?.text ? (
           <>
-            {sentences ? <SentenceText text={page.text} sentences={sentences} analysis={analysis} lens={lens} jump={jump + pointed} /> : page.text}
+            {sentences ? <SentenceText text={page.text} sentences={sentences} analysis={analysis} lens={lens} jump={jump + pointed} point={point != null ? point - 1 : undefined} /> : page.text}
             <span className="reader-one-page" role="note">
               {t.onePage}
             </span>

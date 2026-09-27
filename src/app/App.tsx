@@ -302,7 +302,7 @@ export default function App() {
             <AboutPage />
           </Suspense>
         )}
-        {route.name === "book" && <BookPage key={route.id} id={route.id} page={route.page} />}
+        {route.name === "book" && <BookPage key={route.id} id={route.id} page={route.page} sentence={route.sentence} />}
       </main>
 
 

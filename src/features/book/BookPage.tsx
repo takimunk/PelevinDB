@@ -340,7 +340,7 @@ export function titles(title: string, titleEn: string | null | undefined, lang: 
   return lang === "ru" ? { main: title, sub: titleEn } : { main: titleEn, sub: title };
 }
 
-export function BookPage({ id, page }: { id: string; page?: number }) {
+export function BookPage({ id, page, sentence }: { id: string; page?: number; sentence?: number }) {
   const t = useT(T);
   const lang = useLang();
   const { meta, content, segments, missing, origin, rank, excerpt, year, kind, titleEn, lines } = useBookView(id);
@@ -1009,7 +1009,7 @@ export function BookPage({ id, page }: { id: string; page?: number }) {
         )}
 
         {selected != null && segments[selected] && (
-          <Reader segment={segments[selected]} analysis={analyses[selected] ?? null} total={segments.length} onMove={move} onClose={closeReader} excerpt={excerpt} page={pageText} />
+          <Reader segment={segments[selected]} analysis={analyses[selected] ?? null} total={segments.length} onMove={move} onClose={closeReader} excerpt={excerpt} page={pageText} point={sentence} />
         )}
       </div>
     </PreviewProvider>

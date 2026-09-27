@@ -192,3 +192,9 @@ test("a read-only server still opens a v3 file, without sentences", () => {
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test("a book link can point at one sentence of a page", async () => {
+  const { parseRoute } = await import("../src/app/router.ts");
+  assert.deepEqual(parseRoute("#/book/pv-chapaev-i-pustota?page=305&s=2"), { name: "book", id: "pv-chapaev-i-pustota", page: 305, sentence: 2 });
+  assert.deepEqual(parseRoute("#/book/pv-t?page=3&s=0"), { name: "book", id: "pv-t", page: 3, sentence: undefined });
+});

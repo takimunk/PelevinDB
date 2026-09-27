@@ -154,6 +154,7 @@ export function SentenceText({
   analysis,
   lens,
   jump = 0,
+  point,
 }: {
   text: string;
   sentences: PageSentences;
@@ -161,6 +162,8 @@ export function SentenceText({
   lens: FocusId | null;
   /** Bumped when the reader points at a dimension: scrolls to its peak sentence again and flashes it. */
   jump?: number;
+  /** A sentence (0-based) to mark, scroll to and flash, as a link to one sentence asks. */
+  point?: number;
 }) {
   const t = useT(T);
   const lang = useLang();
@@ -179,6 +182,15 @@ export function SentenceText({
     if (fresh && jump && !matchMedia("(prefers-reduced-motion: reduce)").matches)
       peak.animate([{ outline: "2px solid var(--c)", outlineOffset: "3px" }, { outline: "2px solid transparent", outlineOffset: "3px" }], { duration: 1400, easing: "ease-out" });
   }, [text, lens, jump]);
+  // A linked sentence wins over the lens peak: it runs after, so it has the last scroll.
+  useEffect(() => {
+    if (point == null) return;
+    const el = root.current?.querySelectorAll<HTMLElement>(".sent")[point];
+    if (!el) return;
+    el.scrollIntoView({ block: "center" });
+    if (!matchMedia("(prefers-reduced-motion: reduce)").matches)
+      el.animate([{ outline: "2px solid var(--ink)", outlineOffset: "3px" }, { outline: "2px solid transparent", outlineOffset: "3px" }], { duration: 2200, easing: "ease-out" });
+  }, [text, point]);
   const color = lens ? FOCUS.find((f) => f.id === lens)!.color : undefined;
   const lensed = lens ? lensWeights(sentences, analysis, lens) : null;
   const parts: React.ReactNode[] = [];
@@ -198,7 +210,7 @@ export function SentenceText({
             "--c": SENTENCE_EMOTIONS.find((e) => e.id === read.emotion)!.color,
           } as CSSProperties)
         : undefined;
-    const peak = lensed && i === lensed.peak ? "peak" : "";
+    const peak = `${lensed && i === lensed.peak ? "peak" : ""} ${point === i ? "pointed" : ""}`;
     if (!read) {
       parts.push(
         <span key={i} className={`sent ${peak}`} style={style}>

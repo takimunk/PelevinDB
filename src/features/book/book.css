@@ -926,6 +926,10 @@
   text-decoration: underline 2px var(--c);
   text-underline-offset: 4px;
 }
+.sent.pointed {
+  text-decoration: underline 2px var(--ink);
+  text-underline-offset: 4px;
+}
 .sent.open {
   outline: 1px solid var(--line-2);
 }
