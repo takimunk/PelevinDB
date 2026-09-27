@@ -44,13 +44,15 @@ export const asFocus = (id: string): FocusId | null => (FOCUS.some((f) => f.id =
 export const MOMENT_FOCUS: Record<string, FocusId | null> = { climax: "tension", still: null, light: "light", dark: "dark", wonder: "surprise", inner: "interiority" };
 
 const PEEK_CACHE = 600;
-const peeks = new Map<string, string | null>();
-const inflight = new Map<string, Promise<string | null>>();
+/** A page's peak sentence and the dimension it was chosen by (the leading emotion when the asked one has none). */
+export type Peek = { text: string | null; dim: FocusId | null };
+const peeks = new Map<string, Peek>();
+const inflight = new Map<string, Promise<Peek | null>>();
 
 const peekKey = (bookId: string, page: number, dim: FocusId | null | undefined) => `${bookId}#${page}#${dim ?? ""}`;
 
-/** The sentence of a corpus page (1-based) that carries `dim` most; null when there is none. Cached per page and dimension. */
-export function loadPeek(bookId: string, page: number, dim?: FocusId | null): Promise<string | null> {
+/** The sentence of a corpus page (1-based) that carries `dim` most; null if the request failed. Cached per page and dimension. */
+export function loadPeek(bookId: string, page: number, dim?: FocusId | null): Promise<Peek | null> {
   const key = peekKey(bookId, page, dim);
   if (peeks.has(key)) return Promise.resolve(peeks.get(key)!);
   let p = inflight.get(key);
@@ -59,10 +61,11 @@ export function loadPeek(bookId: string, page: number, dim?: FocusId | null): Pr
     p = fetch(`/api/corpus/${encodeURIComponent(bookId)}/peek/${page}${dim ? `?dim=${dim}` : ""}`)
       .then(async (r) => {
         if (!r.ok) return null;
-        const text = ((await r.json()) as { text: string | null }).text ?? null;
-        peeks.set(key, text);
+        const body = (await r.json()) as Partial<Peek>;
+        const peek: Peek = { text: body.text ?? null, dim: body.dim ?? null };
+        peeks.set(key, peek);
         for (const old of peeks.keys()) if (peeks.size > PEEK_CACHE) peeks.delete(old);
-        return text;
+        return peek;
       })
       .catch(() => null)
       .finally(() => inflight.delete(key));
@@ -78,13 +81,25 @@ export function usePeek(bookId: string | null, page: number | null, dim?: FocusI
   useEffect(() => {
     if (!key || !bookId || page == null) return;
     let alive = true;
-    void loadPeek(bookId, page, dim).then((text) => alive && setState({ key, text }));
+    void loadPeek(bookId, page, dim).then((p) => alive && setState({ key, text: p?.text ?? null }));
     return () => {
       alive = false;
     };
   }, [key]);
   if (!key) return null;
-  return peeks.has(key) ? peeks.get(key)! : state?.key === key ? state.text : null;
+  return peeks.has(key) ? peeks.get(key)!.text : state?.key === key ? state.text : null;
+}
+
+/** The page (global index) and dimension the preview shows right now, if it is open. */
+export const currentTip = () => (tip ? { index: tip.index, dim: tip.dim ?? null } : null);
+
+/**
+ * The reader highlight that shows the same sentence as the preview of `page` (0-based) for `dim`: the dimension the
+ * server actually quoted by, or none when it quoted nothing. Waits for the answer (usually cached from the hover).
+ */
+export async function previewLens(bookId: string, page: number, dim: FocusId | null | undefined): Promise<FocusId | null> {
+  const peek = await loadPeek(bookId, page + 1, dim);
+  return peek ? (peek.text ? peek.dim : null) : (dim ?? null);
 }
 
 /** A quote that becomes the page's peak sentence for `dim` once it arrives; `fallback` until then or without one. */
@@ -167,7 +182,7 @@ function PageTooltip() {
   const n = segments.length;
   const fallback = previewSentence(segments[current.index].text);
   // undefined: not fetched yet (the first sentence shows, faded); null: Jev names no sentence (the first sentence shows).
-  const peak = key != null && peeks.has(key) ? peeks.get(key) : undefined;
+  const peak = key != null && peeks.has(key) ? peeks.get(key)!.text : undefined;
   const sentence = peak ?? fallback;
   const pending = key != null && peak === undefined && tried !== key;
   return (

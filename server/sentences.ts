@@ -89,7 +89,8 @@ export function pageSentences(store: Store, id: string, page: number, pageStart:
   const f = b.focus.get(page);
   return {
     spans: list.map((s) => [s.start - pageStart, s.end - pageStart]),
-    focus: f && f.sentences === list.length ? { focus: roundFocus(f.focus), none: roundAll(f.none) } : null,
+    // Unrounded: the reader must pick the same peak as the preview (GET …/peek), and rounding can turn a near-tie into a tie.
+    focus: f && f.sentences === list.length ? { focus: f.focus, none: f.none } : null,
     read: list.map((_, i) => {
       const a = b.read.get(`${page}:${i}`);
       return a ? compactRead(a) : null;
@@ -97,14 +98,12 @@ export function pageSentences(store: Store, id: string, page: number, pageStart:
   };
 }
 
-const roundAll = <K extends string>(r: Record<K, number>) => Object.fromEntries(Object.entries(r).map(([k, v]) => [k, r3(v as number)])) as Record<K, number>;
-const roundFocus = (r: Record<FocusId, number[]>) => Object.fromEntries(Object.entries(r).map(([k, v]) => [k, (v as number[]).map(r3)])) as Record<FocusId, number[]>;
 
 /**
  * The page's peak sentence for a dimension as a quote, or null when the page has no focus answer, Jev names no
  * sentence, or the sentence is too short to stand as a quote (then callers keep their own quote).
  */
-export function peakQuote(store: Store, id: string, page: number, dim: FocusId): string | null {
+export function peakQuote(store: Store, id: string, page: number, dim: FocusId, minLength = QUOTE_MIN): string | null {
   const b = bookData(store, id);
   const f = b?.focus.get(page);
   const list = b?.sentences.get(page);
@@ -113,13 +112,13 @@ export function peakQuote(store: Store, id: string, page: number, dim: FocusId):
   if (peak == null) return null;
   const s = list[peak];
   const text = b.text.slice(s.start, s.end);
-  if (clean(text).replace(/^[—–-]\s*/, "").length < QUOTE_MIN) return null;
+  if (clean(text).replace(/^[—–-]\s*/, "").length < minLength) return null;
   return sentenceQuote(text, peak === 0);
 }
 
 /**
- * GET /api/corpus/:id/peek/:page?dim=…: the one sentence of a page that carries `dim` most, for chart previews and
- * quotes; without `dim`, or when no sentence carries it, the sentence of the page's leading emotion. `dim` in the
+ * GET /api/corpus/:id/peek/:page?dim=…: the one sentence of a page that carries `dim` most (the sentence the reader
+ * highlights for `dim`), for chart previews and quotes; without `dim`, or when no sentence carries it, the sentence of the page's leading emotion. `dim` in the
  * answer says which one was used. `text` is null when the page has no focus answer yet; the caller keeps its own
  * opening line then. One sentence per request, never more.
  */
@@ -127,11 +126,17 @@ export function peek(store: Store, id: string, page: number, dim: FocusId | null
   const b = bookData(store, id);
   if (!b) return store.book(id) && page >= 0 && page < store.book(id)!.pages ? { text: null, dim } : null;
   if (!b.sentences.has(page)) return null;
-  const leading = b.pages.get(page) ? argmax(b.pages.get(page)!.emotions) : null;
-  const fallback = FOCUS.some((f) => f.id === leading) ? (leading as FocusId) : null;
-  // A page with no sentence carrying `dim` (low fear, say) is quoted by its leading emotion's sentence instead.
-  for (const use of [dim, fallback]) {
-    const text = use ? peakQuote(store, id, page, use) : null;
+  // A page with no sentence carrying `dim` (low fear, say) is quoted by its strongest emotion that has a sentence, so
+  // the preview always names a sentence the reader can highlight. Anticipation has no sentence focus and is skipped.
+  const a = b.pages.get(page);
+  const emotions = a
+    ? FOCUS.filter((f) => f.source?.group === "emotion")
+        .map((f) => f.id)
+        .sort((x, y) => a.emotions[y as keyof typeof a.emotions] - a.emotions[x as keyof typeof a.emotions])
+    : [];
+  for (const use of [dim, ...emotions]) {
+    // Any length: the reader highlights the peak however short it is, and the preview must show the same sentence.
+    const text = use ? peakQuote(store, id, page, use, 1) : null;
     if (text) return { text, dim: use };
   }
   return { text: null, dim: null };

@@ -113,7 +113,7 @@ export function Reader({
   const closeRef = useRef<HTMLButtonElement>(null);
   const textRef = useRef<HTMLDivElement>(null);
   const [showAnalysis, setShowAnalysis] = useStatsOpen();
-  const [lens, setLens] = useLens();
+  const [lens, setLens, pointed] = useLens();
   // Bumped on each click on an emotion, so the same emotion clicked twice still brings its sentence back.
   const [jump, setJump] = useState(0);
   const sentences = excerpt && page?.text ? (page.sentences ?? null) : null;
@@ -173,7 +173,7 @@ export function Reader({
       <div className="reader-text" ref={textRef}>
         {excerpt && page?.text ? (
           <>
-            {sentences ? <SentenceText text={page.text} sentences={sentences} analysis={analysis} lens={lens} jump={jump} /> : page.text}
+            {sentences ? <SentenceText text={page.text} sentences={sentences} analysis={analysis} lens={lens} jump={jump + pointed} /> : page.text}
             <span className="reader-one-page" role="note">
               {t.onePage}
             </span>

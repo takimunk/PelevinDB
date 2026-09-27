@@ -143,6 +143,8 @@ test("peek returns one page's peak sentence for a dimension, or its leading emot
   // No sentence carries joy on page 1: the leading emotion's sentence stands in.
   assert.deepEqual(peek(store, "pv-x", 0, "joy"), { text: "Страшная тень метнулась к окну и исчезла.", dim: "fear" });
   assert.equal(peek(store, "pv-x", 9, "fear"), null);
+  // However short, the peak is quoted: the reader highlights it, so the preview must show the same sentence.
+  assert.deepEqual(peek(store, "pv-x", 1, "humor"), { text: "Смешно.", dim: "humor" });
   store.close();
 });
 

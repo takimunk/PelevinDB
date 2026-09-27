@@ -52,25 +52,45 @@ const readLens = (): FocusId | null => {
 
 const LENS_EVENT = "pelevindb:lens";
 
-/** Sets the reader's highlight (remembered for this viewer); the Lines views set it before opening a line's page. */
-export function rememberLens(next: FocusId | null) {
+/** A pointed lens set before the reader opens: the reader flashes that sentence once it shows the page. */
+let pointPending = false;
+
+/**
+ * Sets the reader's highlight (remembered for this viewer). `point`: also scroll to its sentence and flash it, as when
+ * a chart, a quote or a line opens a page on the sentence it previewed.
+ */
+export function rememberLens(next: FocusId | null, { point = false } = {}) {
   try {
     if (next) localStorage.setItem(STORAGE, next);
     else localStorage.removeItem(STORAGE);
   } catch {
     /* storage is a convenience only */
   }
-  window.dispatchEvent(new CustomEvent(LENS_EVENT, { detail: next }));
+  if (point) pointPending = true;
+  window.dispatchEvent(new CustomEvent(LENS_EVENT, { detail: { lens: next, point } }));
 }
 
+/** The reader's lens, and a counter that goes up each time something points at a sentence. */
 export function useLens() {
   const [lens, setLens] = useState<FocusId | null>(readLens);
+  const [pointed, setPointed] = useState(() => {
+    const was = pointPending;
+    pointPending = false;
+    return was ? 1 : 0;
+  });
   useEffect(() => {
-    const on = (e: Event) => setLens((e as CustomEvent<FocusId | null>).detail);
+    const on = (e: Event) => {
+      const { lens: next, point } = (e as CustomEvent<{ lens: FocusId | null; point: boolean }>).detail;
+      setLens(next);
+      if (point) {
+        pointPending = false;
+        setPointed((n) => n + 1);
+      }
+    };
     window.addEventListener(LENS_EVENT, on);
     return () => window.removeEventListener(LENS_EVENT, on);
   }, []);
-  return [lens, rememberLens] as const;
+  return [lens, (next: FocusId | null) => rememberLens(next), pointed] as const;
 }
 
 export function LensBar({
@@ -149,11 +169,14 @@ export function SentenceText({
   useEffect(() => setOpen(null), [text]);
   // Opening a page with a highlight on, or pointing at an emotion, brings the peak sentence into view; a pointed
   // sentence flashes once so the eye finds it.
+  const flashed = useRef(0);
   useEffect(() => {
     const peak = root.current?.querySelector<HTMLElement>(".sent.peak");
     if (!peak) return;
-    peak.scrollIntoView({ block: "center", behavior: jump ? "smooth" : "auto" });
-    if (jump && !matchMedia("(prefers-reduced-motion: reduce)").matches)
+    const fresh = jump !== flashed.current;
+    flashed.current = jump;
+    peak.scrollIntoView({ block: "center", behavior: fresh && jump ? "smooth" : "auto" });
+    if (fresh && jump && !matchMedia("(prefers-reduced-motion: reduce)").matches)
       peak.animate([{ outline: "2px solid var(--c)", outlineOffset: "3px" }, { outline: "2px solid transparent", outlineOffset: "3px" }], { duration: 1400, easing: "ease-out" });
   }, [text, lens, jump]);
   const color = lens ? FOCUS.find((f) => f.id === lens)!.color : undefined;

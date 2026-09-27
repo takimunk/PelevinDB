@@ -257,7 +257,7 @@ app.get("/api/corpus/:id/peek/:n", (req, res) => {
     res.status(404).json({ error: "This book is not in the corpus." });
     return;
   }
-  res.set("ETag", `W/"${hashOf("sha1").update(`peek2|${id.value}|${n.value}|${rawDim}|${stamp}|${store.stamp(id.value, FOCUS_RUBRIC)}`).digest("base64url")}"`);
+  res.set("ETag", `W/"${hashOf("sha1").update(`peek3|${id.value}|${n.value}|${rawDim}|${stamp}|${store.stamp(id.value, FOCUS_RUBRIC)}`).digest("base64url")}"`);
   if (req.fresh) {
     res.status(304).end();
     return;

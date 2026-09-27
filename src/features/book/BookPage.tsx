@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { EMOTIONS, ERAS, FOCUS, GENRES, type EmotionId, highOf, labelOf, lowOf, MODES, MOODS, PROFILE_SCALES, SEGMENT_QUESTION_COUNT, TEXTURES, THEMES } from "../../../shared/catalog.ts";
+import { EMOTIONS, ERAS, FOCUS, type FocusId, GENRES, type EmotionId, highOf, labelOf, lowOf, MODES, MOODS, PROFILE_SCALES, SEGMENT_QUESTION_COUNT, TEXTURES, THEMES } from "../../../shared/catalog.ts";
 import { ARC_SHAPES, argmax, bookStats, moments, series, storyArc, topEntries } from "../../domain/analysis.ts";
 import { spend, tokens, usd } from "../../domain/cost.ts";
 import { buildCsv, buildExport } from "../../domain/export.ts";
@@ -24,7 +24,7 @@ import { ArcPlot, Bars, Dna, PulsePlot, Sliders, Spectrogram, ThemeLines } from 
 import { num, pageRef, pct } from "./i18n.ts";
 import { useDash, type DashState } from "./dash.ts";
 import { InsightList } from "./Insights.tsx";
-import { MOMENT_FOCUS, PeakQuote, PreviewOffset, PreviewProvider } from "./preview.tsx";
+import { currentTip, MOMENT_FOCUS, PeakQuote, previewLens, PreviewOffset, PreviewProvider } from "./preview.tsx";
 import { QuoteExplorer } from "./QuoteExplorer.tsx";
 import { rememberLens } from "./SentenceText.tsx";
 import { Reader } from "./Reader.tsx";
@@ -414,7 +414,28 @@ export function BookPage({ id, page }: { id: string; page?: number }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [analyses, segments, dash.key]);
   const pickIn = useCallback((i: number) => openPage(view.from + i), [openPage, view.from]);
-  const atIn = useCallback((p: number) => openPage(view.from + Math.round(p * Math.max(0, view.analyses.length - 1))), [openPage, view]);
+  // Charts open exactly what their preview shows: the previewed page, highlighted by the dimension its quoted
+  // sentence was chosen by, with that sentence in view. Without an open preview, the page the chart computed.
+  const peekBook = canon && excerpt ? id : null;
+  const openPointed = useCallback(
+    (index: number, dim: FocusId | null | undefined) => {
+      if (!peekBook) return openPage(index);
+      void previewLens(peekBook, index, dim).then((lens) => {
+        rememberLens(lens, { point: true });
+        openPage(index);
+      });
+    },
+    [peekBook, openPage],
+  );
+  const fromChart = useCallback(
+    (index: number) => {
+      const tip = currentTip();
+      openPointed(tip?.index ?? index, tip?.dim);
+    },
+    [openPointed],
+  );
+  const chartPick = useCallback((i: number) => fromChart(view.from + i), [fromChart, view.from]);
+  const chartAt = useCallback((p: number) => fromChart(view.from + Math.round(p * Math.max(0, view.analyses.length - 1))), [fromChart, view]);
 
   if (missing)
     return (
@@ -626,7 +647,7 @@ export function BookPage({ id, page }: { id: string; page?: number }) {
 
         {/* 4. Plot development (emotion columns per page range), full width */}
         <Panel title={t.s.dna} note={t.n.dna} className="dna-panel">
-          <Dna analyses={analyses} insights={dna} onPick={openPage} />
+          <Dna analyses={analyses} insights={dna} onPick={fromChart} />
         </Panel>
 
         {/* 5. Brief */}
@@ -733,7 +754,7 @@ export function BookPage({ id, page }: { id: string; page?: number }) {
               <ol className="quotes">
                 {peaksShown.map((m) => (
                   <li key={m.id}>
-                    <button onClick={() => pickIn(m.index)}>
+                    <button onClick={() => openPointed(view.from + m.index, MOMENT_FOCUS[m.id])}>
                       <span className="quote-label">
                         <Swatch color={m.color} round />
                         {lang === "ru" ? m.ru : m.label}
@@ -754,7 +775,7 @@ export function BookPage({ id, page }: { id: string; page?: number }) {
                     <li key={`${l.dim}:${l.page}:${l.n}`}>
                       <button
                         onClick={() => {
-                          rememberLens(l.dim);
+                          rememberLens(l.dim, { point: true });
                           openPage(l.page - 1);
                         }}
                       >
@@ -784,14 +805,14 @@ export function BookPage({ id, page }: { id: string; page?: number }) {
               <DashBar state={ds} set={setDash} matches={view.matches} pages={view.analyses.length} />
 
               <Cell span={8} title={t.c.spectrogram} keyNote={`${labelOf(vLead, lang).toLowerCase()} ${num(lang, vs.emotions[vLead.id], 2)}`}>
-                <Spectrogram analyses={view.analyses} emotions={vs.emotions} onPick={atIn} compact only={ds.emo} smoothing={ds.smooth} marks={view.marks} />
+                <Spectrogram analyses={view.analyses} emotions={vs.emotions} onPick={chartAt} compact only={ds.emo} smoothing={ds.smooth} marks={view.marks} />
               </Cell>
               <Cell span={4} title={t.c.radar} keyNote={others.length ? t.c.vs(others.length) : undefined} className="cell-radar">
                 {meta.fingerprint && <Radar axes={radarAxes(meta.fingerprint, mean, lang)} color={lead.color} refLabel={t.meanOf(others.length)} />}
               </Cell>
 
               <Cell span={8} title={t.c.pulse} keyNote={insights.tension != null && whole ? `${t.c.tension} ${insights.tension > 0 ? "↑" : "↓"} r=${num(lang, insights.tension, 2)}` : undefined}>
-                <PulsePlot analyses={view.analyses} moments={view.peaks} onPick={pickIn} compact smoothing={ds.smooth} highlight={view.marks} />
+                <PulsePlot analyses={view.analyses} moments={view.peaks} onPick={chartPick} compact smoothing={ds.smooth} highlight={view.marks} />
               </Cell>
               <Cell
                 span={4}
@@ -853,7 +874,7 @@ export function BookPage({ id, page }: { id: string; page?: number }) {
                 )}
               </Cell>
               <Cell span={6} title={t.c.shape} keyNote={bestFit ? `r=${num(lang, bestFit.r, 2)}` : undefined}>
-                <ArcPlot curve={view.arc.curve} shape={view.arc.shape} fits={view.arc.fits} compact pages={view.analyses.length} onPick={pickIn} />
+                <ArcPlot curve={view.arc.curve} shape={view.arc.shape} fits={view.arc.fits} compact pages={view.analyses.length} onPick={chartPick} />
               </Cell>
               <Cell
                 span={6}
@@ -959,7 +980,7 @@ export function BookPage({ id, page }: { id: string; page?: number }) {
                   />
                 }
               >
-                <ThemeLines analyses={view.analyses} themes={vs.themes} onPick={atIn} compact order={ds.ts} smoothing={ds.smooth} marks={view.marks} />
+                <ThemeLines analyses={view.analyses} themes={vs.themes} onPick={chartAt} compact order={ds.ts} smoothing={ds.smooth} marks={view.marks} />
               </Cell>
               {!complete && <p className="coverage-note">{t.coverage(n2(done), n2(segments.length))}</p>}
             </section>

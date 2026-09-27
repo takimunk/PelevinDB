@@ -251,7 +251,7 @@ export function LinesShelf({ params }: { params: Record<string, string> }) {
           <ol className="lines-list" aria-label={t.table} start={(data.page - 1) * data.pageSize + 1}>
             {data.rows.map((r) => (
               <li key={`${r.id}:${r.page}:${r.n}`}>
-                <a href={href(`/book/${r.id}?page=${r.page}`)} onClick={() => rememberLens(state.dim)} aria-label={t.open(primaryTitle(r, lang), r.page)}>
+                <a href={href(`/book/${r.id}?page=${r.page}`)} onClick={() => rememberLens(state.dim, { point: true })} aria-label={t.open(primaryTitle(r, lang), r.page)}>
                   <q className="pt-quote" lang="ru">
                     {r.text}
                   </q>
