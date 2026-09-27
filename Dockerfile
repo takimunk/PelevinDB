@@ -9,7 +9,7 @@ FROM node:22-bookworm-slim AS runtime
 WORKDIR /app
 ARG APP_REVISION=unknown
 ENV APP_REVISION=$APP_REVISION
-LABEL org.opencontainers.image.source="https://github.com/takimunk/xbook"
+LABEL org.opencontainers.image.source="https://github.com/takimunk/PelevinDB"
 ENV NODE_ENV=production HOST=0.0.0.0 PORT=5173 XBOOK_DB=/app/data/xbook.db
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force

@@ -1,0 +1,65 @@
+name: CI and deploy
+
+on:
+  push:
+    branches: [main, 'codex/**']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+      - run: npx playwright install --with-deps chromium webkit
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: failure()
+        with:
+          name: test-results
+          path: test-results
+          retention-days: 7
+
+  deploy:
+    needs: checks
+    if: github.event_name != 'pull_request' && github.repository == 'takimunk/PelevinDB'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      packages: write
+    concurrency:
+      group: pelevindb-${{ github.ref == 'refs/heads/main' && 'production' || 'preview' }}
+      cancel-in-progress: false
+    env:
+      DEPLOY_TARGET: ${{ github.ref == 'refs/heads/main' && 'production' || 'preview' }}
+      GHCR_USERNAME: ${{ github.actor }}
+      GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+      COOLIFY_WEBHOOK: ${{ vars.COOLIFY_WEBHOOK }}
+      COOLIFY_WEBHOOK_PREVIEW: ${{ vars.COOLIFY_WEBHOOK_PREVIEW }}
+      DEPLOY_URL: ${{ vars.DEPLOY_URL }}
+      DEPLOY_URL_PREVIEW: ${{ vars.DEPLOY_URL_PREVIEW }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+      - name: Build, publish and verify Coolify deployment
+        run: node scripts/github-deploy.ts "$DEPLOY_TARGET"

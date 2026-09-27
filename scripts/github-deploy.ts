@@ -8,12 +8,13 @@ export function deploymentConfig(target: string, env: Env) {
     if (!value) throw new Error(`${key} is required`);
     return value;
   };
-  if (env.CIRCLECI !== "true" || env.CIRCLE_PROJECT_USERNAME !== "takimunk" || env.CIRCLE_PROJECT_REPONAME !== "xbook") throw new Error("Only the xbook CircleCI project may deploy");
-  const sha = required("CIRCLE_SHA1");
+  if (env.GITHUB_ACTIONS !== "true" || env.GITHUB_REPOSITORY !== "takimunk/PelevinDB") throw new Error("Only the PelevinDB GitHub Actions project may deploy");
+  if (!["push", "workflow_dispatch"].includes(required("GITHUB_EVENT_NAME"))) throw new Error("Only trusted branch runs may deploy");
+  const sha = required("GITHUB_SHA");
   if (!/^[a-f0-9]{40}$/.test(sha)) throw new Error("Invalid commit SHA");
   if (target !== "preview" && target !== "production") throw new Error("Invalid target");
-  if (target === "production" && (env.CIRCLE_BRANCH !== "main" || env.CIRCLE_PULL_REQUEST || env.CIRCLE_PULL_REQUESTS)) throw new Error("Production requires a main branch push");
-  if (target === "preview" && !env.CIRCLE_BRANCH?.startsWith("codex/")) throw new Error("Preview requires a codex/ branch");
+  if (target === "production" && env.GITHUB_REF !== "refs/heads/main") throw new Error("Production requires a main branch push");
+  if (target === "preview" && !env.GITHUB_REF?.startsWith("refs/heads/codex/")) throw new Error("Preview requires a codex/ branch");
   const suffix = target === "preview" ? "_PREVIEW" : "";
   const webhook = new URL(required(`COOLIFY_WEBHOOK${suffix}`));
   if (webhook.origin !== "https://flcl.stickies.fun" || webhook.pathname !== "/api/v1/deploy" || webhook.username || webhook.password || webhook.hash) throw new Error("Unexpected Coolify webhook");
@@ -22,7 +23,7 @@ export function deploymentConfig(target: string, env: Env) {
   if (target === "preview" && uuid === new URL(required("COOLIFY_WEBHOOK")).searchParams.get("uuid")) throw new Error("Preview must use a separate application");
   const site = new URL(required(`DEPLOY_URL${suffix}`));
   if (site.protocol !== "https:" || site.username || site.password || site.search || site.hash) throw new Error("Deployment URL must use HTTPS");
-  return { sha, uuid, webhook, site, image: "ghcr.io/takimunk/xbook", tag: target === "production" ? "latest" : "preview", username: required("GHCR_USERNAME"), registryToken: required("GHCR_TOKEN"), token: required("COOLIFY_TOKEN") };
+  return { sha, uuid, webhook, site, image: "ghcr.io/takimunk/pelevindb", tag: target === "production" ? "latest" : "preview", username: required("GHCR_USERNAME"), registryToken: required("GHCR_TOKEN"), token: required("COOLIFY_TOKEN") };
 }
 
 async function deploy(target: string) {
@@ -33,7 +34,7 @@ async function deploy(target: string) {
   };
   const immutable = `${c.image}:${c.sha}`;
   docker(["build", "--build-arg", `APP_REVISION=${c.sha}`, "-t", immutable, "."]);
-  const container = `xbook-check-${c.sha.slice(0, 12)}`;
+  const container = `pelevindb-check-${c.sha.slice(0, 12)}`;
   try {
     docker(["run", "-d", "--name", container, "-p", "127.0.0.1:5173:5173", immutable]);
     await waitForRevision(new URL("http://127.0.0.1:5173"), c.sha, 30);

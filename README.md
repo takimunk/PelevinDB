@@ -1,4 +1,6 @@
-# xbook
+# PelevinDB
+
+Independent fork of [takimunk/xbook](https://github.com/takimunk/xbook), with the original Git history preserved.
 
 A terminal over books. Find a book in Project Gutenberg or upload your own (EPUB, FB2, TXT, Markdown). Jev (TypeSafe) reads it page by page, and xbook turns the answers into a CLI-style dashboard: emotions, pace, mood, narration, themes, story shape and genre. Every book sits on a shared 3D map, placed by meaning.
 
@@ -25,7 +27,7 @@ This is a single-user prototype. Exposing a server that holds an API key needs a
 ## Deployment and analytics
 
 See [DEPLOYMENT.md](DEPLOYMENT.md) for the Coolify container, CI deployment gate,
-`xbookx.xyz` DNS, persistent corpus storage and runtime OpenPanel setup.
+`pelevindb.xyz` DNS, persistent corpus storage and runtime OpenPanel setup.
 
 ## Interface
 

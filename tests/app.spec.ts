@@ -123,7 +123,7 @@ test("home search finds the library, the atlas and the Gutenberg catalog", async
     route.fulfill({ json: { hits: [{ id: "205", title: "Walden, and On The Duty Of Civil Disobedience", author: "Henry David Thoreau", language: "en" }] } }),
   );
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1, name: "xbook" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "PelevinDB" })).toBeVisible();
   await expect(page.getByRole("button", { name: "upload epub · fb2 · txt" })).toBeVisible();
 
   const search = page.getByRole("combobox", { name: "Search books" });

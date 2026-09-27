@@ -103,14 +103,14 @@ export default function App() {
       }}
     >
       <header className="topbar">
-        <a className="brand" href={href("/")} aria-label="xbook home">
+        <a className="brand" href={href("/")} aria-label="PelevinDB home">
           <svg viewBox="0 0 16 16" aria-hidden="true">
             <rect x="0" y="0" width="7" height="7" />
             <rect x="9" y="9" width="7" height="7" />
             <rect x="9" y="0" width="3" height="3" />
             <rect x="0" y="12" width="3" height="3" />
           </svg>
-          <span className="brand-name">XBOOK</span>
+          <span className="brand-name">PELEVINDB</span>
         </a>
         <nav className="nav" aria-label="Main navigation">
           {nav.map((n) => (
@@ -154,7 +154,7 @@ export default function App() {
       </main>
 
       <footer className="statusline">
-        <span>xbook</span>
+        <span>PelevinDB</span>
         <span>
           {books.length} {books.length === 1 ? "book" : "books"} in your library · {analyzed} analysed
         </span>
