@@ -158,8 +158,13 @@ test("home shows the wordmark, project links and top pages by emotion; search, l
   await expect(page).toHaveURL(/#\/book\/pv-chapaev\?page=40$/);
 
   await page.goto("/#/");
-  await page.keyboard.press("/");
+  await expect(page.getByRole("heading", { level: 1, name: "PelevinDB" })).toBeVisible();
   const dialog = page.getByRole("dialog", { name: "Search" });
+  // The key listener attaches after the route renders; "/" only ever opens the dialog, so retrying is safe.
+  await expect(async () => {
+    await page.keyboard.press("/");
+    await expect(dialog).toBeVisible({ timeout: 1000 });
+  }).toPass();
   await dialog.getByRole("combobox", { name: "Search books" }).fill("void");
   await expect(dialog.getByRole("option", { name: /Chapaev and Void/ })).toBeVisible();
   await dialog.getByRole("combobox", { name: "Search books" }).fill("пустота");
