@@ -198,10 +198,11 @@
     gap: 20px;
     padding-top: 28px;
   }
+  /* Phones and small tablets: a 16:9 strip, full width; the scene reframes itself for it. */
   .stage-frame {
-    aspect-ratio: 4 / 5;
+    aspect-ratio: 16 / 9;
     min-height: 0;
-    max-height: 62svh;
+    max-height: none;
   }
   .top-pages {
     padding-top: 48px;

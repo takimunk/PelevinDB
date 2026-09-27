@@ -100,7 +100,8 @@ function groups(lang: Lang) {
 const find = (list: Group[], value: string) => list.flatMap((g) => g.options).find((o) => o.value === value);
 
 /** Every page, filtered by a Jev answer and ranked by any score. Quotes are cut only for the rows on screen. */
-export function QuoteExplorer({ segments, analyses, onPick }: { segments: Segment[]; analyses: Analyses; onPick: (index: number) => void }) {
+/** `offset` shifts page labels when the pages are a slice of the book (onPick still gets the slice index). */
+export function QuoteExplorer({ segments, analyses, onPick, offset = 0 }: { segments: Segment[]; analyses: Analyses; onPick: (index: number) => void; offset?: number }) {
   const t = useT(T);
   const lang = useLang();
   const { filters, sorts } = useMemo(() => groups(lang), [lang]);
@@ -158,7 +159,7 @@ export function QuoteExplorer({ segments, analyses, onPick }: { segments: Segmen
           {shown.map((h) => (
             <li key={h.index}>
               <button onClick={() => onPick(h.index)}>
-                <span className="hit-page num">{pageRef(lang, h.index + 1)}</span>
+                <span className="hit-page num">{pageRef(lang, offset + h.index + 1)}</span>
                 <span className="hit-score">
                   <Meter value={h.value} color={color} className="thin" /> <span className="num">{num(lang, h.value, 2)}</span>
                 </span>

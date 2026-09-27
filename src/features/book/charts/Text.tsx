@@ -29,7 +29,7 @@ const T = {
     pending: "not analysed yet",
     dnaIdle: (n: number, bins: number) => `${n} pages in ${bins} columns · height = emotional intensity · colour = leading emotion · strips = mood, narration`,
     rows: { emotion: "emotion", mood: "mood", narration: "narration", leads: "leads", stretch: "stretch" },
-    dnaLabel: "Emotion DNA of the book",
+    dnaLabel: "Plot development",
     calmWord: "calm",
     intenseWord: "intense",
     beginning: "beginning",
@@ -70,7 +70,7 @@ const T = {
     pending: "ещё не прочитано",
     dnaIdle: (n: number, bins: number) => `${n} стр. в ${bins} столбцах · высота = сила эмоции · цвет = ведущая эмоция · полосы = настроение, повествование`,
     rows: { emotion: "эмоция", mood: "настроение", narration: "повествование", leads: "ведёт", stretch: "отрезки" },
-    dnaLabel: "ДНК эмоций книги",
+    dnaLabel: "Развитие сюжета",
     calmWord: "спокойно",
     intenseWord: "напряжённо",
     beginning: "начало",
@@ -117,6 +117,21 @@ const Emo = ({ id }: { id: EmotionId | "neutral" }) => {
 };
 
 const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
+
+/** Runs of highlighted pages as [x, width] bands across a chart `width` wide. */
+function markBands(marks: boolean[] | undefined, width: number): [number, number][] {
+  if (!marks?.length || !marks.some(Boolean)) return [];
+  const out: [number, number][] = [];
+  const step = width / marks.length;
+  for (let i = 0; i < marks.length; i++) {
+    if (!marks[i]) continue;
+    let j = i;
+    while (j + 1 < marks.length && marks[j + 1]) j++;
+    out.push([i * step, (j - i + 1) * step]);
+    i = j;
+  }
+  return out;
+}
 
 /** The book as a strip of columns: one per page range, height = intensity, colour = leading emotion; mood and narration run underneath. */
 export function Dna({ analyses, insights, onPick }: { analyses: Analyses; insights: DnaInsights; onPick: (index: number) => void }) {
@@ -340,7 +355,15 @@ function Ridgeline({
   share,
   value,
   idle,
+  compact = false,
+  smoothing = true,
+  marks,
 }: {
+  compact?: boolean;
+  /** Gaussian smoothing on (default) or the raw per-page answers. */
+  smoothing?: boolean;
+  /** Pages to highlight (one flag per page), drawn as bands behind every ridge. */
+  marks?: boolean[];
   ridges: Ridge[];
   analyses: Analyses;
   onPick: (p: number) => void;
@@ -354,7 +377,8 @@ function Ridgeline({
   const [hover, setHover] = useState<{ k: number; p: number } | null>(null);
   const n = Math.max(2, Math.min(analyses.length, 160));
   const W = 1000;
-  const data = ridges.map((r) => smooth(series(analyses, r.pick, n), Math.max(0.8, n / 70)).map((v) => v ?? 0));
+  const data = ridges.map((r) => (smoothing ? smooth(series(analyses, r.pick, n), Math.max(0.8, n / 70)) : series(analyses, r.pick, n)).map((v) => v ?? 0));
+  const bands = markBands(marks, W);
   const path = (values: number[], close: boolean) => {
     const pts = values.map((v, i) => `${((i / (values.length - 1)) * W).toFixed(1)},${(1 - Math.min(1, v)).toFixed(3)}`);
     return close ? `M0,1 L${pts.join(" L")} L${W},1 Z` : `M${pts.join(" L")}`;
@@ -366,7 +390,7 @@ function Ridgeline({
   const cur = hover ? { r: ridges[hover.k], v: data[hover.k][Math.round(hover.p * (n - 1))] } : null;
   return (
     <div>
-      <div className="ridges" role="group" aria-label={name} onMouseLeave={() => setHover(null)}>
+      <div className={`ridges ${compact ? "compact" : ""}`} role="group" aria-label={name} onMouseLeave={() => setHover(null)}>
         {ridges.map((r, k) => (
           <div key={r.id} className={`ridge-row ${hover && hover.k !== k ? "faded" : ""}`}>
             <span className="ridge-label">
@@ -381,6 +405,9 @@ function Ridgeline({
               role="img"
               aria-label={`${r.label}: ${t.bookMean} ${share(r.share).trim()}`}
             >
+              {bands.map(([x, w]) => (
+                <rect key={x} x={x} y={0} width={w} height={1} className="hl-band" />
+              ))}
               <line x1={0} x2={W} y1={0.5} y2={0.5} className="threshold" vectorEffect="non-scaling-stroke" />
               <path d={path(data[k], true)} style={{ fill: r.color }} className="area" />
               <path d={path(data[k], false)} style={{ stroke: r.color }} className="edge" vectorEffect="non-scaling-stroke" />
@@ -416,7 +443,24 @@ function Ridgeline({
 }
 
 /** Plutchik's eight emotions over time, in wheel order. */
-export function Spectrogram({ analyses, emotions, onPick }: { analyses: Analyses; emotions: Distribution<EmotionId>; onPick: (p: number) => void }) {
+export function Spectrogram({
+  analyses,
+  emotions,
+  onPick,
+  compact,
+  only,
+  smoothing,
+  marks,
+}: {
+  analyses: Analyses;
+  emotions: Distribution<EmotionId>;
+  onPick: (p: number) => void;
+  compact?: boolean;
+  /** Show only these emotions (all when empty). */
+  only?: EmotionId[];
+  smoothing?: boolean;
+  marks?: boolean[];
+}) {
   const t = useT(T);
   const lang = useLang();
   return (
@@ -425,10 +469,13 @@ export function Spectrogram({ analyses, emotions, onPick }: { analyses: Analyses
         name={t.spectrogram}
         analyses={analyses}
         onPick={onPick}
-        ridges={EMOTIONS.map((e) => ({ id: e.id, label: labelOf(e, lang), color: e.color, share: emotions[e.id], pick: (a) => a.emotions[e.id] }))}
+        ridges={EMOTIONS.filter((e) => !only?.length || only.includes(e.id)).map((e) => ({ id: e.id, label: labelOf(e, lang), color: e.color, share: emotions[e.id], pick: (a) => a.emotions[e.id] }))}
         share={(v) => num(lang, v, 2)}
         value={(v) => `${num(lang, v, 2)} ${t.intensity}`}
         idle={t.specIdle}
+        compact={compact}
+        smoothing={smoothing}
+        marks={marks}
       />
     </div>
   );
@@ -437,12 +484,34 @@ export function Spectrogram({ analyses, emotions, onPick }: { analyses: Analyses
 const THEME_PALETTE = ["var(--d1)", "var(--d2)", "var(--d3)", "var(--d4)", "var(--d5)", "var(--d6)", "var(--d7)", "var(--d8)", "#a8935c", "#5aa6d6"];
 
 /** The ten strongest themes; height = Noul probability that the page is about the theme. */
-export function ThemeLines({ analyses, themes, onPick }: { analyses: Analyses; themes: Distribution<ThemeId>; onPick: (p: number) => void }) {
+export function ThemeLines({
+  analyses,
+  themes,
+  onPick,
+  compact,
+  order = "strength",
+  smoothing,
+  marks,
+}: {
+  analyses: Analyses;
+  themes: Distribution<ThemeId>;
+  onPick: (p: number) => void;
+  compact?: boolean;
+  /** The ten strongest themes, listed by strength or by the page where each first leads (≥ 0.5). */
+  order?: "strength" | "appearance";
+  smoothing?: boolean;
+  marks?: boolean[];
+}) {
   const t = useT(T);
   const lang = useLang();
+  const first = (id: ThemeId) => {
+    const i = analyses.findIndex((a) => a && a.themes[id] >= 0.5);
+    return i < 0 ? Infinity : i;
+  };
   const top = THEMES.slice()
     .sort((a, b) => themes[b.id] - themes[a.id])
-    .slice(0, 10);
+    .slice(0, 10)
+    .sort((a, b) => (order === "appearance" ? first(a.id) - first(b.id) : 0));
   return (
     <div className="ridge-themes">
       <Ridgeline
@@ -453,6 +522,9 @@ export function ThemeLines({ analyses, themes, onPick }: { analyses: Analyses; t
         share={(v) => pct(lang, v)}
         value={(v) => `${pct(lang, v)} ${t.likely}`}
         idle={t.themesIdle}
+        compact={compact}
+        smoothing={smoothing}
+        marks={marks}
       />
     </div>
   );
@@ -466,7 +538,22 @@ const PULSE_LINES = [
 ] as const;
 
 /** Tension, pace, light and interiority across the book, with the extreme pages marked. */
-export function PulsePlot({ analyses, moments, onPick }: { analyses: Analyses; moments: Moment[]; onPick: (index: number) => void }) {
+export function PulsePlot({
+  analyses,
+  moments,
+  onPick,
+  compact = false,
+  smoothing = true,
+  highlight,
+}: {
+  analyses: Analyses;
+  moments: Moment[];
+  onPick: (index: number) => void;
+  compact?: boolean;
+  smoothing?: boolean;
+  /** Pages to highlight, drawn as bands behind the lines. */
+  highlight?: boolean[];
+}) {
   const t = useT(T);
   const lang = useLang();
   const [ref, { width }] = useSize<HTMLDivElement>();
@@ -478,11 +565,11 @@ export function PulsePlot({ analyses, moments, onPick }: { analyses: Analyses; m
     LANES = 2,
     LANE = 16,
     TOP = LANES * LANE + 8,
-    PH = 170,
+    PH = compact ? 118 : 170,
     height = TOP + PH + 22;
   const plotW = Math.max(40, width - L - R);
   const bins = Math.max(8, Math.min(analyses.length, Math.floor(plotW / 2)));
-  const data = PULSE_LINES.map((l) => smooth(series(analyses, l.pick, bins), bins / 40));
+  const data = PULSE_LINES.map((l) => (smoothing ? smooth(series(analyses, l.pick, bins), bins / 40) : series(analyses, l.pick, bins)));
   const xBin = (i: number) => L + (i / Math.max(1, bins - 1)) * plotW;
   const xPage = (i: number) => L + (i / last) * plotW;
   const y = (v: number) => TOP + (1 - clamp01(v)) * PH;
@@ -544,6 +631,9 @@ export function PulsePlot({ analyses, moments, onPick }: { analyses: Analyses; m
           onPick(hit ? hit.index : Math.round(clamp01((x - L) / plotW) * last));
         }}
       >
+        {markBands(highlight, plotW).map(([x, w]) => (
+          <rect key={x} x={L + x} y={TOP} width={w} height={PH} className="hl-band" />
+        ))}
         {[0, 0.5, 1].map((v) => (
           <g key={v}>
             <line x1={L} x2={L + plotW} y1={y(v)} y2={y(v)} className={v === 0 ? "chart-axis" : "chart-grid"} />
@@ -602,6 +692,7 @@ export function PulsePlot({ analyses, moments, onPick }: { analyses: Analyses; m
           <span className="dim">{t.pulseIdle}</span>
         )}
       </div>
+      {!compact && (
       <ol className="pulse-marks">
         {moments.map((m) => (
           <li key={m.id}>
@@ -616,12 +707,13 @@ export function PulsePlot({ analyses, moments, onPick }: { analyses: Analyses; m
           </li>
         ))}
       </ol>
+      )}
     </div>
   );
 }
 
 /** The light curve against Vonnegut's six story shapes; the best match is drawn dashed behind it. */
-export function ArcPlot({ curve, shape, fits }: { curve: number[]; shape: ArcId; fits: { id: ArcId; r: number }[] }) {
+export function ArcPlot({ curve, shape, fits, compact = false }: { curve: number[]; shape: ArcId; fits: { id: ArcId; r: number }[]; compact?: boolean }) {
   const t = useT(T);
   const lang = useLang();
   const [ref, { width }] = useSize<HTMLDivElement>();
@@ -630,7 +722,7 @@ export function ArcPlot({ curve, shape, fits }: { curve: number[]; shape: ArcId;
   const norm = curve.map((v) => (hi - lo > 1e-6 ? (v - lo) / (hi - lo) : 0.5));
   const best = ARC_SHAPES.find((a) => a.id === shape);
   const L = 34,
-    H = 96,
+    H = compact ? 58 : 96,
     TOP = 6,
     height = TOP + H + 8;
   const plotW = Math.max(40, width - L - 4);
@@ -709,13 +801,13 @@ export const ModeBars = ({ mode }: { mode: Record<string, number> }) => {
 };
 
 /** Bipolar scales: left pole · track · right pole · value. */
-export function Sliders({ items }: { items: { id: string; low: string; high: string; value: number; label?: string }[] }) {
+export function Sliders({ items }: { items: { id: string; low: string; high: string; value: number; label?: string; reference?: number }[] }) {
   return (
     <div className="sliders">
       {items.map((s) => (
         <div key={s.id} className="slider-row" title={s.label}>
           <span className="slider-low">{s.low.toLowerCase()}</span>
-          <Track value={s.value} />
+          <Track value={s.value} reference={s.reference} />
           <span className="slider-high">{s.high.toLowerCase()}</span>
           <span className="slider-value num">{Math.round(s.value * 100)}</span>
         </div>

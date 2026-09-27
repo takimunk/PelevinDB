@@ -7,6 +7,8 @@ import { useCanonShelf } from "../../storage/corpus.ts";
 import { useLibrary } from "../../storage/library.ts";
 import { fmt, pct } from "../../ui/format.ts";
 import { BookTable } from "./BookTable.tsx";
+import { PagesShelf } from "./PagesShelf.tsx";
+import type { LibraryTab } from "../../app/router.ts";
 import { CanonTable } from "./CanonTable.tsx";
 import { applyShelf, column, FACETS, facetCounts, LENSES, ranges, readState, VIEWS, writeState, type ShelfState, type ViewId } from "./shelf.ts";
 import "./library.css";
@@ -22,6 +24,9 @@ const T = {
     shelf: "Shelf",
     tabWorks: "Pelevin’s works",
     tabMine: "Your books",
+    tabPages: "Pages",
+    pagesTitle: "Pages",
+    pagesSub: "Every story page of the corpus, one sentence from each. Filter, sort, open any page in the reader.",
     find: "Find",
     findPlaceholder: "title, in Russian or English",
     findMinePlaceholder: "title or author",
@@ -57,6 +62,9 @@ const T = {
     shelf: "Полка",
     tabWorks: "Произведения Пелевина",
     tabMine: "Ваши книги",
+    tabPages: "Страницы",
+    pagesTitle: "Страницы",
+    pagesSub: "Каждая страница корпуса, по одной фразе с каждой. Фильтруйте, сортируйте, открывайте любую страницу в читалке.",
     find: "Найти",
     findPlaceholder: "название по-русски или по-английски",
     findMinePlaceholder: "название или автор",
@@ -198,11 +206,11 @@ function WorksShelf({ params, t }: { params: Record<string, string>; t: Dict }) 
   );
 }
 
-export function LibraryPage({ tab: requested = "canon", params = {} }: { tab?: "mine" | "canon"; params?: Record<string, string> }) {
+export function LibraryPage({ tab: requested = "canon", params = {} }: { tab?: LibraryTab; params?: Record<string, string> }) {
   const t = useT(T);
-  // Your own books exist only in local mode; the public site shows Pelevin's works.
+  // Your own books exist only in local mode; the public site shows Pelevin's works and pages only.
   const local = useLocalMode();
-  const tab = local ? requested : "canon";
+  const tab: LibraryTab = requested === "mine" && !local ? "canon" : requested;
   const { books, ready } = useLibrary();
   const { rows } = useCanonShelf();
   const [filter, setFilter] = useState("");
@@ -215,33 +223,43 @@ export function LibraryPage({ tab: requested = "canon", params = {} }: { tab?: "
   const pages = rows?.reduce((s, r) => s + r.pages, 0) ?? 0;
   const read = rows?.reduce((s, r) => s + r.analysed, 0) ?? 0;
   const works = tab === "canon";
+  const title = works ? t.worksTitle : tab === "pages" ? t.pagesTitle : t.mineTitle;
+  const sub = works ? (rows?.length ? t.worksSub(rows.length, pages, pct(pages ? read / pages : 0)) : "\u00a0") : tab === "pages" ? t.pagesSub : t.mineSub(books.length, chars);
+  const go = (next: LibraryTab) => navigate(next === "canon" ? "/library" : `/library?tab=${next}`, { replace: true });
   return (
     <div className="library-page">
       <header className="page-head">
         <div>
           <p className="eyebrow">{t.eyebrow}</p>
-          <h1 className="display display-l">{works ? t.worksTitle : t.mineTitle}</h1>
-          <p className="page-sub">{works ? (rows?.length ? t.worksSub(rows.length, pages, pct(pages ? read / pages : 0)) : " ") : t.mineSub(books.length, chars)}</p>
+          <h1 className="display display-l">{title}</h1>
+          <p className="page-sub">{sub}</p>
         </div>
-        {local && (
+        {local && tab === "mine" && (
           <button className="btn" onClick={openFilePicker}>
             {t.upload}
           </button>
         )}
       </header>
-      {local && (
-        <div className="shelf-tabs" role="group" aria-label={t.shelf}>
-          <button className={works ? "on" : ""} aria-pressed={works} onClick={() => navigate("/library", { replace: true })}>
-            {t.tabWorks}
-            {rows?.length ? <small>{rows.length}</small> : null}
-          </button>
-          <button className={!works ? "on" : ""} aria-pressed={!works} onClick={() => navigate("/library?tab=mine", { replace: true })}>
+      <div className="shelf-tabs" role="group" aria-label={t.shelf}>
+        <button className={works ? "on" : ""} aria-pressed={works} onClick={() => go("canon")}>
+          {t.tabWorks}
+          {rows?.length ? <small>{rows.length}</small> : null}
+        </button>
+        <button className={tab === "pages" ? "on" : ""} aria-pressed={tab === "pages"} onClick={() => go("pages")}>
+          {t.tabPages}
+          {read ? <small>{fmt(read)}</small> : null}
+        </button>
+        {/* Uploaded books live only in local mode; a quiet link, not a peer tab. */}
+        {local && (
+          <button className={`shelf-tab-aside ${tab === "mine" ? "on" : ""}`} aria-pressed={tab === "mine"} onClick={() => go("mine")}>
             {t.tabMine}
             {books.length ? <small>{books.length}</small> : null}
           </button>
-        </div>
-      )}
-      {works ? (
+        )}
+      </div>
+      {tab === "pages" ? (
+        <PagesShelf params={params} />
+      ) : works ? (
         <WorksShelf params={params} t={t} />
       ) : ready && !books.length ? (
         <div className="library-empty">

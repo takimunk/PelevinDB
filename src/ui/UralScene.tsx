@@ -207,6 +207,9 @@ const densityFragment = /* glsl */ `
 
 // Camera framings for a wide (2:1) and a tall (4:5) hero; anything between is interpolated.
 const WIDE = { aspect: 2, fov: 34, pos: new THREE.Vector3(-2.9, 2.05, -3.3), target: new THREE.Vector3(1.0, 0.35, 3.6) };
+/** Narrow 16:9 strips (phones, small tablets): a touch wider and aimed further along the bank, so the
+ * sign, the river and the man with his shadow all fit, with less empty sand in front. */
+const STRIP = { fov: 37, pos: new THREE.Vector3(-3.0, 2.2, -3.4), target: new THREE.Vector3(1.55, 0.5, 3.9) };
 const TALL = { aspect: 0.8, fov: 52, pos: new THREE.Vector3(-1.7, 2.3, -3.5), target: new THREE.Vector3(1.9, 0.2, 2.2) };
 /** The sign's board runs along the river (its plane parallel to the flow), facing the land side. */
 const SIGN_FACING = Math.PI;
@@ -500,13 +503,19 @@ export function UralScene({ className }: { className?: string }) {
       camera.fov = THREE.MathUtils.lerp(TALL.fov, WIDE.fov, s) * Math.pow(Math.min(1, WIDE.aspect / aspect), 0.35);
       base.pos.lerpVectors(TALL.pos, WIDE.pos, s);
       base.target.lerpVectors(TALL.target, WIDE.target, s);
+      // Below ~900px wide the stage is a 16:9 strip: blend toward the strip framing.
+      const narrow = THREE.MathUtils.smoothstep(width, 900, 500) * THREE.MathUtils.smoothstep(aspect, 1.2, 1.6);
+      camera.fov = THREE.MathUtils.lerp(camera.fov, STRIP.fov, narrow);
+      base.pos.lerp(STRIP.pos, narrow);
+      base.target.lerp(STRIP.target, narrow);
       camera.updateProjectionMatrix();
       // The river spreads each depth row across exactly what this framing can see (plus a margin).
       const halfW = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * aspect;
       const slope = (base.target.x - base.pos.x) / (base.target.z - base.pos.z);
       uniforms.uRiverAxis.value.set(base.pos.x, base.pos.z, slope, 2.9 * halfW * Math.sqrt(1 + slope * slope));
       uniforms.uRefDist.value = base.pos.length();
-      uniforms.uSize.value = THREE.MathUtils.clamp(0.95 + width / 2600, 1.1, 1.5) * dpr;
+      // Slightly larger points on small screens so the drawing stays legible at ~390px.
+      uniforms.uSize.value = (THREE.MathUtils.clamp(0.95 + width / 2600, 1.1, 1.5) + 0.25 * narrow) * dpr;
     };
 
     const setTheme = (dark: boolean) => {

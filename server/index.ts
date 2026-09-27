@@ -7,6 +7,7 @@ import { AnalysisError, analyzeProfile, analyzeSegment } from "./jev.ts";
 import { corpusETag, corpusList, corpusStore, fullTextEnabled, packCorpusBook, pageResponse, rateLimiter, type Encoding } from "./corpus.ts";
 import { localMode } from "./mode.ts";
 import { corpusStats, topPages, topPagesStamp } from "./stats.ts";
+import { pagesETag, pagesQuery, queryPages } from "./pages.ts";
 import { createHash as hashOf } from "node:crypto";
 import { briefInput, corpusId, excerptsInput, pageInput, type Parsed } from "./validate.ts";
 
@@ -157,6 +158,33 @@ app.get("/api/corpus/top-pages", (req, res) => {
     return;
   }
   res.json(topPages(store, per));
+});
+
+// Page navigation across the corpus: one sentence per row, 25 rows per result page, at most 5 result pages.
+const pagesLimit = rateLimiter(Number(process.env.CORPUS_QUERIES_PER_MINUTE) || 120);
+app.get("/api/corpus/pages", (req, res) => {
+  res.set("Cache-Control", "no-cache");
+  const parsed = pagesQuery(req.query as Record<string, unknown>);
+  if ("error" in parsed) {
+    res.status(400).json({ error: parsed.error });
+    return;
+  }
+  const limit = pagesLimit(req.ip || "unknown");
+  if (!limit.ok) {
+    res.set("Retry-After", String(limit.retryAfter)).status(429).json({ error: "Too many searches at once. Try again in a minute." });
+    return;
+  }
+  const store = corpusStore();
+  if (!store) {
+    res.status(404).json({ error: "No corpus yet: run npm run corpus." });
+    return;
+  }
+  res.set("ETag", pagesETag(store, parsed.query));
+  if (req.fresh) {
+    res.status(304).end();
+    return;
+  }
+  res.json(queryPages(store, parsed.query));
 });
 
 // One page of full text at a time: the book payload carries only excerpts, and this route is rate limited

@@ -43,11 +43,25 @@
 .wordmark-hero .wordmark-art-stacked {
   font-size: clamp(4px, calc(100cqi / 32.6), 13px);
 }
-@container (max-width: 420px) {
+/* Phones: the one-line art as an SVG path (crisp, no seams between cells), about 80% of the column. */
+.wordmark-svg {
+  display: none;
+}
+@container (max-width: 480px) {
   .wordmark-hero .wordmark-art-wide {
     display: none;
   }
-  .wordmark-hero .wordmark-art-stacked {
+  .wordmark-hero .wordmark-svg {
     display: block;
+    width: 80%;
+    height: auto;
+    shape-rendering: crispEdges;
   }
+}
+/* Keep WebKit from nudging glyphs: box-drawing and block cells must butt against each other. */
+.wordmark-art {
+  font-variant-ligatures: none;
+  font-kerning: none;
+  text-rendering: geometricPrecision;
+  -webkit-font-smoothing: antialiased;
 }

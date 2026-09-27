@@ -112,6 +112,24 @@ const button = (page: Page, label: string) => page.getByRole("button", { name: n
 /** Book page section heading; the section number ("01") is CSS content and part of the accessible name. */
 const section = (page: Page, title: string) => page.getByRole("heading", { name: new RegExp(`^(\\d+\\s*)?${title}$`) });
 
+/** A dashboard cell by its tiny title (upper-cased only by CSS). */
+const cell = (page: Page, title: string) => page.locator(".cell").filter({ has: page.locator(".cell-head h3", { hasText: new RegExp(`^${title}$`) }) });
+
+/** The book page order: title and actions, compact fingerprint, facts, plot development, brief, one dashboard of cells, insights last. */
+async function expectBookLayout(page: Page) {
+  await expect(page.locator(".hero-strip .pixels i")).toHaveCount(85);
+  const titles = ["emotions over the book", "star chart", "pulse", "extreme pages", "mood · narration", "story shape", "neighbours", "texture vs corpus", "whole book", "themes over the book"];
+  await expect(page.locator(".cell-head h3")).toHaveText(titles);
+  const y = async (sel: string) => (await page.locator(sel).first().boundingBox())!.y;
+  const order = [await y(".book-title"), await y(".title-actions"), await y(".hero-strip"), await y(".book-facts"), await y(".dna-panel"), await y(".brief-panel"), await y(".dash"), await y(".insights")];
+  expect(order).toEqual([...order].sort((a, b) => a - b));
+  await expect(page.locator(".panel-head h3")).toHaveText(["Plot development", "Brief", "Insights"]);
+  const brief = (await page.locator(".brief-panel").boundingBox())!;
+  const dash = (await page.locator(".dash").boundingBox())!;
+  expect(Math.abs(brief.width - dash.width)).toBeLessThan(4);
+  await expect(page.locator("[data-n]")).toHaveCount(0);
+}
+
 async function openReader(page: Page, index = 1) {
   await expect(page.locator(".book-title")).toBeVisible();
   await page.goto(`${page.url().split("?")[0]}?page=${index}`);
@@ -204,6 +222,71 @@ test("home says so when the corpus has not been read yet", async ({ page }) => {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
+const pageRow = (i: number) => ({
+  id: "pv-omon",
+  title: "Омон Ра",
+  titleEn: "Omon Ra",
+  year: 1992,
+  kind: "novel",
+  page: i + 1,
+  quote: `Фраза номер ${i + 1}, которой начинается страница.`,
+  emotion: "fear",
+  mood: "grim",
+  mode: "dialogue",
+  themes: ["death"],
+  scores: Object.fromEntries(["intensity", ...EMOTIONS.map((e) => e.id), ...TEXTURES.map((t) => t.id)].map((k) => [k, 0.5])),
+});
+const pagesResult = (page: number) => ({
+  total: 300,
+  page,
+  pageSize: 25,
+  pages: 5,
+  maxPages: 5,
+  rows: Array.from({ length: 25 }, (_, i) => pageRow((page - 1) * 25 + i)),
+  facets: { book: { "pv-omon": 300 }, kind: { novel: 300 }, decade: { "1990": 300 }, emotion: { fear: 200, joy: 100 }, mood: { grim: 300 }, mode: { dialogue: 300 }, theme: { death: 120 } },
+  books: { "pv-omon": { title: "Омон Ра", titleEn: "Omon Ra", year: 1992 } },
+});
+
+test("library pages tab browses quotes with facets, sort and at most five result pages", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  const asked: URLSearchParams[] = [];
+  await page.route("**/api/corpus/pages?*", (route) => {
+    const q = new URL(route.request().url()).searchParams;
+    asked.push(q);
+    return route.fulfill({ json: pagesResult(Number(q.get("page"))) });
+  });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/#/library");
+  await page.getByRole("button", { name: /^Pages/ }).click();
+  await expect(page).toHaveURL(/tab=pages/);
+  const table = page.getByRole("table", { name: "Pages of the corpus" });
+  await expect(table.locator("a.bt-row")).toHaveCount(25);
+  await expect(table.locator("a.bt-row").first()).toContainText("Фраза номер 1");
+  await expect(table.locator("a.bt-row").first()).toHaveAttribute("href", "#/book/pv-omon?page=1");
+
+  await page.getByRole("combobox", { name: "Filter by emotion" }).selectOption("joy");
+  await expect(page).toHaveURL(/emotion=joy/);
+  await expect.poll(() => asked.at(-1)?.get("emotion")).toBe("joy");
+  await page.getByRole("button", { name: "funniest" }).click();
+  await expect.poll(() => asked.at(-1)?.get("sort")).toBe("humor");
+  await expect(page.getByRole("columnheader", { name: /humou?r/i })).toHaveAttribute("aria-sort", "descending");
+
+  const pager = page.getByRole("navigation", { name: "Result pages" });
+  await expect(pager.getByRole("button")).toHaveCount(5);
+  await pager.getByRole("button", { name: "Result page 3" }).click();
+  await expect.poll(() => asked.at(-1)?.get("page")).toBe("3");
+  await expect(table.locator("a.bt-row").first()).toContainText("Фраза номер 51");
+  await expect(page.getByText("Beyond this, narrow the filters")).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test("the pages API refuses result pages beyond the fifth", async ({ request }) => {
+  const res = await request.get("/api/corpus/pages?page=6");
+  expect(res.status()).toBe(400);
+  expect((await res.json()).error).toMatch(/copyright/);
+});
+
 test("analysed book shows cost, radar, brief, quotes, every chart, the reader and exports the dataset", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
@@ -228,32 +311,46 @@ test("analysed book shows cost, radar, brief, quotes, every chart, the reader an
   expect(dossier).toMatchObject({ dossier: { title: "sea" } });
   expect(JSON.stringify(dossier)).not.toContain("storm broke over the harbour. The storm broke over the harbour. The storm broke over the harbour. The storm broke over the harbour.");
   await expect(page.locator(".cost")).toContainText("$");
-  await expect(page.locator(".hero-radar svg")).toBeVisible();
+  await expect(page.locator(".cell-radar svg")).toBeVisible();
   await expect(page.locator(".quotes li").first()).toBeVisible();
-  for (const title of ["Brief", "Quotes", "Insights", "DNA", "Spectrogram", "Pulse", "Mood", "Narration", "Shape", "Texture", "Whole book", "Themes", "Neighbours"]) {
-    await expect(section(page, title)).toBeVisible();
-  }
-  const headings = await page.locator(".panel-head h3").allTextContents();
-  expect(headings.slice(0, 2)).toEqual(["Brief", "Quotes"]);
+  await expectBookLayout(page);
   await expect(page.locator(".hero-strip .pixels i")).toHaveCount(85);
   await expect(page.locator(".ridge-themes .ridge-row svg")).toHaveCount(10);
   await expect(page.locator(".ridge-emotions .ridge-row svg")).toHaveCount(8);
   await expect(page.locator(".neighbours")).toContainText(/Walden|Meditations|Moby Dick|Emma|Dracula|Ulysses|Candide|Hamlet/);
   await expect(page.locator(".insights")).toContainText("dialogue");
   await expect(page.locator(".chart-caption")).toContainText("peaks on p.");
-  await expect(page.locator(".pulse-marks li")).toHaveCount(await page.locator(".quotes li").count());
+  await expect(page.locator(".quotes li")).toHaveCount(6);
 
-  const texture = (await section(page, "Texture").boundingBox())!;
-  const whole = (await section(page, "Whole book").boundingBox())!;
+  const texture = (await cell(page, "texture vs corpus").boundingBox())!;
+  const whole = (await cell(page, "whole book").boundingBox())!;
   expect(Math.abs(texture.y - whole.y)).toBeLessThan(4);
   expect(whole.x).toBeGreaterThan(texture.x + 300);
+
+  // Dashboard controls live in the URL and drive every cell.
+  const bar = page.getByRole("group", { name: "Dashboard filters" });
+  await bar.getByRole("button", { name: "1st ⅓" }).click();
+  await expect(page).toHaveURL(/range=0-33/);
+  await bar.getByRole("group", { name: "emotions" }).getByRole("button", { name: /^fear/i }).click();
+  await expect(page).toHaveURL(/emo=fear/);
+  await expect(page.locator(".ridge-emotions .ridge-row svg")).toHaveCount(1);
+  await bar.getByLabel("highlight").selectOption("mood:meditative");
+  await expect(page.locator(".chart-svg.pulse .hl-band").first()).toBeAttached();
+  await expect(page.locator(".ridge-themes .hl-band").first()).toBeAttached();
+  await cell(page, "neighbours").getByRole("button", { name: "year" }).click();
+  await expect(page).toHaveURL(/ns=year/);
+  await cell(page, "texture vs corpus").getByRole("button", { name: "Δ" }).click();
+  await expect(page).toHaveURL(/xs=diff/);
+  await bar.getByRole("button", { name: "reset" }).click();
+  await expect(page).not.toHaveURL(/range=|emo=|hl=/);
+  await expect(page.locator(".ridge-emotions .ridge-row svg")).toHaveCount(8);
 
   await page.locator(".quotes li button").first().click();
   await expect(page.locator(".reader-text")).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(page.locator(".reader")).toHaveCount(0);
 
-  await page.locator(".pulse-marks button").first().click();
+  await page.locator(".chart-svg.pulse").click({ position: { x: 200, y: 100 } });
   await expect(page.locator(".reader-text")).toBeVisible();
   await page.keyboard.press("Escape");
 
@@ -368,7 +465,7 @@ test("analysis survives a partial failure and resumes without recomputing finish
   expect(count).toBe(before + 1);
   // Page completion can render before the subsequent whole-book profile request.
   await expect.poll(() => profiles).toBe(1);
-  await expect(section(page, "Spectrogram")).toBeVisible();
+  await expect(cell(page, "emotions over the book")).toBeVisible();
   await expect(button(page, "map")).toBeEnabled();
 });
 
@@ -470,10 +567,8 @@ test("canon books open read-only from the library, the map and search with brief
   await expect(page.locator(".brief-logline")).toHaveText(briefAnswer.logline);
   await expect(page.locator(".book-facts")).toContainText(tokens(canonBook.pages * 5000 + 1500));
   await expect(page.locator(".cost")).toContainText("$");
-  for (const title of ["Brief", "Quotes", "Insights", "DNA", "Spectrogram", "Pulse", "Mood", "Narration", "Shape", "Texture", "Whole book", "Themes", "Neighbours"]) {
-    await expect(section(page, title)).toBeVisible();
-  }
-  await expect(page.locator(".hero-radar svg")).toBeVisible();
+  await expectBookLayout(page);
+  await expect(page.locator(".cell-radar svg")).toBeVisible();
   await expect(page.locator(".hero-strip .pixels i")).toHaveCount(85);
   for (const label of ["analyze", "resume", "write brief"]) await expect(button(page, label)).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Delete book" })).toHaveCount(0);
@@ -547,7 +642,7 @@ test("corpus books send excerpts and open their full text one page at a time", a
   await expect(page.locator(".book-title")).toHaveText("Homo Zapiens");
   await expect(page.locator(".book-subtitle")).toHaveText("Generation «П»");
   await expect(page.locator(".book-hero .eyebrow")).toContainText("Novel · 1999");
-  await expect(page.locator(".excerpt-note")).toContainText("one page at a time");
+  await expect(page.locator(".excerpt-note")).toHaveCount(0);
   await expect(page.locator(".book-facts")).toContainText(String(canonSegments.length));
   await expect(page.locator(".quotes li").first()).toBeVisible();
   expect(requested).toEqual([]);
@@ -570,8 +665,8 @@ test("corpus books send excerpts and open their full text one page at a time", a
   await expect(page.locator(".book-title")).toHaveText("Generation «П»");
   await expect(page.locator(".book-subtitle")).toHaveText("Homo Zapiens");
   await expect(page.locator(".book-hero .eyebrow")).toContainText("Роман · 1999");
-  await expect(section(page, "Спектрограмма")).toBeVisible();
-  await expect(page.locator(".excerpt-note")).toContainText("по одной странице");
+  await expect(cell(page, "эмоции по ходу книги")).toBeVisible();
+  await expect(section(page, "Коротко")).toBeVisible();
   await page.goto("/#/book/pv-generation-p?page=2");
   await expect(page.locator(".reader-one-page")).toHaveText("По одной странице");
   await expect(page.locator(".reader-page")).toContainText("с. 2");
@@ -607,7 +702,7 @@ test("the public site hides uploading, your library and the analysis actions", a
 
   await page.goto("/#/library?tab=mine");
   await expect(page.locator(".canon-table a.bt-row").first()).toBeVisible();
-  await expect(page.locator(".shelf-tabs")).toHaveCount(0);
+  await expect(page.locator(".shelf-tabs").getByRole("button", { name: /your books/i })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /upload/i })).toHaveCount(0);
 
   await page.keyboard.press("/");
@@ -684,7 +779,7 @@ test.describe("phone workflows", () => {
       await page.locator(".canon-card-link").filter({ hasText: "Meditations" }).tap();
       await expect(page.locator(".brief-logline")).toBeVisible();
       await fits();
-      for (const selector of [".quotes", ".pulse-marks", ".neighbours", ".sliders", ".ridges"]) {
+      for (const selector of [".quotes", ".dash", ".neighbours", ".sliders", ".ridges"]) {
         const boxes = await page.locator(selector).evaluateAll((els) =>
           els.map((el) => ({
             client: el.clientWidth,

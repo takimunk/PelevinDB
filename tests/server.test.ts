@@ -499,3 +499,77 @@ test("top pages per emotion rank story pages, skip paratext, never repeat a page
   assert.equal(pageQuote("коротко. " + "слово ".repeat(60)).endsWith("…"), true);
   assert.ok(pageQuote("слово ".repeat(60)).length <= 140);
 });
+
+test("corpus pages: filters, sort, facet counts, paratext skipped, one-sentence quotes and the 5-page cap", async () => {
+  const { MAX_RESULT_PAGES, PAGE_SIZE, pagesETag, pagesQuery, queryPages } = await import("../server/pages.ts");
+  const store = openStore(":memory:");
+  const base = demoAnalyses(segmentText(SAMPLE_BOOK.text, "pages"))[0];
+  const sentence = (i: number) => `Страница номер ${i} рассказывает о реке, которая течёт через весь город к морю.`;
+  const add = (id: string, title: string, year: number, kind: "novel" | "story", n: number) => {
+    const pages = Array.from({ length: n }, (_, i) => `${sentence(i)} ${"Второе предложение. ".repeat(20)}`);
+    const text = pages.join("\n\n");
+    let at = 0;
+    const segs = pages.map((p) => {
+      const seg = { start: at, end: at + p.length };
+      at += p.length + 2;
+      return seg;
+    });
+    store.addBook({ id, source: "pelevin", sourceRef: id, title, titleEn: null, year, kind, author: "П", rank: null, chars: text.length, pageChars: 1800, pages: n }, text, segs);
+    return pages;
+  };
+  add("pv-a", "Омон Ра", 1992, "novel", 150);
+  add("pv-b", "Жёлтая стрела", 1993, "story", 10);
+  const put = (id: string, idx: number, humor: number, over: Partial<SegmentAnalysis> = {}) =>
+    store.putAnalysis(id, idx, {
+      ...base,
+      rubric: RUBRIC_VERSION,
+      model: "jev",
+      texture: { ...base.texture, humor },
+      mode: { ...base.mode, paratext: 0 },
+      ...over,
+    } as SegmentAnalysis);
+  for (let i = 0; i < 150; i++) put("pv-a", i, i / 150);
+  for (let i = 0; i < 10; i++) put("pv-b", i, 0.5, i === 0 ? { mode: { ...base.mode, paratext: 0.99 } } : {});
+
+  const q = (raw: Record<string, string>) => {
+    const parsed = pagesQuery(raw);
+    assert.ok("query" in parsed, JSON.stringify(parsed));
+    return queryPages(store, parsed.query);
+  };
+  const all = q({});
+  assert.equal(all.total, 159, "the paratext page is skipped");
+  assert.equal(all.pageSize, PAGE_SIZE);
+  assert.equal(all.pages, MAX_RESULT_PAGES, "159 rows would be 7 result pages; the cap is 5");
+  assert.equal(all.rows.length, PAGE_SIZE);
+  assert.ok(all.rows.every((r) => r.quote.length <= 160 && !r.quote.includes("Второе")), "one sentence per row");
+  assert.equal(all.facets.book["pv-a"], 150);
+  assert.equal(all.facets.decade["1990"], 159);
+
+  const funny = q({ sort: "humor", dir: "-1" });
+  assert.equal(funny.rows[0].id, "pv-a");
+  assert.equal(funny.rows[0].page, 150);
+  const dull = q({ sort: "humor", dir: "1" });
+  assert.equal(dull.rows[0].page, 1);
+
+  const story = q({ kind: "story" });
+  assert.equal(story.total, 9);
+  assert.ok(story.rows.every((r) => r.id === "pv-b"));
+  assert.equal(story.facets.kind.novel, 150, "a facet ignores its own filter");
+  assert.equal(story.facets.book["pv-a"], undefined, "other facets respect it");
+  assert.equal(q({ q: "желтая" }).total, 9, "search ignores case and ё");
+  assert.equal(q({ q: "номер 149" }).total, 1);
+
+  assert.ok("error" in pagesQuery({ page: "6" }));
+  assert.match((pagesQuery({ page: "6" }) as { error: string }).error, /copyright/);
+  assert.ok("error" in pagesQuery({ page: "0" }));
+  assert.ok("error" in pagesQuery({ mood: "nope" }));
+  assert.ok("error" in pagesQuery({ sort: "rank" }));
+  assert.ok("error" in pagesQuery({ q: "x".repeat(101) }));
+  assert.equal(q({ page: "5" }).rows.length, PAGE_SIZE);
+
+  const etag = pagesETag(store, (pagesQuery({}) as { query: never }).query);
+  assert.match(etag, /^W\//);
+  put("pv-b", 1, 0.9);
+  assert.notEqual(pagesETag(store, (pagesQuery({}) as { query: never }).query), etag);
+  store.close();
+});

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { EMOTIONS, ERAS, GENRES, highOf, labelOf, lowOf, MODES, MOODS, PROFILE_SCALES, SEGMENT_QUESTION_COUNT, TEXTURES, THEMES } from "../../../shared/catalog.ts";
+import { EMOTIONS, ERAS, GENRES, type EmotionId, highOf, labelOf, lowOf, MODES, MOODS, PROFILE_SCALES, SEGMENT_QUESTION_COUNT, TEXTURES, THEMES } from "../../../shared/catalog.ts";
 import { ARC_SHAPES, argmax, bookStats, moments, series, storyArc, topEntries } from "../../domain/analysis.ts";
 import { spend, tokens, usd } from "../../domain/cost.ts";
 import { buildCsv, buildExport } from "../../domain/export.ts";
@@ -15,13 +15,14 @@ import { useLocalMode } from "../../services/mode.ts";
 import { useBookView } from "../../storage/books.ts";
 import { useCorpusPage } from "../../storage/corpus.ts";
 import { briefFor, removeBook, touchBook, useLibrary } from "../../storage/library.ts";
-import { PixelStrip } from "../../ui/PixelStrip.tsx";
-import { Meter, Swatch } from "../../ui/term.tsx";
+import { GroupLegend, PixelStrip } from "../../ui/PixelStrip.tsx";
+import { Meter, StackBar, Swatch } from "../../ui/term.tsx";
 import { starPath, useCorpus, useEmbedding } from "../map/corpus.ts";
 import { KIND_LABELS } from "../map/encoding.ts";
 import { meanSource, Radar, radarAxes } from "./charts/Radar.tsx";
-import { ArcPlot, Bars, Dna, ModeBars, MoodBars, PulsePlot, Sliders, Spectrogram, ThemeLines } from "./charts/Text.tsx";
+import { ArcPlot, Bars, Dna, PulsePlot, Sliders, Spectrogram, ThemeLines } from "./charts/Text.tsx";
 import { num, pageRef, pct } from "./i18n.ts";
+import { useDash, type DashState } from "./dash.ts";
 import { InsightList } from "./Insights.tsx";
 import { QuoteExplorer } from "./QuoteExplorer.tsx";
 import { Reader } from "./Reader.tsx";
@@ -69,12 +70,40 @@ const T = {
     howItWorks: `Each page is one Jev request with ${SEGMENT_QUESTION_COUNT} independent questions, then one request about the whole book. Text is sent to TypeSafe only after you press Analyze.`,
     fingerprint: "fingerprint coordinates",
     meanOf: (n: number) => `mean of ${n} other ${plural(n, ["book", "books"])}`,
-    excerptNote: "The text opens one page at a time: pick a quote, a page in a chart or a line in explore to read that page in full.",
+    dashboard: "Measurements",
+    c: {
+      spectrogram: "emotions over the book",
+      radar: "star chart",
+      pulse: "pulse",
+      quotes: "extreme pages",
+      explore: "explore",
+      mood: "mood",
+      narration: "narration",
+      shape: "story shape",
+      texture: "texture vs corpus",
+      whole: "whole book",
+      themes: "themes over the book",
+      neighbours: "neighbours",
+      tension: "tension",
+      vs: (n: number) => `vs ${n} ${plural(n, ["book", "books"])}`,
+      corpusMean: "| = corpus mean",
+      top: "top",
+      moodMode: "mood · narration",
+      sortBy: "sort",
+      byScore: "score",
+      byPage: "page",
+      byYear: "year",
+      byOrder: "order",
+      byStrength: "strength",
+      byAppearance: "first seen",
+      clickHighlight: "click a part to highlight its pages",
+      relNote: "relative: centre = corpus mean",
+    },
     s: {
       brief: "Brief",
       quotes: "Quotes",
       insights: "Insights",
-      dna: "DNA",
+      dna: "Plot development",
       spectrogram: "Spectrogram",
       pulse: "Pulse",
       mood: "Mood",
@@ -180,12 +209,40 @@ const T = {
     howItWorks: `Каждая страница — один запрос к Jev с ${SEGMENT_QUESTION_COUNT} независимыми вопросами, затем один запрос обо всей книге. Текст уходит в TypeSafe только после нажатия «Анализировать».`,
     fingerprint: "координат отпечатка",
     meanOf: (n: number) => `среднее ${n} ${plural(n, ["другой книги", "других книг", "других книг"])}`,
-    excerptNote: "Текст открывается по одной странице: выберите цитату, страницу на графике или строку в поиске, чтобы прочитать её целиком.",
+    dashboard: "Измерения",
+    c: {
+      spectrogram: "эмоции по ходу книги",
+      radar: "звёздная диаграмма",
+      pulse: "пульс",
+      quotes: "крайние страницы",
+      explore: "поиск по страницам",
+      mood: "настроение",
+      narration: "повествование",
+      shape: "форма сюжета",
+      texture: "фактура против корпуса",
+      whole: "вся книга",
+      themes: "темы по ходу книги",
+      neighbours: "соседи",
+      tension: "напряжение",
+      vs: (n: number) => `против ${n} ${plural(n, ["книги", "книг", "книг"])}`,
+      corpusMean: "| = среднее по корпусу",
+      top: "главное",
+      moodMode: "настроение · повествование",
+      sortBy: "сортировка",
+      byScore: "сила",
+      byPage: "стр.",
+      byYear: "год",
+      byOrder: "порядок",
+      byStrength: "сила",
+      byAppearance: "появление",
+      clickHighlight: "нажмите на часть, чтобы подсветить её страницы",
+      relNote: "относительно: центр = среднее по корпусу",
+    },
     s: {
       brief: "Коротко",
       quotes: "Цитаты",
       insights: "Выводы",
-      dna: "ДНК",
+      dna: "Развитие сюжета",
       spectrogram: "Спектрограмма",
       pulse: "Пульс",
       mood: "Настроение",
@@ -252,11 +309,11 @@ const T = {
   },
 };
 
-function Panel({ n, title, note, className = "", children }: { n?: number; title: string; note?: string; className?: string; children: ReactNode }) {
+function Panel({ title, note, className = "", children }: { title: string; note?: string; className?: string; children: ReactNode }) {
   return (
     <section className={`panel ${className}`}>
       <header className="panel-head">
-        <h3 data-n={n != null ? String(n).padStart(2, "0") : undefined}>{title}</h3>
+        <h3>{title}</h3>
         {note && <p>{note}</p>}
       </header>
       {children}
@@ -314,20 +371,46 @@ export function BookPage({ id, page }: { id: string; page?: number }) {
     return neighbours(embedding.rows, id, 6).flatMap((n) => (byId.has(n.id) ? [{ ...n, star: byId.get(n.id)! }] : []));
   }, [embedding, corpus, id]);
 
+  const dash = useDash(id);
+  const { state: ds, set: setDash, path: dashPath } = dash;
   const selected = page ? Math.min(segments.length, page) - 1 : null;
-  const openPage = useCallback((index: number) => navigate(`/book/${id}?page=${index + 1}`, { replace: page != null }), [id, page]);
+  const openPage = useCallback((index: number) => navigate(dashPath(index + 1), { replace: page != null }), [dashPath, page]);
   const openAt = (position: number) => openPage(Math.round(position * (segments.length - 1)));
   const move = useCallback(
     (delta: number) => {
       if (selected == null) return;
       const next = Math.max(0, Math.min(segments.length - 1, selected + delta));
-      navigate(`/book/${id}?page=${next + 1}`, { replace: true });
+      navigate(dashPath(next + 1), { replace: true });
     },
-    [selected, segments.length, id],
+    [selected, segments.length, dashPath],
   );
   // Excerpt-only corpus books: the open page's full text, fetched for that page alone.
   const pageText = useCorpusPage(id, selected != null ? selected + 1 : null, segments.length, excerpt && selected != null);
-  const closeReader = useCallback(() => navigate(`/book/${id}`, { replace: true }), [id]);
+  const closeReader = useCallback(() => navigate(dashPath(null), { replace: true }), [dashPath]);
+
+  // The dashboard's slice of the book: its own stats, arc and extreme pages, indexed from `from`.
+  const view = useMemo(() => {
+    const n = analyses.length;
+    const from = Math.min(Math.max(0, n - 1), Math.floor((ds.range[0] / 100) * n));
+    const to = Math.max(from + 1, Math.ceil((ds.range[1] / 100) * n));
+    const a = analyses.slice(from, to);
+    const segs = segments.slice(from, to);
+    const [group, key] = (ds.hl ?? ":").split(":") as ["mood" | "mode" | "", string];
+    const marks = ds.hl ? a.map((x) => !!x && (group === "mood" ? argmax(x.mood) : argmax(x.mode)) === key) : undefined;
+    return {
+      from,
+      analyses: a,
+      segments: segs,
+      stats: bookStats(segs, a),
+      arc: storyArc(series(a, (x) => x.texture.valence)),
+      peaks: moments(a),
+      marks,
+      matches: marks ? marks.filter(Boolean).length : 0,
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [analyses, segments, dash.key]);
+  const pickIn = useCallback((i: number) => openPage(view.from + i), [openPage, view.from]);
+  const atIn = useCallback((p: number) => openPage(view.from + Math.round(p * Math.max(0, view.analyses.length - 1))), [openPage, view]);
 
   if (missing)
     return (
@@ -373,154 +456,170 @@ export function BookPage({ id, page }: { id: string; page?: number }) {
     else download(`${meta.title}.csv`, buildCsv(segments, analyses), "text/csv;charset=utf-8");
     setExportOpen(false);
   };
-  let section = 0;
-  const next = () => ++section;
+  const mean = meanSource(others);
+  const vs = view.stats;
+  const vMood = MOODS.find((m) => m.id === argmax(vs.mood));
+  const vMode = MODES.find((m) => m.id === argmax(vs.mode));
+  const vLead = EMOTIONS.find((e) => e.id === argmax(vs.emotions))!;
+  const bestFit = view.arc.fits.find((f) => f.id === view.arc.shape);
+  const textureRows = TEXTURES.map((tx) => ({ tx, v: vs.texture[tx.id], d: mean ? vs.texture[tx.id] - mean.texture[tx.id] : 0 }));
+  const textureGap = mean ? [...textureRows].sort((a, b) => Math.abs(b.d) - Math.abs(a.d))[0] : null;
+  const textureShown = ds.xs === "diff" ? [...textureRows].sort((a, b) => Math.abs(b.d) - Math.abs(a.d)) : textureRows;
+  const topGenre = content.profile ? topEntries(content.profile.genre, 1)[0] : null;
+  const topTheme = topEntries(vs.themes, 1)[0];
+  const signed = (v: number) => `${v >= 0 ? "+" : "−"}${num(lang, Math.abs(v), 2)}`;
+  // Relative mode centres every scale on the corpus mean: 0.5 + (book − corpus).
+  const rel = (v: number, ref: number | undefined) => (ds.rel && ref != null ? Math.max(0, Math.min(1, 0.5 + v - ref)) : v);
+  const peaksShown = ds.qs === "page" ? [...view.peaks].sort((a, b) => a.index - b.index) : view.peaks;
+  const similarShown = ds.ns === "year" ? [...similar].sort((a, b) => (a.star.year ?? 9999) - (b.star.year ?? 9999)) : similar;
+  const whole = ds.range[0] === 0 && ds.range[1] === 100;
+  const actions = (
+    <div className="book-actions title-actions">
+      {editable &&
+        !complete &&
+        (running ? (
+          <button className="btn small" onClick={() => stopAnalysis(id)}>
+            {t.stop} · {done}/{segments.length}
+          </button>
+        ) : (
+          <button className="btn small primary" disabled={!configured} onClick={() => void startAnalysis(id)}>
+            {done ? t.resume : t.analyze}
+          </button>
+        ))}
+      <button className="btn small" onClick={() => navigate(`/map?focus=${id}`)} disabled={!meta.fingerprint}>
+        {t.map}
+      </button>
+      <div className="menu-wrap">
+        <button className="btn small ghost" onClick={() => setExportOpen(!exportOpen)} aria-expanded={exportOpen}>
+          {t.export}
+        </button>
+        {exportOpen && (
+          <div className="menu">
+            <button onClick={() => exportData("json")}>{t.json}</button>
+            <button onClick={() => exportData("csv")}>{t.csv}</button>
+          </div>
+        )}
+      </div>
+      {canon
+        ? local &&
+          localCopy && (
+            <button className="btn small ghost" onClick={() => navigate(`/book/${localCopy.id}`)}>
+              {t.yourCopy}
+            </button>
+          )
+        : editable && (
+            <button
+              className="btn small ghost danger"
+              aria-label={t.delete}
+              title={t.deleteTitle}
+              onClick={() => {
+                if (confirm(t.confirmDelete(meta.title))) {
+                  stopAnalysis(id);
+                  void removeBook(id).then(() => navigate("/library?tab=mine"));
+                }
+              }}
+            >
+              <svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.3">
+                <path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8.5h5.8l.6-8.5" />
+              </svg>
+            </button>
+          )}
+    </div>
+  );
 
   return (
     <div className="book-page">
-      <section className="book-hero">
-        <div className="hero-main">
-          <div className="eyebrow">
-            {source}
-            {canon && <span className="corpus-badge">{t.readByJev}</span>}
-          </div>
-          <h1 className="book-title">{name.main}</h1>
-          {name.sub && <p className="book-subtitle">{name.sub}</p>}
-          <p className="book-author">{meta.author}</p>
-          {hasData ? (
-            <p className="book-character">
-              <span>
-                <Swatch color={lead.color} round />
-                {labelOf(lead, lang).toLowerCase()}
-              </span>
-              {topMood && (
-                <span>
-                  <Swatch color={topMood.color} round />
-                  {labelOf(topMood, lang).toLowerCase()}
-                </span>
-              )}
-              {topMode && <span>{labelOf(topMode, lang).toLowerCase()}</span>}
-              {topThemes.length > 0 && <span>{topThemes.join(", ")}</span>}
-              {arcShape && (
-                <span>
-                  {t.arc}: {(lang === "ru" ? arcShape.ru : arcShape.label).toLowerCase()}
-                </span>
-              )}
-            </p>
-          ) : (
-            <p className="book-character placeholder">{t.noCharacter}</p>
-          )}
-          <dl className="book-facts">
-            <div>
-              <dt>{t.pages}</dt>
-              <dd className="num">{n2(segments.length)}</dd>
-            </div>
-            <div>
-              <dt>{t.chars}</dt>
-              <dd className="num">{n2(meta.chars)}</dd>
-            </div>
-            <div>
-              <dt>{t.reading}</dt>
-              <dd className="num">{minutes < 90 ? t.min(Math.round(minutes)) : t.hours(Math.round(minutes / 60))}</dd>
-            </div>
-            <div>
-              <dt>{t.jev}</dt>
-              <dd className="data-badge num">
-                <Meter value={coverage} className="thin" /> {complete ? t.complete : pct(lang, coverage)}
-              </dd>
-            </div>
-            <div title={t.tokensHint(n2(cost.jevTokens), n2(cost.jevRequests), cost.briefTokens ? n2(cost.briefTokens) : undefined)}>
-              <dt>{t.tokens}</dt>
-              <dd className="num">{tokens(cost.totalTokens)}</dd>
-            </div>
-            <div title={t.costHint(usd(cost.jevUsd), brief ? usd(cost.briefUsd) : undefined)}>
-              <dt>{t.cost}</dt>
-              <dd className="cost num">{usd(cost.totalUsd)}</dd>
-            </div>
-          </dl>
-          <div className="book-actions">
-            {editable &&
-              !complete &&
-              (running ? (
-                <button className="btn" onClick={() => stopAnalysis(id)}>
-                  {t.stop} · {done}/{segments.length}
-                </button>
-              ) : (
-                <button className="btn primary" disabled={!configured} onClick={() => void startAnalysis(id)}>
-                  {done ? t.resume : t.analyze}
-                </button>
-              ))}
-            <button className="btn" onClick={() => navigate(`/map?focus=${id}`)} disabled={!meta.fingerprint}>
-              {t.map}
-            </button>
-            <div className="menu-wrap">
-              <button className="btn ghost" onClick={() => setExportOpen(!exportOpen)} aria-expanded={exportOpen}>
-                {t.export}
-              </button>
-              {exportOpen && (
-                <div className="menu">
-                  <button onClick={() => exportData("json")}>{t.json}</button>
-                  <button onClick={() => exportData("csv")}>{t.csv}</button>
-                </div>
-              )}
-            </div>
-            {canon ? (
-              local &&
-              localCopy && (
-                <button className="btn ghost" onClick={() => navigate(`/book/${localCopy.id}`)}>
-                  {t.yourCopy}
-                </button>
-              )
-            ) : (
-              editable && (
-              <button
-                className="btn ghost danger"
-                aria-label={t.delete}
-                title={t.deleteTitle}
-                onClick={() => {
-                  if (confirm(t.confirmDelete(meta.title))) {
-                    stopAnalysis(id);
-                    void removeBook(id).then(() => navigate("/library?tab=mine"));
-                  }
-                }}
-              >
-                <svg viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.3">
-                  <path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8.5h5.8l.6-8.5" />
-                </svg>
-              </button>
-              )
-            )}
-          </div>
-          {running && (
-            <div className="progress-line" aria-live="polite">
-              <Meter value={coverage} />
-              <span className="num">{t.progress(done, segments.length)}</span>
-            </div>
-          )}
-          {!complete && !running && (
-            <p className="analysis-note" role={job?.status === "error" ? "alert" : undefined}>
-              {canon ? t.canonNote(n2(done), n2(segments.length)) : job?.status === "error" ? `${t.error}: ${job.error}` : configured === false ? t.noKey : t.howItWorks}
-            </p>
-          )}
-          {excerpt && (
-            <p className="excerpt-note" role="note">
-              {t.excerptNote}
-            </p>
-          )}
-          {meta.fingerprint && (
-            <div className="hero-strip">
-              <PixelStrip values={fingerprintValues(meta.fingerprint)} size={8} label={t.fingerprint} />
-            </div>
-          )}
+      {/* 1. Title block */}
+      <header className="book-hero">
+        <div className="eyebrow">
+          {source}
+          {canon && <span className="corpus-badge">{t.readByJev}</span>}
         </div>
+        <h1 className="book-title">{name.main}</h1>
+        {name.sub && <p className="book-subtitle">{name.sub}</p>}
+        <p className="book-author">{meta.author}</p>
+        {actions}
+        {hasData ? (
+          <p className="book-character">
+            <span>
+              <Swatch color={lead.color} round />
+              {labelOf(lead, lang).toLowerCase()}
+            </span>
+            {topMood && (
+              <span>
+                <Swatch color={topMood.color} round />
+                {labelOf(topMood, lang).toLowerCase()}
+              </span>
+            )}
+            {topMode && <span>{labelOf(topMode, lang).toLowerCase()}</span>}
+            {topThemes.length > 0 && <span>{topThemes.join(", ")}</span>}
+            {arcShape && (
+              <span>
+                {t.arc}: {(lang === "ru" ? arcShape.ru : arcShape.label).toLowerCase()}
+              </span>
+            )}
+          </p>
+        ) : (
+          <p className="book-character placeholder">{t.noCharacter}</p>
+        )}
+
+        {/* 2. The 85-dimension fingerprint, compact */}
         {meta.fingerprint && (
-          <div className="hero-radar">
-            <Radar axes={radarAxes(meta.fingerprint, meanSource(others), lang)} color={lead.color} refLabel={t.meanOf(others.length)} />
+          <div className="hero-strip">
+            <PixelStrip values={fingerprintValues(meta.fingerprint)} size={5} label={t.fingerprint} />
+            <GroupLegend />
           </div>
         )}
-      </section>
 
-      <Panel n={next()} title={t.s.brief} note={brief ? t.n.briefBy(brief.model) : t.n.brief} className="brief-panel">
+        {/* 3. Facts */}
+        <dl className="book-facts">
+          <div>
+            <dt>{t.pages}</dt>
+            <dd className="num">{n2(segments.length)}</dd>
+          </div>
+          <div>
+            <dt>{t.chars}</dt>
+            <dd className="num">{n2(meta.chars)}</dd>
+          </div>
+          <div>
+            <dt>{t.reading}</dt>
+            <dd className="num">{minutes < 90 ? t.min(Math.round(minutes)) : t.hours(Math.round(minutes / 60))}</dd>
+          </div>
+          <div>
+            <dt>{t.jev}</dt>
+            <dd className="data-badge num">
+              <Meter value={coverage} className="thin" /> {complete ? t.complete : pct(lang, coverage)}
+            </dd>
+          </div>
+          <div title={t.tokensHint(n2(cost.jevTokens), n2(cost.jevRequests), cost.briefTokens ? n2(cost.briefTokens) : undefined)}>
+            <dt>{t.tokens}</dt>
+            <dd className="num">{tokens(cost.totalTokens)}</dd>
+          </div>
+          <div title={t.costHint(usd(cost.jevUsd), brief ? usd(cost.briefUsd) : undefined)}>
+            <dt>{t.cost}</dt>
+            <dd className="cost num">{usd(cost.totalUsd)}</dd>
+          </div>
+        </dl>
+        {running && (
+          <div className="progress-line" aria-live="polite">
+            <Meter value={coverage} />
+            <span className="num">{t.progress(done, segments.length)}</span>
+          </div>
+        )}
+        {!complete && !running && (
+          <p className="analysis-note" role={job?.status === "error" ? "alert" : undefined}>
+            {canon ? t.canonNote(n2(done), n2(segments.length)) : job?.status === "error" ? `${t.error}: ${job.error}` : configured === false ? t.noKey : t.howItWorks}
+          </p>
+        )}
+      </header>
+
+      {/* 4. Plot development (emotion columns per page range), full width */}
+      <Panel title={t.s.dna} note={t.n.dna} className="dna-panel">
+        <Dna analyses={analyses} insights={dna} onPick={openPage} />
+      </Panel>
+
+      {/* 5. Brief */}
+      <Panel title={t.s.brief} note={brief ? t.n.briefBy(brief.model) : t.n.brief} className="brief-panel">
         {brief ? (
           <div className="brief" lang={picked!.lang}>
             {picked!.fallback && (
@@ -589,133 +688,94 @@ export function BookPage({ id, page }: { id: string; page?: number }) {
         )}
       </Panel>
 
-      {hasData && peaks.length > 0 && (
-        <Panel n={next()} title={t.s.quotes} note={quoteView === "extremes" ? t.n.extremes : t.n.explore}>
-          <div className="presets quote-views" role="group" aria-label={t.quotesView}>
-            {(["extremes", "explore"] as const).map((v) => (
-              <button key={v} className={quoteView === v ? "on" : ""} aria-pressed={quoteView === v} onClick={() => setQuoteView(v)}>
-                {t.views[v]}
-              </button>
-            ))}
-          </div>
-          {quoteView === "extremes" ? (
-            <ol className="quotes">
-              {peaks.map((m) => (
-                <li key={m.id}>
-                  <button onClick={() => openPage(m.index)} style={{ ["--mark" as string]: m.color }}>
-                    <span className="quote-label">
-                      <Swatch color={m.color} round />
-                      {lang === "ru" ? m.ru : m.label}
-                    </span>
-                    <q>{firstSentence(segments[m.index].text, 220)}</q>
-                    <span className="quote-page num">
-                      {pageRef(lang, m.index + 1)} · {pct(lang, m.index / Math.max(1, segments.length - 1))}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ol>
-          ) : (
-            <QuoteExplorer segments={segments} analyses={analyses} onPick={openPage} />
-          )}
-        </Panel>
-      )}
-
-      {hasData && (
-        <Panel n={next()} title={t.s.insights} note={t.n.insights}>
-          <InsightList insights={insights} pages={segments.length} onPick={openPage} />
-        </Panel>
-      )}
-
-      <Panel n={next()} title={t.s.dna} note={t.n.dna}>
-        <Dna analyses={analyses} insights={dna} onPick={openPage} />
-      </Panel>
-
+      {/* 6. One dense dashboard of everything else, with analyst controls in the URL */}
       {hasData ? (
-        <>
-          <Panel n={next()} title={t.s.spectrogram} note={t.n.spectrogram}>
-            <Spectrogram analyses={analyses} emotions={stats.emotions} onPick={openAt} />
-          </Panel>
-          <Panel n={next()} title={t.s.pulse} note={t.n.pulse}>
-            <PulsePlot analyses={analyses} moments={peaks} onPick={openPage} />
-          </Panel>
+        <section className="dash" aria-label={t.dashboard}>
+          <DashBar state={ds} set={setDash} matches={view.matches} pages={view.analyses.length} />
 
-          <div className="grid three">
-            <Panel n={next()} title={t.s.mood} note={t.n.mood}>
-              <MoodBars mood={stats.mood} />
-            </Panel>
-            <Panel n={next()} title={t.s.narration} note={t.n.narration}>
-              <ModeBars mode={stats.mode} />
-            </Panel>
-            <Panel n={next()} title={t.s.shape} note={t.n.shape}>
-              <ArcPlot curve={arc.curve} shape={arc.shape} fits={arc.fits} />
-            </Panel>
-          </div>
+          <Cell span={8} title={t.c.spectrogram} keyNote={`${labelOf(vLead, lang).toLowerCase()} ${num(lang, vs.emotions[vLead.id], 2)}`}>
+            <Spectrogram analyses={view.analyses} emotions={vs.emotions} onPick={atIn} compact only={ds.emo} smoothing={ds.smooth} marks={view.marks} />
+          </Cell>
+          <Cell span={4} title={t.c.radar} keyNote={others.length ? t.c.vs(others.length) : undefined} className="cell-radar">
+            {meta.fingerprint && <Radar axes={radarAxes(meta.fingerprint, mean, lang)} color={lead.color} refLabel={t.meanOf(others.length)} />}
+          </Cell>
 
-          <div className="grid two pair">
-            <Panel n={next()} title={t.s.texture} note={t.n.texture}>
-              <Sliders items={TEXTURES.map((tx) => ({ id: tx.id, low: lowOf(tx, lang), high: highOf(tx, lang), value: stats.texture[tx.id], label: labelOf(tx, lang) }))} />
-            </Panel>
-            <Panel n={next()} title={t.s.whole} note={t.n.whole}>
-              {content.profile ? (
-                <>
-                  <Bars
-                    items={topEntries(content.profile.genre, 3).map(([gid, p]) => ({
-                      id: gid,
-                      label: labelOf(
-                        GENRES.find((g) => g.id === gid)!,
-                        lang,
-                      ),
-                      value: p,
-                      color: "var(--d1)",
-                    }))}
-                    sort={false}
-                  />
-                  <p className="profile-era">
-                    <span className="eyebrow">{t.era}</span>{" "}
-                    <b>
-                      {labelOf(
-                        ERAS.find((e) => e.id === argmax(content.profile!.era))!,
-                        lang,
-                      )}
-                    </b>
-                  </p>
-                  <Sliders
-                    items={PROFILE_SCALES.map((s) => ({
-                      id: s.id,
-                      low: lowOf(s, lang),
-                      high: highOf(s, lang),
-                      value: content.profile!.scales[s.id],
-                      label: `${t.confidence} ${pct(lang, content.profile!.scaleConfidence[s.id])}`,
-                    }))}
-                  />
-                </>
-              ) : (
-                <p className="placeholder">{t.profileWait}</p>
-              )}
-            </Panel>
-          </div>
+          <Cell span={8} title={t.c.pulse} keyNote={insights.tension != null && whole ? `${t.c.tension} ${insights.tension > 0 ? "↑" : "↓"} r=${num(lang, insights.tension, 2)}` : undefined}>
+            <PulsePlot analyses={view.analyses} moments={view.peaks} onPick={pickIn} compact smoothing={ds.smooth} highlight={view.marks} />
+          </Cell>
+          <Cell
+            span={quoteView === "explore" ? 12 : 4}
+            title={quoteView === "extremes" ? t.c.quotes : t.c.explore}
+            controls={
+              <>
+                <Tabs label={t.quotesView} value={quoteView} options={[["extremes", t.views.extremes], ["explore", t.views.explore]]} onChange={setQuoteView} />
+                {quoteView === "extremes" && <Tabs label={t.c.sortBy} value={ds.qs} options={[["score", t.c.byScore], ["page", t.c.byPage]]} onChange={(qs) => setDash({ qs })} />}
+              </>
+            }
+          >
+            {quoteView === "extremes" ? (
+              <ol className="quotes compact">
+                {peaksShown.map((m) => (
+                  <li key={m.id}>
+                    <button onClick={() => pickIn(m.index)}>
+                      <span className="quote-label">
+                        <Swatch color={m.color} round />
+                        {lang === "ru" ? m.ru : m.label}
+                      </span>
+                      <span className="quote-page num">{pageRef(lang, view.from + m.index + 1)}</span>
+                      <q>{firstSentence(view.segments[m.index].text, 140)}</q>
+                    </button>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <QuoteExplorer segments={view.segments} analyses={view.analyses} onPick={pickIn} offset={view.from} />
+            )}
+          </Cell>
 
-          <Panel n={next()} title={t.s.themes} note={t.n.themes}>
-            <ThemeLines analyses={analyses} themes={stats.themes} onPick={openAt} />
-          </Panel>
-
-          <Panel n={next()} title={t.s.neighbours} note={t.n.neighbours}>
-            {similar.length ? (
-              <ul className="neighbours">
-                {similar.map(({ id: nid, similarity, star }) => (
+          <Cell span={4} title={t.c.moodMode} keyNote={vMood ? `${labelOf(vMood, lang).toLowerCase()} ${pct(lang, vs.mood[vMood.id])}` : undefined}>
+            <Strip
+              label={t.c.mood}
+              active={ds.hl}
+              onPick={(hl) => setDash({ hl })}
+              group="mood"
+              items={MOODS.map((m) => ({ id: m.id, label: labelOf(m, lang), value: vs.mood[m.id] ?? 0, color: m.color }))}
+            />
+            <Strip
+              label={t.c.narration}
+              active={ds.hl}
+              onPick={(hl) => setDash({ hl })}
+              group="mode"
+              items={MODES.filter((m) => m.id !== "paratext").map((m) => ({ id: m.id, label: labelOf(m, lang), value: vs.mode[m.id] ?? 0, color: m.color }))}
+            />
+            {vMode && (
+              <p className="cell-foot">
+                {t.c.narration}: {labelOf(vMode, lang).toLowerCase()} {pct(lang, vs.mode[vMode.id])} · {t.c.clickHighlight}
+              </p>
+            )}
+          </Cell>
+          <Cell span={4} title={t.c.shape} keyNote={bestFit ? `r=${num(lang, bestFit.r, 2)}` : undefined}>
+            <ArcPlot curve={view.arc.curve} shape={view.arc.shape} fits={view.arc.fits} compact />
+          </Cell>
+          <Cell
+            span={4}
+            title={t.c.neighbours}
+            controls={<Tabs label={t.c.sortBy} value={ds.ns} options={[["similarity", "cos"], ["year", t.c.byYear]]} onChange={(ns) => setDash({ ns })} />}
+          >
+            {similarShown.length ? (
+              <ul className="neighbours compact">
+                {similarShown.map(({ id: nid, similarity, star }) => (
                   <li key={nid}>
                     <button onClick={() => navigate(starPath(star))}>
                       <span className="nb-sim num">{Math.round(Math.max(0, similarity) * 100)}</span>
                       <span className="nb-name">
-                        <b>{lang === "ru" || !star.titleEn ? star.title : star.titleEn}</b>{" "}
-                        <small>
-                          {star.author}
-                          {star.year ? ` · ${star.year}` : ""}
+                        <b>{lang === "ru" || !star.titleEn ? star.title : star.titleEn}</b>
+                        <small className="num">
+                          {star.year ?? ""}
                           {star.kind === "library" ? ` · ${t.library}` : ""}
                         </small>
                       </span>
-                      <PixelStrip values={fingerprintValues(star.fingerprint)} size={3} idle=" " />
+                      <PixelStrip values={fingerprintValues(star.fingerprint)} size={2} idle=" " />
                     </button>
                   </li>
                 ))}
@@ -723,9 +783,62 @@ export function BookPage({ id, page }: { id: string; page?: number }) {
             ) : (
               <p className="placeholder">{meta.fingerprint ? t.noNeighbours : t.noFingerprint}</p>
             )}
-          </Panel>
+          </Cell>
+
+          <Cell
+            span={6}
+            title={t.c.texture}
+            keyNote={textureGap ? `${labelOf(textureGap.tx, lang).toLowerCase()} ${signed(textureGap.d)}` : undefined}
+            controls={mean && <Tabs label={t.c.sortBy} value={ds.xs} options={[["value", t.c.byOrder], ["diff", "Δ"]]} onChange={(xs) => setDash({ xs })} />}
+          >
+            <Sliders
+              items={textureShown.map(({ tx, v }) => ({
+                id: tx.id,
+                low: lowOf(tx, lang),
+                high: highOf(tx, lang),
+                value: rel(v, mean?.texture[tx.id]),
+                label: labelOf(tx, lang),
+                reference: ds.rel ? 0.5 : mean?.texture[tx.id],
+              }))}
+            />
+            {mean && <p className="cell-foot">{ds.rel ? t.c.relNote : t.c.corpusMean}</p>}
+          </Cell>
+          <Cell span={6} title={t.c.whole} keyNote={topGenre ? `${labelOf(GENRES.find((g) => g.id === topGenre[0])!, lang).toLowerCase()} ${pct(lang, topGenre[1])}` : undefined}>
+            {content.profile ? (
+              <>
+                <Bars
+                  items={topEntries(content.profile.genre, 3).map(([gid, p]) => ({ id: gid, label: labelOf(GENRES.find((g) => g.id === gid)!, lang), value: p, color: "var(--d1)" }))}
+                  sort={false}
+                />
+                <p className="profile-era">
+                  <span className="eyebrow">{t.era}</span> <b>{labelOf(ERAS.find((e) => e.id === argmax(content.profile!.era))!, lang)}</b>
+                </p>
+                <Sliders
+                  items={PROFILE_SCALES.map((ps) => ({
+                    id: ps.id,
+                    low: lowOf(ps, lang),
+                    high: highOf(ps, lang),
+                    value: rel(content.profile!.scales[ps.id], mean?.profile?.scales[ps.id]),
+                    label: `${t.confidence} ${pct(lang, content.profile!.scaleConfidence[ps.id])}`,
+                    reference: ds.rel ? 0.5 : mean?.profile?.scales[ps.id],
+                  }))}
+                />
+              </>
+            ) : (
+              <p className="placeholder">{t.profileWait}</p>
+            )}
+          </Cell>
+
+          <Cell
+            span={12}
+            title={t.c.themes}
+            keyNote={topTheme ? `${labelOf(THEMES.find((th) => th.id === topTheme[0])!, lang).toLowerCase()} ${pct(lang, topTheme[1])}` : undefined}
+            controls={<Tabs label={t.c.sortBy} value={ds.ts} options={[["strength", t.c.byStrength], ["appearance", t.c.byAppearance]]} onChange={(ts) => setDash({ ts })} />}
+          >
+            <ThemeLines analyses={view.analyses} themes={vs.themes} onPick={atIn} compact order={ds.ts} smoothing={ds.smooth} marks={view.marks} />
+          </Cell>
           {!complete && <p className="coverage-note">{t.coverage(n2(done), n2(segments.length))}</p>}
-        </>
+        </section>
       ) : (
         <section className="preview panel">
           <p className="eyebrow">{t.measures}</p>
@@ -742,9 +855,203 @@ export function BookPage({ id, page }: { id: string; page?: number }) {
         </section>
       )}
 
+      {/* 7. Insights at the end */}
+      {hasData && (
+        <Panel title={t.s.insights} note={t.n.insights}>
+          <InsightList insights={insights} pages={segments.length} onPick={openPage} />
+        </Panel>
+      )}
+
       {selected != null && segments[selected] && (
         <Reader segment={segments[selected]} analysis={analyses[selected] ?? null} total={segments.length} onMove={move} onClose={closeReader} excerpt={excerpt} page={pageText} />
       )}
+    </div>
+  );
+}
+
+/** One dashboard cell: a tiny mono title, optional controls, an optional key number, and the chart. */
+function Cell({ span, title, keyNote, controls, className = "", children }: { span: number; title: string; keyNote?: ReactNode; controls?: ReactNode; className?: string; children: ReactNode }) {
+  return (
+    <section className={`cell span-${span} ${className}`}>
+      <header className="cell-head">
+        <h3>{title}</h3>
+        {controls && <span className="cell-controls">{controls}</span>}
+        {keyNote != null && <span className="cell-key num">{keyNote}</span>}
+      </header>
+      {children}
+    </section>
+  );
+}
+
+/** A tiny mono segmented control. */
+function Tabs<V extends string>({ label, value, options, onChange }: { label: string; value: V; options: [V, string][]; onChange: (v: V) => void }) {
+  return (
+    <span className="cell-tabs" role="group" aria-label={label}>
+      {options.map(([v, text]) => (
+        <button key={v} className={value === v ? "on" : ""} aria-pressed={value === v} onClick={() => onChange(v)}>
+          {text}
+        </button>
+      ))}
+    </span>
+  );
+}
+
+/** A distribution as one stacked strip plus its largest parts; clicking a part highlights its pages everywhere. */
+function Strip({
+  label,
+  group,
+  items,
+  active,
+  onPick,
+}: {
+  label: string;
+  group: "mood" | "mode";
+  items: { id: string; label: string; value: number; color: string }[];
+  active: string | null;
+  onPick: (hl: string | null) => void;
+}) {
+  const lang = useLang();
+  const [hover, setHover] = useState<string | null>(null);
+  const sorted = [...items].sort((a, b) => b.value - a.value);
+  const total = items.reduce((sum, i) => sum + i.value, 0) || 1;
+  const shown = hover ? sorted.filter((i) => i.id === hover) : sorted.slice(0, 3);
+  return (
+    <div className="strip">
+      <span className="strip-label">{label}</span>
+      <StackBar items={sorted} onHover={setHover} />
+      <ul className="strip-top">
+        {shown.map((i) => {
+          const key = `${group}:${i.id}`;
+          return (
+            <li key={i.id}>
+              <button className={active === key ? "on" : ""} aria-pressed={active === key} onClick={() => onPick(active === key ? null : key)}>
+                <Swatch color={i.color} />
+                <span>{i.label.toLowerCase()}</span>
+                <b className="num">{pct(lang, i.value / total)}</b>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+const BAR = {
+  en: {
+    label: "Dashboard filters",
+    range: "range",
+    ranges: [
+      ["0-100", "whole"],
+      ["0-33", "1st ⅓"],
+      ["33-67", "2nd ⅓"],
+      ["67-100", "3rd ⅓"],
+    ] as [string, string][],
+    from: "from %",
+    to: "to %",
+    emotions: "emotions",
+    allEmotions: "all",
+    highlight: "highlight",
+    none: "none",
+    mood: "mood",
+    narration: "narration",
+    smooth: "smooth",
+    scale: "scale",
+    abs: "abs",
+    rel: "rel",
+    matches: (n: number, of: number) => `${n}/${of} pages`,
+    reset: "reset",
+  },
+  ru: {
+    label: "Фильтры панели",
+    range: "часть",
+    ranges: [
+      ["0-100", "вся"],
+      ["0-33", "1-я ⅓"],
+      ["33-67", "2-я ⅓"],
+      ["67-100", "3-я ⅓"],
+    ] as [string, string][],
+    from: "от %",
+    to: "до %",
+    emotions: "эмоции",
+    allEmotions: "все",
+    highlight: "подсветка",
+    none: "нет",
+    mood: "настроение",
+    narration: "повествование",
+    smooth: "сглаживание",
+    scale: "шкала",
+    abs: "абс",
+    rel: "отн",
+    matches: (n: number, of: number) => `${n}/${of} стр.`,
+    reset: "сброс",
+  },
+};
+
+/** The dashboard's filter bar: part of the book, emotions shown, highlighted pages, smoothing and scale. */
+function DashBar({ state, set, matches, pages }: { state: DashState; set: (p: Partial<DashState>) => void; matches: number; pages: number }) {
+  const t = useT(BAR);
+  const lang = useLang();
+  const range = `${state.range[0]}-${state.range[1]}`;
+  const clampPct = (v: string, fallback: number) => (Number.isFinite(Number(v)) && v !== "" ? Math.max(0, Math.min(100, Math.round(Number(v)))) : fallback);
+  const toggleEmo = (id: EmotionId) => set({ emo: state.emo.includes(id) ? state.emo.filter((e) => e !== id) : [...state.emo, id] });
+  const changed = range !== "0-100" || state.emo.length || state.hl || !state.smooth || state.rel;
+  return (
+    <div className="dash-bar" role="group" aria-label={t.label}>
+      <span className="dash-field">
+        <span className="dash-label">{t.range}</span>
+        <Tabs label={t.range} value={range} options={t.ranges.some(([v]) => v === range) ? t.ranges : [...t.ranges, [range, `${state.range[0]}–${state.range[1]}%`]]} onChange={(v) => set({ range: v.split("-").map(Number) as [number, number] })} />
+        <input className="dash-num" type="number" min={0} max={99} value={state.range[0]} aria-label={t.from} onChange={(e) => set({ range: [Math.min(clampPct(e.target.value, 0), state.range[1] - 1), state.range[1]] })} />
+        <span className="dim">–</span>
+        <input className="dash-num" type="number" min={1} max={100} value={state.range[1]} aria-label={t.to} onChange={(e) => set({ range: [state.range[0], Math.max(clampPct(e.target.value, 100), state.range[0] + 1)] })} />
+      </span>
+      <span className="dash-field">
+        <span className="dash-label">{t.emotions}</span>
+        <span className="cell-tabs" role="group" aria-label={t.emotions}>
+          <button className={!state.emo.length ? "on" : ""} aria-pressed={!state.emo.length} onClick={() => set({ emo: [] })}>
+            {t.allEmotions}
+          </button>
+          {EMOTIONS.map((e) => (
+            <button key={e.id} className={state.emo.includes(e.id) ? "on" : ""} aria-pressed={state.emo.includes(e.id)} onClick={() => toggleEmo(e.id)} title={labelOf(e, lang)}>
+              <Swatch color={e.color} round />
+              {labelOf(e, lang).slice(0, 4).toLowerCase()}
+            </button>
+          ))}
+        </span>
+      </span>
+      <span className="dash-field">
+        <label className="dash-label" htmlFor="dash-hl">
+          {t.highlight}
+        </label>
+        <select id="dash-hl" className="dash-select" value={state.hl ?? ""} onChange={(e) => set({ hl: e.target.value || null })}>
+          <option value="">{t.none}</option>
+          <optgroup label={t.mood}>
+            {MOODS.map((m) => (
+              <option key={m.id} value={`mood:${m.id}`}>
+                {labelOf(m, lang).toLowerCase()}
+              </option>
+            ))}
+          </optgroup>
+          <optgroup label={t.narration}>
+            {MODES.filter((m) => m.id !== "paratext").map((m) => (
+              <option key={m.id} value={`mode:${m.id}`}>
+                {labelOf(m, lang).toLowerCase()}
+              </option>
+            ))}
+          </optgroup>
+        </select>
+        {state.hl && <span className="dash-count num">{t.matches(matches, pages)}</span>}
+      </span>
+      <span className="dash-field">
+        <Tabs label={t.smooth} value={state.smooth ? "on" : "off"} options={[["on", `${t.smooth} ✓`], ["off", `${t.smooth} ✗`]]} onChange={(v) => set({ smooth: v === "on" })} />
+        <span className="dash-label">{t.scale}</span>
+        <Tabs label={t.scale} value={state.rel ? "rel" : "abs"} options={[["abs", t.abs], ["rel", t.rel]]} onChange={(v) => set({ rel: v === "rel" })} />
+      </span>
+      {changed ? (
+        <button className="link-u dash-reset" onClick={() => set({ range: [0, 100], emo: [], hl: null, smooth: true, rel: false })}>
+          {t.reset}
+        </button>
+      ) : null}
     </div>
   );
 }
