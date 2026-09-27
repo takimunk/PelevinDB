@@ -898,14 +898,24 @@
   color: var(--muted);
 }
 .sent {
-  cursor: pointer;
   border-radius: 3px;
   transition: background-color 0.15s var(--ease);
 }
-.sent:hover,
-.sent:focus-visible {
-  outline: none;
-  background: var(--surface-2);
+/* Only sentences Jev read on their own open a card. */
+.sent.read {
+  cursor: pointer;
+}
+.sent.read:focus-visible {
+  outline: 1px solid var(--line-2);
+}
+/* No lens: each read sentence takes its leading emotion's colour, as strong as the sentence is intense. */
+.sent-text.felt .sent.read {
+  background: color-mix(in oklab, var(--c) calc(var(--w) * 38%), transparent);
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+.sent-text.felt .sent.read:hover {
+  background: color-mix(in oklab, var(--c) calc(12% + var(--w) * 38%), transparent);
 }
 .sent-text.lensed .sent {
   background: color-mix(in oklab, var(--c) calc(var(--w) * 38%), transparent);

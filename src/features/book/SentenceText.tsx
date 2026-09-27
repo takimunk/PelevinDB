@@ -11,7 +11,11 @@ import {
   SENTENCE_SCALES,
   type FocusId,
 } from "../../../shared/catalog.ts";
-import type { PageSentences, SegmentAnalysis } from "../../../shared/types.ts";
+import type {
+  PageSentences,
+  SegmentAnalysis,
+  SentenceRead,
+} from "../../../shared/types.ts";
 import { pageScore } from "../../../shared/focus.ts";
 import { useLang, useT } from "../../i18n/index.ts";
 
@@ -21,7 +25,6 @@ const T = {
     off: "off",
     peak: "peak",
     sentence: (n: number) => `Sentence ${n}`,
-    unread: "Jev has not read this sentence on its own.",
     reads: "Read alone",
     none: "Jev finds no sentence on this page that carries it.",
     pending: "Sentence analysis has not reached this page yet.",
@@ -31,7 +34,6 @@ const T = {
     off: "нет",
     peak: "пик",
     sentence: (n: number) => `Фраза ${n}`,
-    unread: "Jev не читал эту фразу отдельно.",
     reads: "Отдельно",
     none: "Jev не находит на этой странице фразы, которая это несёт.",
     pending: "Разбор по фразам до этой страницы ещё не дошёл.",
@@ -144,7 +146,9 @@ export function SentenceText({
   useEffect(() => setOpen(null), [text]);
   // Opening a page with a highlight on brings its peak sentence into view.
   useEffect(() => {
-    root.current?.querySelector<HTMLElement>(".sent.peak")?.scrollIntoView({ block: "center" });
+    root.current
+      ?.querySelector<HTMLElement>(".sent.peak")
+      ?.scrollIntoView({ block: "center" });
   }, [text, lens]);
   const color = lens ? FOCUS.find((f) => f.id === lens)!.color : undefined;
   const lensed = lens ? lensWeights(sentences, analysis, lens) : null;
@@ -154,26 +158,43 @@ export function SentenceText({
     if (start > at) parts.push(text.slice(at, start));
     const w = lensed?.weights[i] ?? 0;
     const read = sentences.read[i];
+    const body = text.slice(start, end);
+    // Only sentences Jev read on their own are highlighted and open a card. Without a lens the tint is the
+    // sentence's leading emotion, its opacity the sentence's intensity (with a faint floor, so calm ones still show).
+    const style = lensed
+      ? ({ "--w": Math.sqrt(w).toFixed(3), "--c": color } as CSSProperties)
+      : read
+        ? ({
+            "--w": (0.12 + 0.88 * read.scales.arousal).toFixed(3),
+            "--c": SENTENCE_EMOTIONS.find((e) => e.id === read.emotion)!.color,
+          } as CSSProperties)
+        : undefined;
+    const peak = lensed && i === lensed.peak ? "peak" : "";
+    if (!read) {
+      parts.push(
+        <span key={i} className={`sent ${peak}`} style={style}>
+          {body}
+        </span>,
+      );
+      at = end;
+      return;
+    }
+    const toggle = () => setOpen(open === i ? null : i);
     parts.push(
       <span
         key={i}
-        className={`sent ${lensed && i === lensed.peak ? "peak" : ""} ${open === i ? "open" : ""} ${read ? "read" : ""}`}
-        style={
-          lensed
-            ? ({ "--w": Math.sqrt(w).toFixed(3), "--c": color } as CSSProperties)
-            : undefined
-        }
+        className={`sent read ${peak} ${open === i ? "open" : ""}`}
+        style={style}
         role="button"
         tabIndex={0}
         aria-expanded={open === i}
         aria-label={t.sentence(i + 1)}
-        onClick={() => setOpen(open === i ? null : i)}
+        onClick={toggle}
         onKeyDown={(e) =>
-          (e.key === "Enter" || e.key === " ") &&
-          (e.preventDefault(), setOpen(open === i ? null : i))
+          (e.key === "Enter" || e.key === " ") && (e.preventDefault(), toggle())
         }
       >
-        {text.slice(start, end)}
+        {body}
       </span>,
     );
     if (open === i)
@@ -181,6 +202,7 @@ export function SentenceText({
         <SentenceCard
           key={`card-${i}`}
           n={i}
+          read={read}
           sentences={sentences}
           lens={lens}
           weight={lensed?.weights[i] ?? null}
@@ -198,7 +220,7 @@ export function SentenceText({
       {lens && lensed && lensed.peak < 0 && (
         <span className="reader-lens-note">{t.none}</span>
       )}
-      <span ref={root} className={`sent-text ${lensed ? "lensed" : ""}`}>
+      <span ref={root} className={`sent-text ${lensed ? "lensed" : "felt"}`}>
         {parts}
       </span>
     </>
@@ -207,18 +229,19 @@ export function SentenceText({
 
 function SentenceCard({
   n,
+  read,
   sentences,
   lens,
   weight,
 }: {
   n: number;
+  read: SentenceRead;
   sentences: PageSentences;
   lens: FocusId | null;
   weight: number | null;
 }) {
   const t = useT(T);
   const lang = useLang();
-  const read = sentences.read[n];
   const top = sentences.focus
     ? FOCUS.map((f) => ({
         f,
@@ -260,33 +283,29 @@ function SentenceCard({
           ))}
         </span>
       )}
-      {read ? (
-        <span className="sent-read">
-          <span className="dim">{t.reads}:</span>{" "}
-          {labelOf(
-            SENTENCE_EMOTIONS.find((e) => e.id === read.emotion)!,
-            lang,
-          ).toLowerCase()}{" "}
-          ·{" "}
-          {labelOf(
-            SENTENCE_ACTS.find((a) => a.id === read.act)!,
-            lang,
-          ).toLowerCase()}
-          {SENTENCE_FLAGS.filter((f) => read.flags[f.id] >= 0.5).map((f) => (
-            <span key={f.id} className="tag">
-              {labelOf(f, lang).toLowerCase()}
-            </span>
-          ))}
-          <span className="sent-scales num">
-            {SENTENCE_SCALES.map(
-              (s) =>
-                `${labelOf(s, lang).toLowerCase()} ${Math.round(read.scales[s.id] * 100)}`,
-            ).join(" · ")}
+      <span className="sent-read">
+        <span className="dim">{t.reads}:</span>{" "}
+        {labelOf(
+          SENTENCE_EMOTIONS.find((e) => e.id === read.emotion)!,
+          lang,
+        ).toLowerCase()}{" "}
+        ·{" "}
+        {labelOf(
+          SENTENCE_ACTS.find((a) => a.id === read.act)!,
+          lang,
+        ).toLowerCase()}
+        {SENTENCE_FLAGS.filter((f) => read.flags[f.id] >= 0.5).map((f) => (
+          <span key={f.id} className="tag">
+            {labelOf(f, lang).toLowerCase()}
           </span>
+        ))}
+        <span className="sent-scales num">
+          {SENTENCE_SCALES.map(
+            (s) =>
+              `${labelOf(s, lang).toLowerCase()} ${Math.round(read.scales[s.id] * 100)}`,
+          ).join(" · ")}
         </span>
-      ) : (
-        <span className="dim"> {t.unread}</span>
-      )}
+      </span>
     </span>
   );
 }
