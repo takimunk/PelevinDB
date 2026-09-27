@@ -7,26 +7,16 @@ import "./blog.css";
 
 const T = {
   en: {
-    kicker: "Journal",
-    title: "Notes from the reading room",
-    lede: "Essays and working notes on reading Viktor Pelevin with a machine: what we measure, how, and what the numbers do and do not say.",
-    read: "Read",
+    title: "Blog",
     min: "min read",
-    all: "All notes",
-    missing: "There is no such note.",
-    loading: "Loading the note",
-    about: "About PelevinDB",
+    missing: "There is no such post.",
+    loading: "Loading the post",
   },
   ru: {
-    kicker: "Журнал",
-    title: "Записки из читального зала",
-    lede: "Эссе и рабочие заметки о том, как мы читаем Виктора Пелевина вместе с машиной: что измеряем, как и о чём цифры говорят, а о чём молчат.",
-    read: "Читать",
+    title: "Блог",
     min: "мин чтения",
-    all: "Все заметки",
-    missing: "Такой заметки нет.",
-    loading: "Загружаем заметку",
-    about: "О проекте",
+    missing: "Такого поста нет.",
+    loading: "Загружаем пост",
   },
 };
 
@@ -43,7 +33,7 @@ function BlogIndex() {
   const lang = useLang();
   useEffect(() => {
     const previous = document.title;
-    document.title = `${t.kicker} — PelevinDB`;
+    document.title = `${t.title} — PelevinDB`;
     return () => {
       document.title = previous;
     };
@@ -51,9 +41,7 @@ function BlogIndex() {
   return (
     <div className="blog">
       <header className="blog-masthead">
-        <p className="blog-kicker">{t.kicker}</p>
         <h1 className="blog-h1">{t.title}</h1>
-        <p className="blog-lede">{t.lede}</p>
       </header>
       <ol className="blog-list">
         {POSTS.map((p) => (
@@ -67,15 +55,10 @@ function BlogIndex() {
               </p>
               <h2 className="blog-item-title">{p.title[lang]}</h2>
               <p className="blog-item-dek">{p.dek[lang]}</p>
-              <p className="blog-tags">{p.tags[lang].join(" / ")}</p>
-              <span className="blog-more">{t.read} →</span>
             </a>
           </li>
         ))}
       </ol>
-      <p className="blog-foot">
-        <a href={href("/about")}>{t.about} →</a>
-      </p>
     </div>
   );
 }
@@ -93,8 +76,8 @@ function PostView({ post }: { post: Post }) {
   const { Component } = post;
   return (
     <article className="blog blog-post" lang={lang}>
-      <nav className="blog-crumbs" aria-label={t.kicker}>
-        <a href={href("/blog")}>← {t.all}</a>
+      <nav className="blog-crumbs" aria-label={t.title}>
+        <a href={href("/blog")}>← {t.title}</a>
       </nav>
       <header className="post-head">
         <p className="blog-meta">
@@ -116,8 +99,7 @@ function PostView({ post }: { post: Post }) {
         <Component />
       </Suspense>
       <footer className="post-foot">
-        <a href={href("/blog")}>← {t.all}</a>
-        <a href={href("/about")}>{t.about} →</a>
+        <a href={href("/blog")}>← {t.title}</a>
       </footer>
     </article>
   );
@@ -129,7 +111,7 @@ function Missing() {
     <div className="blog">
       <p className="blog-lede">{t.missing}</p>
       <p className="blog-foot">
-        <a href={href("/blog")}>← {t.all}</a>
+        <a href={href("/blog")}>← {t.title}</a>
       </p>
     </div>
   );
