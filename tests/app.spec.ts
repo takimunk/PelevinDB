@@ -106,8 +106,11 @@ async function upload(page: Page, name: string, content: string | Buffer) {
   });
 }
 
-/** Terminal buttons render as `[ label ]`; the brackets are CSS content and part of the accessible name. */
-const button = (page: Page, label: string) => page.getByRole("button", { name: new RegExp(`^\\W*${label}\\W*$`) });
+/** Button by its label, ignoring case and surrounding symbols such as arrows. */
+const button = (page: Page, label: string) => page.getByRole("button", { name: new RegExp(`^\\W*${label}\\W*$`, "i") });
+
+/** Book page section heading; the section number ("01") is CSS content and part of the accessible name. */
+const section = (page: Page, title: string) => page.getByRole("heading", { name: new RegExp(`^(\\d+\\s*)?${title}$`) });
 
 async function openReader(page: Page, index = 1) {
   await expect(page.locator(".book-title")).toBeVisible();
@@ -115,25 +118,85 @@ async function openReader(page: Page, index = 1) {
   await expect(page.locator(".reader-text")).toBeVisible();
 }
 
-test("home search finds the library, the atlas and the Gutenberg catalog", async ({ page }) => {
+const pelevinList = {
+  available: true,
+  books: [
+    { id: "pv-chapaev", title: "Чапаев и Пустота", titleEn: "Chapaev and Void", year: 1996, kind: "novel", author: "Виктор Пелевин", rank: null, gutenberg: null, pages: 330, chars: 594_000, analysed: 0, complete: false, briefed: false },
+    { id: "pv-omon", title: "Омон Ра", titleEn: "Omon Ra", year: 1992, kind: "novella", author: "Виктор Пелевин", rank: null, gutenberg: null, pages: 90, chars: 162_000, analysed: 45, complete: false, briefed: false },
+  ],
+};
+
+const topPagesFixture = [
+  { emotion: "joy", items: [{ id: "pv-omon", title: "Омон Ра", titleEn: "Omon Ra", year: 1992, page: 12, score: 0.94, quote: "Это было не сияние, не музыка – а что-то совсем иное." }] },
+  { emotion: "fear", items: [{ id: "pv-chapaev", title: "Чапаев и Пустота", titleEn: "Chapaev and Void", year: 1996, page: 40, score: 0.99, quote: "Сказать, что я испугался – значит не сказать ничего." }] },
+];
+
+test("home shows the wordmark, project links and top pages by emotion; search, language and theme switch", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
-  await page.route("**/atlas.json", (route) => route.fulfill({ json: atlas }));
-  await page.route("**/api/catalog/search?*", (route) =>
-    route.fulfill({ json: { hits: [{ id: "205", title: "Walden, and On The Duty Of Civil Disobedience", author: "Henry David Thoreau", language: "en" }] } }),
-  );
+  await page.route("**/api/corpus", (route) => route.fulfill({ json: pelevinList }));
+  await page.route("**/api/corpus/top-pages?*", (route) => {
+    expect(new URL(route.request().url()).searchParams.get("per")).toBe("5");
+    return route.fulfill({ json: topPagesFixture });
+  });
   await page.goto("/");
+  await page.evaluate(() => localStorage.setItem("pelevindb.lang", "en"));
+  await page.reload();
+  // Home shows the big logo in the hero; the header's small one stays out of the way (and out of the a11y tree).
   await expect(page.getByRole("heading", { level: 1, name: "PelevinDB" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "upload epub · fb2 · txt" })).toBeVisible();
+  await expect(page.getByRole("banner").getByRole("img", { name: "PelevinDB" })).toHaveCount(0);
+  await expect(page.getByRole("contentinfo")).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Source on GitHub", exact: true })).toHaveAttribute("href", "https://github.com/takimunk/pelevindb");
+  await expect(page.getByRole("banner").getByRole("link", { name: /GitHub/ })).toHaveAttribute("href", "https://github.com/takimunk/pelevindb");
+  await expect(page.getByRole("link", { name: "central dogma specialist" })).toHaveAttribute("rel", "noopener");
+  const top = page.getByRole("region", { name: "The most emotional pages" });
+  await expect(top.getByRole("heading", { level: 3 })).toHaveCount(8);
+  const fear = top.getByRole("link", { name: /Chapaev and Void, page 40/ });
+  await expect(fear).toContainText("1996 · 0.99");
+  await expect(page.getByText(/Gutenberg|canon/i)).toHaveCount(0);
+  await fear.click();
+  await expect(page).toHaveURL(/#\/book\/pv-chapaev\?page=40$/);
 
-  const search = page.getByRole("combobox", { name: "Search books" });
-  await search.fill("Walden");
-  await expect(page.getByRole("option", { name: /MAP\s*Walden/ })).toBeVisible();
-  await expect(page.getByRole("option", { name: /Walden, and On The Duty/ })).toBeVisible();
-  await page.getByRole("option", { name: /MAP\s*Walden/ }).click();
-  await expect(page).toHaveURL(/#\/map\?focus=pg-900/);
-  await expect(page.locator(".star-card")).toContainText("Walden");
+  await page.goto("/#/");
+  await page.keyboard.press("/");
+  const dialog = page.getByRole("dialog", { name: "Search" });
+  await dialog.getByRole("combobox", { name: "Search books" }).fill("void");
+  await expect(dialog.getByRole("option", { name: /Chapaev and Void/ })).toBeVisible();
+  await dialog.getByRole("combobox", { name: "Search books" }).fill("пустота");
+  await dialog.getByRole("option", { name: /Chapaev and Void/ }).click();
+  await expect(page).toHaveURL(/#\/book\/pv-chapaev$/);
+
+  await page.goto("/#/");
+  await page.getByRole("button", { name: "Russian" }).click();
+  await expect(page.getByRole("link", { name: "Обзор", exact: true })).toHaveAttribute("aria-current", "page");
+  await expect(page.getByRole("heading", { level: 2, name: "Самые эмоциональные страницы" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Исходный код на GitHub", exact: true })).toBeVisible();
+  await expect(page.locator("html")).toHaveAttribute("lang", "ru");
+  await page.getByRole("button", { name: "английский" }).click();
+
+  const theme = page.locator(".theme-toggle");
+  await theme.click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  await theme.click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+
+  await page.keyboard.press("4");
+  await expect(page).toHaveURL(/#\/blog$/);
+  await page.keyboard.press("5");
+  await expect(page).toHaveURL(/#\/about$/);
+  await page.keyboard.press("2");
+  await expect(page.getByRole("heading", { level: 1, name: "Pelevin’s works" })).toBeVisible();
+  await expect(page.getByRole("banner").getByRole("link", { name: "PelevinDB, home" })).toBeVisible();
   expect(errors).toEqual([]);
+});
+
+test("home says so when the corpus has not been read yet", async ({ page }) => {
+  await page.route("**/api/corpus/top-pages?*", (route) => route.fulfill({ status: 404, json: { error: "No corpus yet" } }));
+  await page.goto("/");
+  await expect(page.getByText("The pages have not been read yet.", { exact: false })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
 test("analysed book shows cost, radar, brief, quotes, every chart, the reader and exports the dataset", async ({ page }) => {
@@ -141,7 +204,7 @@ test("analysed book shows cost, radar, brief, quotes, every chart, the reader an
   page.on("pageerror", (e) => errors.push(e.message));
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.route("**/atlas.json", (route) => route.fulfill({ json: atlas }));
-  await page.route("**/api/status", (route) => route.fulfill({ json: { configured: true, brief: true } }));
+  await page.route("**/api/status", (route) => route.fulfill({ json: { localMode: true, configured: true, brief: true } }));
   let n = 0;
   let dossier: Record<string, unknown> | null = null;
   await page.route("**/api/analyze", (route) => route.fulfill({ json: pageAnswer(n++) }));
@@ -162,12 +225,11 @@ test("analysed book shows cost, radar, brief, quotes, every chart, the reader an
   await expect(page.locator(".cost")).toContainText("$");
   await expect(page.locator(".hero-radar svg")).toBeVisible();
   await expect(page.locator(".quotes li").first()).toBeVisible();
-  for (const title of ["BRIEF", "QUOTES", "INSIGHTS", "DNA", "SPECTROGRAM", "PULSE", "MOOD", "NARRATION", "SHAPE", "TEXTURE", "WHOLE BOOK", "THEMES", "NEIGHBOURS"]) {
-    await expect(page.getByRole("heading", { name: title, exact: true })).toBeVisible();
+  for (const title of ["Brief", "Quotes", "Insights", "DNA", "Spectrogram", "Pulse", "Mood", "Narration", "Shape", "Texture", "Whole book", "Themes", "Neighbours"]) {
+    await expect(section(page, title)).toBeVisible();
   }
-  await expect(page.getByRole("heading", { name: "NEURAL TRACE" })).toHaveCount(0);
   const headings = await page.locator(".panel-head h3").allTextContents();
-  expect(headings.slice(0, 2)).toEqual(["BRIEF", "QUOTES"]);
+  expect(headings.slice(0, 2)).toEqual(["Brief", "Quotes"]);
   await expect(page.locator(".hero-strip .pixels i")).toHaveCount(85);
   await expect(page.locator(".ridge-themes .ridge-row svg")).toHaveCount(10);
   await expect(page.locator(".ridge-emotions .ridge-row svg")).toHaveCount(8);
@@ -176,8 +238,8 @@ test("analysed book shows cost, radar, brief, quotes, every chart, the reader an
   await expect(page.locator(".chart-caption")).toContainText("peaks on p.");
   await expect(page.locator(".pulse-marks li")).toHaveCount(await page.locator(".quotes li").count());
 
-  const texture = (await page.getByRole("heading", { name: "TEXTURE", exact: true }).boundingBox())!;
-  const whole = (await page.getByRole("heading", { name: "WHOLE BOOK", exact: true }).boundingBox())!;
+  const texture = (await section(page, "Texture").boundingBox())!;
+  const whole = (await section(page, "Whole book").boundingBox())!;
   expect(Math.abs(texture.y - whole.y)).toBeLessThan(4);
   expect(whole.x).toBeGreaterThan(texture.x + 300);
 
@@ -224,7 +286,7 @@ test("analysed book shows cost, radar, brief, quotes, every chart, the reader an
 });
 
 test("TXT import has no invented scores; blank and unsupported files fail clearly", async ({ page }) => {
-  await page.route("**/api/status", (route) => route.fulfill({ json: { configured: false } }));
+  await page.route("**/api/status", (route) => route.fulfill({ json: { localMode: true, configured: false } }));
   await page.goto("/");
   await upload(page, "journey.txt", "A calm morning.\n\nA storm is coming.");
   await expect(page.locator(".book-title")).toHaveText("journey");
@@ -272,7 +334,7 @@ test("EPUB follows spine order and reads XHTML chapters with self-closing tags",
 });
 
 test("analysis survives a partial failure and resumes without recomputing finished pages", async ({ page }) => {
-  await page.route("**/api/status", (route) => route.fulfill({ json: { configured: true } }));
+  await page.route("**/api/status", (route) => route.fulfill({ json: { localMode: true, configured: true } }));
   let count = 0,
     profiles = 0,
     fail = true;
@@ -299,7 +361,7 @@ test("analysis survives a partial failure and resumes without recomputing finish
   expect(count).toBe(before + 1);
   // Page completion can render before the subsequent whole-book profile request.
   await expect.poll(() => profiles).toBe(1);
-  await expect(page.getByRole("heading", { name: "SPECTROGRAM" })).toBeVisible();
+  await expect(section(page, "Spectrogram")).toBeVisible();
   await expect(button(page, "map")).toBeEnabled();
 });
 
@@ -360,10 +422,10 @@ test("map switches 2D/3D, takes any answer as an axis, shows coordinates on hove
     await page.waitForTimeout(400);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), path).toBe(true);
   }
-  await page.getByRole("button", { name: "Find book" }).click();
-  await expect(page.getByRole("dialog", { name: "Find book" })).toBeVisible();
+  await page.getByRole("button", { name: "Search the books" }).click();
+  await expect(page.getByRole("dialog", { name: "Search" })).toBeVisible();
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("dialog", { name: "Find book" })).toHaveCount(0);
+  await expect(page.getByRole("dialog", { name: "Search" })).toHaveCount(0);
   expect(errors).toEqual([]);
 });
 
@@ -372,7 +434,7 @@ test("canon books open read-only from the library, the map and search with brief
   page.on("pageerror", (e) => errors.push(e.message));
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.route("**/atlas.json", (route) => route.fulfill({ json: atlas }));
-  await page.route("**/api/status", (route) => route.fulfill({ json: { configured: true, brief: true } }));
+  await page.route("**/api/status", (route) => route.fulfill({ json: { localMode: true, configured: true, brief: true } }));
   await page.route("**/api/corpus", (route) => route.fulfill({ json: canonList }));
   const fetched: string[] = [];
   await page.route("**/api/corpus/*", (route) => {
@@ -382,7 +444,7 @@ test("canon books open read-only from the library, the map and search with brief
   });
 
   await page.goto("/#/library");
-  await expect(button(page, "canon")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: /^Pelevin’s works/ })).toHaveAttribute("aria-pressed", "true");
   const rows = page.locator(".canon-table a.bt-row");
   await expect(rows).toHaveCount(2);
   await expect(rows.first()).toContainText("Meditations");
@@ -395,20 +457,20 @@ test("canon books open read-only from the library, the map and search with brief
 
   await expect(page).toHaveURL(/#\/book\/pg-901$/);
   await expect(page.locator(".book-title")).toHaveText("Meditations");
-  await expect(page.locator(".corpus-badge")).toHaveText("corpus · read by jev");
-  await expect(page.locator(".eyebrow").first()).toContainText("canon #2");
+  await expect(page.locator(".corpus-badge")).toHaveText("read by Jev");
+  await expect(page.locator(".eyebrow").first()).toContainText("PelevinDB corpus #2");
   await expect(page.locator(".data-badge")).toContainText("complete");
   await expect(page.locator(".brief-logline")).toHaveText(briefAnswer.logline);
   await expect(page.locator(".book-facts")).toContainText(tokens(canonBook.pages * 5000 + 1500));
   await expect(page.locator(".cost")).toContainText("$");
-  for (const title of ["BRIEF", "QUOTES", "INSIGHTS", "DNA", "SPECTROGRAM", "PULSE", "MOOD", "NARRATION", "SHAPE", "TEXTURE", "WHOLE BOOK", "THEMES", "NEIGHBOURS"]) {
-    await expect(page.getByRole("heading", { name: title, exact: true })).toBeVisible();
+  for (const title of ["Brief", "Quotes", "Insights", "DNA", "Spectrogram", "Pulse", "Mood", "Narration", "Shape", "Texture", "Whole book", "Themes", "Neighbours"]) {
+    await expect(section(page, title)).toBeVisible();
   }
   await expect(page.locator(".hero-radar svg")).toBeVisible();
   await expect(page.locator(".hero-strip .pixels i")).toHaveCount(85);
   for (const label of ["analyze", "resume", "write brief"]) await expect(button(page, label)).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Delete book" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "rewrite" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /rewrite/i })).toHaveCount(0);
   await expect(button(page, "export")).toBeVisible();
 
   await page.getByRole("button", { name: "explore", exact: true }).click();
@@ -421,25 +483,143 @@ test("canon books open read-only from the library, the map and search with brief
 
   await page.getByRole("link", { name: "Map" }).click();
   await page.getByRole("button", { name: /Meditations Fixture Author/ }).click();
-  await expect(page.locator(".star-card")).toContainText(`canon · jev read all ${canonBook.pages} pages`);
-  await expect(page.getByRole("button", { name: /Meditations Fixture Author/ })).toContainText("▣");
+  await expect(page.locator(".star-card")).toContainText(`corpus · Jev read all ${canonBook.pages} pages`);
+  await expect(page.getByRole("button", { name: /Meditations Fixture Author/ }).locator(".glyph.canon")).toHaveCount(1);
   await button(page, "open book →").click();
   await expect(page).toHaveURL(/#\/book\/pg-901$/);
   await expect(page.locator(".brief-logline")).toHaveText(briefAnswer.logline);
 
   await page.keyboard.press("/");
   await page.getByRole("combobox", { name: "Search books" }).fill("Meditations");
-  await page.getByRole("option", { name: /CAN\s*Meditations/ }).click();
+  await page.getByRole("option", { name: /Meditations/ }).click();
   await expect(page.locator(".book-title")).toHaveText("Meditations");
   expect(fetched).toEqual(["pg-901"]);
 
   await page.goto("/#/book/pg-999");
-  await expect(page.getByRole("heading", { name: "404 · book not found" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Book not found" })).toBeVisible();
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/#/library?tab=canon");
   await expect(page.locator(".canon-table a.bt-row")).toHaveCount(2);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test("corpus books send excerpts and open their full text one page at a time", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const excerptBook = {
+    ...canonBook,
+    id: "pv-generation-p",
+    title: "Generation «П»",
+    titleEn: "Homo Zapiens",
+    year: 1999,
+    kind: "novel",
+    rank: 1,
+    gutenberg: null,
+    text: null,
+    excerpts: canonSegments.map((s) => s.text.slice(0, 120)),
+  };
+  await page.route("**/api/corpus", (route) =>
+    route.fulfill({ json: { available: true, books: [{ ...canonList.books[0], id: excerptBook.id, title: excerptBook.title, titleEn: "Homo Zapiens", year: 1999, kind: "novel", gutenberg: null }] } }),
+  );
+  await page.route("**/api/corpus/pv-generation-p", (route) => route.fulfill({ json: excerptBook }));
+  const requested: number[] = [];
+  let release: () => void = () => {};
+  const gate = new Promise<void>((r) => (release = r));
+  await page.route("**/api/corpus/pv-generation-p/page/*", async (route) => {
+    const n = Number(route.request().url().split("/").at(-1));
+    requested.push(n);
+    if (n === 2) await gate;
+    const s = canonSegments[n - 1];
+    return s ? route.fulfill({ json: { page: n, text: s.text, start: s.start, end: s.end } }) : route.fulfill({ status: 404, json: { error: "This page is not in the corpus." } });
+  });
+
+  await page.goto("/#/book/pv-generation-p");
+  await expect(page.locator(".book-title")).toHaveText("Homo Zapiens");
+  await expect(page.locator(".book-subtitle")).toHaveText("Generation «П»");
+  await expect(page.locator(".book-hero .eyebrow")).toContainText("Novel · 1999");
+  await expect(page.locator(".excerpt-note")).toContainText("one page at a time");
+  await expect(page.locator(".book-facts")).toContainText(String(canonSegments.length));
+  await expect(page.locator(".quotes li").first()).toBeVisible();
+  expect(requested).toEqual([]);
+
+  await page.goto("/#/book/pv-generation-p?page=2");
+  await expect(page.locator(".reader-notice")).toContainText("Loading the page");
+  await expect(page.locator(".reader-excerpt")).toContainText(canonSegments[1].text.slice(0, 40).trim());
+  release();
+  const deep = canonSegments[1].text.slice(600, 660).trim();
+  await expect(page.locator(".reader-text")).toContainText(deep);
+  await expect(page.locator(".reader-one-page")).toHaveText("One page at a time");
+  await page.getByRole("button", { name: "Next page" }).click();
+  await expect(page.locator(".reader-page")).toContainText("p.3");
+  await expect(page.locator(".reader-one-page")).toBeVisible();
+  await expect.poll(() => Math.max(...requested)).toBeLessThanOrEqual(4);
+  expect(new Set(requested).size).toBeLessThanOrEqual(4);
+  await page.keyboard.press("Escape");
+
+  await page.locator(".lang-switch button[lang=ru]").click();
+  await expect(page.locator(".book-title")).toHaveText("Generation «П»");
+  await expect(page.locator(".book-subtitle")).toHaveText("Homo Zapiens");
+  await expect(page.locator(".book-hero .eyebrow")).toContainText("Роман · 1999");
+  await expect(section(page, "Спектрограмма")).toBeVisible();
+  await expect(page.locator(".excerpt-note")).toContainText("по одной странице");
+  await page.goto("/#/book/pv-generation-p?page=2");
+  await expect(page.locator(".reader-one-page")).toHaveText("По одной странице");
+  await expect(page.locator(".reader-page")).toContainText("с. 2");
+  expect(errors).toEqual([]);
+});
+
+test("the public site hides uploading, your library and the analysis actions", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  let analyzed = 0;
+  await page.route("**/api/status", (route) => route.fulfill({ json: { localMode: false, configured: false, brief: false } }));
+  await page.route("**/api/analyze", (route) => ((analyzed += 1), route.fulfill({ status: 404, json: { error: "Not available on the public site." } })));
+  await page.route("**/atlas.json", (route) => route.fulfill({ json: atlas }));
+  await page.route("**/api/corpus", (route) => route.fulfill({ json: canonList }));
+  await page.route("**/api/corpus/pg-901", (route) => route.fulfill({ json: canonBook }));
+  const indexedDb: string[] = [];
+  await page.addInitScript(() => {
+    const open = indexedDB.open.bind(indexedDB);
+    indexedDB.open = (...args: Parameters<typeof indexedDB.open>) => {
+      (window as unknown as { __idb: string[] }).__idb = [...((window as unknown as { __idb?: string[] }).__idb ?? []), String(args[0])];
+      return open(...args);
+    };
+  });
+
+  await page.goto("/");
+  await expect(page.locator(".topbar .search-trigger")).toBeVisible();
+  await page.waitForTimeout(300);
+  await expect(page.locator(".upload-button")).toHaveCount(0);
+  await expect(page.locator("input[type=file]")).toHaveCount(0);
+  await expect(page.locator(".footer-meta")).toHaveCount(0);
+  await page.keyboard.press("u");
+  await expect(page.locator("input[type=file]")).toHaveCount(0);
+
+  await page.goto("/#/library?tab=mine");
+  await expect(page.locator(".canon-table a.bt-row").first()).toBeVisible();
+  await expect(page.locator(".shelf-tabs")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /upload/i })).toHaveCount(0);
+
+  await page.keyboard.press("/");
+  await page.getByRole("combobox", { name: "Search books" }).fill("Meditations");
+  await expect(page.getByRole("option", { name: /Meditations/ }).first()).toBeVisible();
+  await expect(page.getByRole("option", { name: /upload/i })).toHaveCount(0);
+  await page.keyboard.press("Escape");
+
+  await page.goto("/#/book/pg-901");
+  await expect(page.locator(".book-title")).toHaveText("Meditations");
+  for (const label of ["analyze", "resume", "write brief", "rewrite"]) await expect(button(page, label)).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Delete book" })).toHaveCount(0);
+
+  await page.goto("/#/map");
+  await expect(page.locator(".graph canvas")).toBeVisible();
+  await expect(page.locator(".graph-legend .glyph.own")).toHaveCount(0);
+  indexedDb.push(...((await page.evaluate(() => (window as unknown as { __idb?: string[] }).__idb)) ?? []));
+  expect(indexedDb).toEqual([]);
+  expect(analyzed).toBe(0);
   expect(errors).toEqual([]);
 });
 
@@ -452,11 +632,19 @@ test.describe("phone workflows", () => {
     test(`library, book, reader, search and map work at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 844 });
       await page.route("**/atlas.json", (route) => route.fulfill({ json: atlas }));
-      await page.route("**/api/status", (route) => route.fulfill({ json: { configured: false } }));
+      await page.route("**/api/status", (route) => route.fulfill({ json: { localMode: true, configured: false } }));
       await page.route("**/api/corpus", (route) => route.fulfill({ json: canonList }));
       await page.route("**/api/corpus/pg-901", (route) => route.fulfill({ json: canonBook }));
       const fits = async () => {
-        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+        // On failure, name what sticks out, so a regression points at its element.
+        const wide = await page.evaluate(() => {
+          if (document.documentElement.scrollWidth <= innerWidth) return [];
+          return [...document.querySelectorAll("body *")]
+            .filter((el) => el.getBoundingClientRect().right > innerWidth + 0.5)
+            .slice(0, 8)
+            .map((el) => `${el.tagName.toLowerCase()}.${String(el.className)} → ${Math.round(el.getBoundingClientRect().right)}`);
+        });
+        expect(wide, `page wider than ${width}px`).toEqual([]);
       };
       const touchTarget = async (selector: string) => {
         const box = await page.locator(selector).first().boundingBox();
@@ -467,11 +655,11 @@ test.describe("phone workflows", () => {
       if (width === 390) await page.screenshot({ path: "/tmp/xbook-mobile-home.png", fullPage: true });
       await touchTarget(".nav a");
       expect(await page.evaluate(() => document.activeElement?.tagName)).not.toBe("INPUT");
-      await page.getByRole("button", { name: "Find book", exact: true }).tap();
-      await page.getByRole("dialog", { name: "Find book" }).getByRole("combobox", { name: "Search books" }).fill("Meditations");
-      await expect(page.getByRole("option", { name: /CAN\s*Meditations/ })).toBeVisible();
+      await page.getByRole("button", { name: "Search the books", exact: true }).tap();
+      await page.getByRole("dialog", { name: "Search" }).getByRole("combobox", { name: "Search books" }).fill("Meditations");
+      await expect(page.getByRole("option", { name: /Meditations/ })).toBeVisible();
       await page.getByRole("button", { name: "Close search" }).tap();
-      await expect(page.getByRole("dialog", { name: "Find book" })).toHaveCount(0);
+      await expect(page.getByRole("dialog", { name: "Search" })).toHaveCount(0);
 
       await page.getByRole("link", { name: "Library", exact: true }).tap();
       await expect(page.locator(".canon-cards > li")).toHaveCount(2);
@@ -479,7 +667,7 @@ test.describe("phone workflows", () => {
       await page.locator(".shelf-filter-toggle").tap();
       await expect(page.getByRole("combobox", { name: "Filter by genre" })).toBeVisible();
       await page.locator(".shelf-filter-toggle").tap();
-      await page.getByRole("combobox", { name: "Sort canon books" }).selectOption("pages");
+      await page.getByRole("combobox", { name: "Sort works" }).selectOption("pages");
       await page.getByRole("button", { name: "Reverse sort order" }).tap();
       await expect(page.locator(".canon-card-link").first()).toContainText("Emma");
       await page.locator(".canon-card-metrics summary").first().tap();
@@ -506,10 +694,10 @@ test.describe("phone workflows", () => {
       await expect(page.locator(".reader-analysis")).toBeHidden();
       await touchTarget(".reader-nav button");
       if (width === 390) await page.screenshot({ path: "/tmp/xbook-mobile-reader.png" });
-      await page.getByRole("button", { name: "Show page analysis +" }).tap();
+      await page.getByRole("button", { name: "Show page analysis" }).tap();
       await expect(page.locator(".reader-analysis")).toBeVisible();
       await fits();
-      await page.getByRole("button", { name: "Hide page analysis −" }).tap();
+      await page.getByRole("button", { name: "Hide page analysis" }).tap();
       await page.getByRole("button", { name: "Next page" }).tap();
       await page.getByRole("button", { name: "Close reader" }).tap();
       await expect(page.locator(".reader")).toHaveCount(0);
@@ -553,7 +741,7 @@ test.describe("phone workflows", () => {
       await upload(page, "A-very-long-title-that-needs-to-wrap-on-a-phone.txt", "A calm morning. ".repeat(300));
       await fits();
       await page.getByRole("link", { name: "Library", exact: true }).tap();
-      await button(page, "your books").tap();
+      await page.getByRole("button", { name: /^Your books/ }).tap();
       await expect(page.locator("a.bt-row .bt-author").first()).toBeVisible();
       await fits();
       await page.locator("a.bt-row").first().tap();

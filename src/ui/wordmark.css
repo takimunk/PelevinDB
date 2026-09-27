@@ -1,0 +1,53 @@
+/* The PelevinDB logo (src/ui/Wordmark.tsx): block-letter art, ink only (currentColor). */
+.wordmark {
+  display: block;
+  color: var(--ink);
+}
+.wordmark-art {
+  margin: 0;
+  font-family: var(--mono);
+  font-weight: 400;
+  font-size-adjust: none;
+  line-height: 1;
+  letter-spacing: 0;
+  white-space: pre;
+  overflow: hidden;
+  user-select: none;
+}
+.wordmark-art-stacked {
+  display: none;
+}
+
+/* Header: 6 rows at 6px ≈ 36px tall, 77 columns ≈ 280px wide. Phones: the stacked art, 13 rows in ~40px. */
+.wordmark-header .wordmark-art {
+  font-size: 6px;
+}
+@media (max-width: 860px) {
+  .wordmark-header .wordmark-art-wide {
+    display: none;
+  }
+  .wordmark-header .wordmark-art-stacked {
+    display: block;
+    font-size: 3.1px;
+  }
+}
+
+/* Hero: fills its container; a monospace cell is 0.6em, so N columns fit at 100cqi / (N × 0.6). */
+.wordmark-hero {
+  width: 100%;
+  container-type: inline-size;
+}
+.wordmark-hero .wordmark-art-wide {
+  font-size: clamp(4px, calc(100cqi / 46.5), 13px);
+}
+.wordmark-hero .wordmark-art-stacked {
+  font-size: clamp(4px, calc(100cqi / 32.6), 13px);
+}
+@container (max-width: 420px) {
+  .wordmark-hero .wordmark-art-wide {
+    display: none;
+  }
+  .wordmark-hero .wordmark-art-stacked {
+    display: block;
+  }
+}

@@ -21,6 +21,9 @@ test("OpenPanel records initial and hash navigation without private book ids or 
   await page.evaluate(() => { location.hash = "/book/pg-1342?page=2"; });
   await expect.poll(() => events.length).toBe(3);
   expect(events[2].payload.properties.__path).toBe(`${baseURL}/book/pg-1342`);
+  await page.evaluate(() => { location.hash = "/book/pv-generation-p?page=3"; });
+  await expect.poll(() => events.length).toBe(4);
+  expect(events[3].payload.properties.__path).toBe(`${baseURL}/book/pv-generation-p`);
 });
 
 test("analytics config failure does not prevent the app from opening", async ({ page }) => {

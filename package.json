@@ -9,8 +9,8 @@
     "start": "NODE_ENV=production node --env-file-if-exists=.env server/index.ts",
     "test": "tsx --test tests/*.test.ts",
     "test:e2e": "playwright test",
-    "atlas": "node --env-file-if-exists=.env scripts/build-atlas.ts",
-    "greatest": "node scripts/fetch-greatest.ts",
+    "pelevin:ingest": "node scripts/ingest-pelevin.ts",
+    "pelevin:eda": "python3 scripts/eda-pelevin.py",
     "corpus": "node --env-file-if-exists=.env scripts/analyze-corpus.ts"
   },
   "dependencies": {

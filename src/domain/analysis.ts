@@ -28,7 +28,7 @@ export const intensity = (a: SegmentAnalysis | null | undefined) =>
   a ? Math.max(...Object.values(a.emotions)) : 0;
 
 export const emotionColor = (id: EmotionId | "neutral") =>
-  EMOTIONS.find((e) => e.id === id)?.color ?? "#6f7380";
+  EMOTIONS.find((e) => e.id === id)?.color ?? "#8a8780";
 export const moodColor = (id: MoodId) => MOODS.find((m) => m.id === id)!.color;
 export const modeColor = (id: ModeId) => MODES.find((m) => m.id === id)!.color;
 
@@ -119,12 +119,12 @@ export function smooth(values: (number | null)[], sigma = Math.max(1, values.len
 }
 
 export const ARC_SHAPES = [
-  { id: "rise", label: "Rags to riches", hint: "Steady rise", f: (t: number) => t },
-  { id: "fall", label: "Tragedy", hint: "Steady fall", f: (t: number) => -t },
-  { id: "hole", label: "Man in a hole", hint: "Fall, then rise", f: (t: number) => -Math.sin(Math.PI * t) },
-  { id: "icarus", label: "Icarus", hint: "Rise, then fall", f: (t: number) => Math.sin(Math.PI * t) },
-  { id: "cinderella", label: "Cinderella", hint: "Rise, fall, rise", f: (t: number) => t + 0.35 * Math.sin(2 * Math.PI * t) },
-  { id: "oedipus", label: "Oedipus", hint: "Fall, rise, fall", f: (t: number) => -t - 0.35 * Math.sin(2 * Math.PI * t) },
+  { id: "rise", label: "Rags to riches", hint: "Steady rise", ru: "Из грязи в князи", hintRu: "Ровный подъём", f: (t: number) => t },
+  { id: "fall", label: "Tragedy", hint: "Steady fall", ru: "Трагедия", hintRu: "Ровное падение", f: (t: number) => -t },
+  { id: "hole", label: "Man in a hole", hint: "Fall, then rise", ru: "Человек в яме", hintRu: "Падение, затем подъём", f: (t: number) => -Math.sin(Math.PI * t) },
+  { id: "icarus", label: "Icarus", hint: "Rise, then fall", ru: "Икар", hintRu: "Подъём, затем падение", f: (t: number) => Math.sin(Math.PI * t) },
+  { id: "cinderella", label: "Cinderella", hint: "Rise, fall, rise", ru: "Золушка", hintRu: "Подъём, падение, подъём", f: (t: number) => t + 0.35 * Math.sin(2 * Math.PI * t) },
+  { id: "oedipus", label: "Oedipus", hint: "Fall, rise, fall", ru: "Эдип", hintRu: "Падение, подъём, падение", f: (t: number) => -t - 0.35 * Math.sin(2 * Math.PI * t) },
 ] as const;
 export type ArcId = (typeof ARC_SHAPES)[number]["id"] | "flat";
 
@@ -190,17 +190,17 @@ export function volatility(analyses: Analyses) {
   return count ? sum / count : 0;
 }
 
-export type Moment = { id: string; label: string; hint: string; index: number; value: number; color: string };
+export type Moment = { id: string; label: string; hint: string; ru: string; hintRu: string; index: number; value: number; color: string };
 
 /** Extreme pages worth opening: the climax, the quietest page, the brightest and darkest. */
 export function moments(analyses: Analyses): Moment[] {
-  const candidates: { id: string; label: string; hint: string; color: string; pick: (a: SegmentAnalysis) => number }[] = [
-    { id: "climax", label: "Climax", hint: "most tension and pace", color: "#ff4d3a", pick: (a) => a.texture.tension * 0.7 + a.texture.pace * 0.3 },
-    { id: "still", label: "Stillest page", hint: "slowest and most meditative", color: "#8fd3ff", pick: (a) => (1 - a.texture.pace) * 0.6 + a.mood.meditative * 0.4 },
-    { id: "light", label: "Brightest moment", hint: "most light and joy", color: "#ffd23f", pick: (a) => a.texture.valence * 0.6 + a.emotions.joy * 0.4 },
-    { id: "dark", label: "Darkest moment", hint: "least light, most sadness", color: "#5a7dff", pick: (a) => (1 - a.texture.valence) * 0.6 + a.emotions.sadness * 0.4 },
-    { id: "wonder", label: "Biggest surprise", hint: "strongest surprise", color: "#2fe0c0", pick: (a) => a.emotions.surprise },
-    { id: "inner", label: "Deepest interiority", hint: "most inside a character's mind", color: "#b77dff", pick: (a) => a.texture.interiority },
+  const candidates: { id: string; label: string; hint: string; ru: string; hintRu: string; color: string; pick: (a: SegmentAnalysis) => number }[] = [
+    { id: "climax", label: "Climax", hint: "most tension and pace", ru: "Кульминация", hintRu: "больше всего напряжения и темпа", color: "#d93b30", pick: (a) => a.texture.tension * 0.7 + a.texture.pace * 0.3 },
+    { id: "still", label: "Stillest page", hint: "slowest and most meditative", ru: "Самая тихая страница", hintRu: "медленнее и созерцательнее всего", color: "#5aa6d6", pick: (a) => (1 - a.texture.pace) * 0.6 + a.mood.meditative * 0.4 },
+    { id: "light", label: "Brightest moment", hint: "most light and joy", ru: "Самый светлый момент", hintRu: "больше всего света и радости", color: "#dba100", pick: (a) => a.texture.valence * 0.6 + a.emotions.joy * 0.4 },
+    { id: "dark", label: "Darkest moment", hint: "least light, most sadness", ru: "Самый тёмный момент", hintRu: "меньше всего света, больше всего грусти", color: "#4a5fd0", pick: (a) => (1 - a.texture.valence) * 0.6 + a.emotions.sadness * 0.4 },
+    { id: "wonder", label: "Biggest surprise", hint: "strongest surprise", ru: "Главная неожиданность", hintRu: "сильнее всего удивление", color: "#17998a", pick: (a) => a.emotions.surprise },
+    { id: "inner", label: "Deepest interiority", hint: "most inside a character's mind", ru: "Глубже всего в мыслях", hintRu: "больше всего внутри героя", color: "#9152c8", pick: (a) => a.texture.interiority },
   ];
   const used = new Set<number>();
   const result: Moment[] = [];
@@ -217,7 +217,7 @@ export function moments(analyses: Analyses): Moment[] {
     });
     if (best !== -1) {
       used.add(best);
-      result.push({ id: c.id, label: c.label, hint: c.hint, color: c.color, index: best, value });
+      result.push({ id: c.id, label: c.label, hint: c.hint, ru: c.ru, hintRu: c.hintRu, color: c.color, index: best, value });
     }
   }
   return result;

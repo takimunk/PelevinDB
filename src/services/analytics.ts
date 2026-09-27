@@ -3,7 +3,7 @@ import { OpenPanel } from "@openpanel/web";
 /** Group private local books together and omit search/filter/page parameters. */
 export function analyticsPath(hash: string): string {
   const path = hash.replace(/^#/, "").split("?")[0];
-  if (/^\/book\/pg-\d+$/.test(path)) return path;
+  if (/^\/book\/(?:pg-\d+|pv-[a-z0-9-]+)$/.test(path)) return path;
   if (path.startsWith("/book/")) return "/book/local";
   if (path === "/map" || path === "/library") return path;
   return "/";

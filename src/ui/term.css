@@ -1,0 +1,73 @@
+/* Chart primitives from term.tsx. Chrome uses ink tokens; the fill colour is data and comes inline. */
+.meter {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+  height: 6px;
+  vertical-align: middle;
+  background: var(--surface-2);
+  border-radius: 1px;
+  overflow: hidden;
+}
+.meter > i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--ink);
+  border-radius: 1px;
+}
+.meter.thin {
+  height: 3px;
+}
+.track {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+  height: 14px;
+  vertical-align: middle;
+}
+.track::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  border-top: 1px solid var(--line-2);
+}
+.track::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 3px;
+  bottom: 3px;
+  border-left: 1px solid var(--line-2);
+}
+.track-fill {
+  position: absolute;
+  top: calc(50% - 1px);
+  height: 2px;
+  background: var(--ink);
+  opacity: 0.55;
+}
+.track-dot {
+  position: absolute;
+  top: 50%;
+  width: 9px;
+  height: 9px;
+  margin: -4.5px 0 0 -4.5px;
+  border: 1.5px solid var(--ink);
+  border-radius: 50%;
+  background: var(--paper);
+  z-index: 1;
+}
+.key-swatch {
+  display: inline-block;
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin-right: 7px;
+  border-radius: 1px;
+  vertical-align: 0.05em;
+}
+.key-swatch.round {
+  border-radius: 50%;
+}

@@ -10,3 +10,4 @@ playwright-report/
 /library/
 data/*.db
 data/*.db-*
+.venv-eda/

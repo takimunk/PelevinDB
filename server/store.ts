@@ -4,11 +4,11 @@
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import type { BookBrief, BookProfile, SegmentAnalysis } from "../shared/types.ts";
+import { BRIEF_LANGS, type BookBrief, type BookKind, type BookProfile, type BriefLang, type SegmentAnalysis } from "../shared/types.ts";
 
 export const DEFAULT_DB = "data/xbook.db";
 
-const MIGRATIONS = [
+export const MIGRATIONS = [
   `CREATE TABLE books (
     id          TEXT PRIMARY KEY,
     source      TEXT NOT NULL,
@@ -68,11 +68,32 @@ const MIGRATIONS = [
     jev_tokens   INTEGER NOT NULL DEFAULT 0,
     brief_usd    REAL NOT NULL DEFAULT 0
   ) STRICT;`,
+  // v2: bibliographic fields for the Pelevin corpus; `rank` holds chronological order.
+  `ALTER TABLE books ADD COLUMN year INTEGER;
+  ALTER TABLE books ADD COLUMN kind TEXT;
+  ALTER TABLE books ADD COLUMN title_en TEXT;`,
+  // v3: briefs per language. Rebuilt so the key includes the language; every earlier brief is English.
+  `CREATE TABLE briefs_v3 (
+    book_id            TEXT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+    lang               TEXT NOT NULL DEFAULT 'en',
+    model              TEXT NOT NULL,
+    answer             TEXT NOT NULL,
+    prompt_tokens      INTEGER NOT NULL,
+    completion_tokens  INTEGER NOT NULL,
+    cost_usd           REAL NOT NULL,
+    created_at         TEXT NOT NULL,
+    PRIMARY KEY (book_id, lang, created_at)
+  ) STRICT;
+  INSERT INTO briefs_v3 (book_id, lang, model, answer, prompt_tokens, completion_tokens, cost_usd, created_at)
+    SELECT book_id, 'en', model, answer, prompt_tokens, completion_tokens, cost_usd, created_at FROM briefs;
+  DROP TABLE briefs;
+  ALTER TABLE briefs_v3 RENAME TO briefs;`,
 ];
 
 export type StoredBook = {
   id: string;
-  source: "gutenberg" | "upload";
+  source: "gutenberg" | "upload" | "pelevin";
+  /** Gutenberg id for "gutenberg"; for "pelevin", a hash of the stored text (a changed text gets a new row). */
   sourceRef: string;
   title: string;
   author: string;
@@ -80,11 +101,24 @@ export type StoredBook = {
   chars: number;
   pageChars: number;
   pages: number;
+  /** First publication year (Pelevin corpus; null for older sources). */
+  year?: number | null;
+  kind?: BookKind | null;
+  titleEn?: string | null;
 };
 
-export type BookProgress = StoredBook & { analysed: number; profiled: boolean; briefed: boolean };
+/** `briefed`: a brief exists in every language of BRIEF_LANGS; `briefedLangs`: the languages that have one. */
+export type BookProgress = StoredBook & { analysed: number; profiled: boolean; briefed: boolean; briefedLangs: BriefLang[] };
+
+const BOOK_COLUMNS = "id, source, source_ref, title, author, rank, chars, page_chars, pages, year, kind, title_en";
 
 const now = () => new Date().toISOString();
+
+function briefState(raw: unknown) {
+  const have = new Set(typeof raw === "string" ? raw.split(",") : []);
+  const briefedLangs = BRIEF_LANGS.filter((l) => have.has(l));
+  return { briefed: briefedLangs.length === BRIEF_LANGS.length, briefedLangs };
+}
 
 /** `readOnly` never creates or migrates the file, so the web server cannot touch what the corpus script writes. */
 export function openStore(path = process.env.XBOOK_DB || DEFAULT_DB, { readOnly = false } = {}) {
@@ -125,14 +159,21 @@ export function openStore(path = process.env.XBOOK_DB || DEFAULT_DB, { readOnly 
     chars: Number(r.chars),
     pageChars: Number(r.page_chars),
     pages: Number(r.pages),
+    year: r.year == null ? null : Number(r.year),
+    kind: r.kind == null ? null : (String(r.kind) as BookKind),
+    titleEn: r.title_en == null ? null : String(r.title_en),
   });
 
   const q = {
-    book: db.prepare("SELECT id, source, source_ref, title, author, rank, chars, page_chars, pages FROM books WHERE id = ?"),
+    book: db.prepare(`SELECT ${BOOK_COLUMNS} FROM books WHERE id = ?`),
+    books: db.prepare(`SELECT ${BOOK_COLUMNS} FROM books ORDER BY rank IS NULL, rank, title`),
+    deleteBook: db.prepare("DELETE FROM books WHERE id = ?"),
+    deleteAnswers: db.prepare("DELETE FROM analyses WHERE book_id = ?"),
+    updateMeta: db.prepare("UPDATE books SET title = :title, title_en = :titleEn, year = :year, kind = :kind, rank = :rank WHERE id = :id"),
     text: db.prepare("SELECT text FROM books WHERE id = ?"),
     insertBook: db.prepare(
-      `INSERT INTO books (id, source, source_ref, title, author, rank, chars, page_chars, pages, text, created_at)
-       VALUES (:id, :source, :sourceRef, :title, :author, :rank, :chars, :pageChars, :pages, :text, :at)`,
+      `INSERT INTO books (id, source, source_ref, title, author, rank, chars, page_chars, pages, text, created_at, year, kind, title_en)
+       VALUES (:id, :source, :sourceRef, :title, :author, :rank, :chars, :pageChars, :pages, :text, :at, :year, :kind, :titleEn)`,
     ),
     insertSegment: db.prepare("INSERT INTO segments (book_id, idx, start, end) VALUES (?, ?, ?, ?)"),
     segments: db.prepare("SELECT idx, start, end FROM segments WHERE book_id = ? ORDER BY idx"),
@@ -143,14 +184,14 @@ export function openStore(path = process.env.XBOOK_DB || DEFAULT_DB, { readOnly 
     putProfile: db.prepare(`INSERT OR REPLACE INTO profiles (book_id, rubric, model, answer, input_tokens, created_at) VALUES (?, ?, ?, ?, ?, ?)`),
     profile: db.prepare("SELECT answer FROM profiles WHERE book_id = ? AND rubric = ?"),
     putBrief: db.prepare(
-      `INSERT INTO briefs (book_id, model, answer, prompt_tokens, completion_tokens, cost_usd, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO briefs (book_id, lang, model, answer, prompt_tokens, completion_tokens, cost_usd, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     ),
-    brief: db.prepare("SELECT answer FROM briefs WHERE book_id = ? ORDER BY created_at DESC LIMIT 1"),
+    brief: db.prepare("SELECT answer FROM briefs WHERE book_id = ? AND lang = ? ORDER BY created_at DESC LIMIT 1"),
     progress: db.prepare(
-      `SELECT b.id, b.source, b.source_ref, b.title, b.author, b.rank, b.chars, b.page_chars, b.pages,
+      `SELECT b.id, b.source, b.source_ref, b.title, b.author, b.rank, b.chars, b.page_chars, b.pages, b.year, b.kind, b.title_en,
               (SELECT COUNT(*) FROM analyses a WHERE a.book_id = b.id AND a.rubric = :rubric) AS analysed,
               EXISTS (SELECT 1 FROM profiles p WHERE p.book_id = b.id AND p.rubric = :rubric) AS profiled,
-              EXISTS (SELECT 1 FROM briefs r WHERE r.book_id = b.id) AS briefed
+              (SELECT GROUP_CONCAT(DISTINCT r.lang) FROM briefs r WHERE r.book_id = b.id) AS brief_langs
        FROM books b ORDER BY b.rank IS NULL, b.rank, b.title`,
     ),
     stamp: db.prepare(
@@ -180,6 +221,11 @@ export function openStore(path = process.env.XBOOK_DB || DEFAULT_DB, { readOnly 
     finishRun: db.prepare("UPDATE runs SET finished_at = ?, jev_tokens = ?, brief_usd = ? WHERE id = ?"),
   };
 
+  const briefOf = (id: string, lang: BriefLang = "en"): BookBrief | null => {
+    const r = q.brief.get(id, lang) as { answer: string } | undefined;
+    return r ? { lang, ...JSON.parse(r.answer) } : null;
+  };
+
   return {
     db,
     close: () => db.close(),
@@ -193,9 +239,25 @@ export function openStore(path = process.env.XBOOK_DB || DEFAULT_DB, { readOnly 
     /** Stores a book with its exact page boundaries, so answers stay tied to the text they were given. */
     addBook(book: StoredBook, text: string, segments: { start: number; end: number }[]) {
       tx(() => {
-        q.insertBook.run({ ...book, rank: book.rank, text, at: now() });
+        q.insertBook.run({ ...book, rank: book.rank, year: book.year ?? null, kind: book.kind ?? null, titleEn: book.titleEn ?? null, text, at: now() });
         segments.forEach((s, i) => q.insertSegment.run(book.id, i, s.start, s.end));
       });
+    },
+    books: () => (q.books.all() as Record<string, unknown>[]).map(toBook),
+    /** Deletes the matching books with their pages, answers, profiles and briefs; returns how many went. */
+    deleteBooks(match: (b: StoredBook) => boolean) {
+      const ids = (q.books.all() as Record<string, unknown>[]).map(toBook).filter(match).map((b) => b.id);
+      tx(() => {
+        for (const id of ids) {
+          q.deleteAnswers.run(id);
+          q.deleteBook.run(id);
+        }
+      });
+      return ids.length;
+    },
+    /** Bibliographic fields change without touching the text, so stored answers stay valid. */
+    updateBookMeta(id: string, m: { title: string; titleEn: string | null; year: number | null; kind: BookKind | null; rank: number | null }) {
+      q.updateMeta.run({ id, ...m });
     },
     segments: (id: string) => q.segments.all(id) as { idx: number; start: number; end: number }[],
 
@@ -212,12 +274,21 @@ export function openStore(path = process.env.XBOOK_DB || DEFAULT_DB, { readOnly 
       const r = q.profile.get(id, rubric) as { answer: string } | undefined;
       return r ? JSON.parse(r.answer) : null;
     },
+    /** Stores a brief under its own `lang` (English when unset). Older briefs of the same language stay as history. */
     putBrief(id: string, b: BookBrief) {
-      q.putBrief.run(id, b.model, JSON.stringify(b), b.usage.prompt_tokens, b.usage.completion_tokens, b.usage.cost, b.createdAt);
+      const lang = b.lang ?? "en";
+      q.putBrief.run(id, lang, b.model, JSON.stringify({ ...b, lang }), b.usage.prompt_tokens, b.usage.completion_tokens, b.usage.cost, b.createdAt);
     },
-    brief(id: string): BookBrief | null {
-      const r = q.brief.get(id) as { answer: string } | undefined;
-      return r ? JSON.parse(r.answer) : null;
+    /** The latest brief in `lang`. */
+    brief: briefOf,
+    /** The latest brief in every language that has one. */
+    briefs(id: string): Partial<Record<BriefLang, BookBrief>> {
+      const out: Partial<Record<BriefLang, BookBrief>> = {};
+      for (const lang of BRIEF_LANGS) {
+        const b = briefOf(id, lang);
+        if (b) out[lang] = b;
+      }
+      return out;
     },
 
     progress(rubric: string): BookProgress[] {
@@ -225,7 +296,7 @@ export function openStore(path = process.env.XBOOK_DB || DEFAULT_DB, { readOnly 
         ...toBook(r),
         analysed: Number(r.analysed),
         profiled: Boolean(r.profiled),
-        briefed: Boolean(r.briefed),
+        ...briefState(r.brief_langs),
       }));
     },
     /** Changes whenever any stored answer, profile or brief of the book changes; cheap enough for an ETag. */

@@ -17,15 +17,23 @@ Runtime environment:
 - `OPENPANEL_CLIENT_ID`: public client ID from the OpenPanel PelevinDB project
 - `OPENPANEL_API_URL`: API URL shown by your OpenPanel installation (cloud default: `https://api.openpanel.dev`)
 - `XBOOK_DB=/app/data/xbook.db` (image default)
+- `LOCAL_MODE`: leave unset on the public site. Local mode (uploading and analysing your own
+  books, and the paid `/api/analyze`, `/api/profile` and `/api/brief` routes) is on by default
+  only when `NODE_ENV` is not `production`, so `npm run dev` has it and the container does not.
+  `LOCAL_MODE=1` turns it on in production (private use only); `LOCAL_MODE=0` turns it off in development.
+- `CORPUS_FULL_TEXT`: leave unset. The corpus is copyrighted: the book payload carries only short
+  excerpts, and `/api/corpus/:id/page/:n` serves one page at a time (60 pages a minute per client,
+  `CORPUS_PAGES_PER_MINUTE`). `CORPUS_FULL_TEXT=1` sends whole books, for local use only.
 
 Mount persistent storage at `/app/data`. Import the corpus with a SQLite backup or
 checkpointed copy into `xbook.db`; the container user (UID 1000) needs read access.
-The app starts without the corpus, but the canon will be empty. The bundled atlas
+The app starts without the corpus, but the library will be empty. The bundled atlas
 remains available. Never place the database in `public/` or the Docker image.
 
-Set `TYPESAFE_API_KEY` and `OPENROUTER_API_KEY` only in Coolify runtime variables.
-Each provider has a separate, application-wide **$10 lifetime budget**. The paid
-endpoints are public: visitors share this allowance. Search, reading, maps and saved
+Set `TYPESAFE_API_KEY` and `OPENROUTER_API_KEY` only in Coolify runtime variables, and only if
+the deployment runs in local mode; the public site never calls them (the paid routes answer 404
+unless `LOCAL_MODE=1`). Each provider has a separate, application-wide **$10 lifetime budget**.
+In local mode the paid endpoints are open to anyone who can reach the server, sharing this allowance. Search, reading, maps and saved
 results continue to work when the allowance is exhausted.
 
 Set `XBOOK_BUDGET_DB=/app/data/spending.db` on the persistent volume and keep
@@ -107,7 +115,7 @@ needed. If no client ID is configured, no analytics events are sent.
 
 The SDK tracks initial visits and hash navigation, including browser back/forward.
 It groups local books at `/book/local`, strips search/page parameters, and retains
-public Gutenberg book IDs. Referrers retain the origin only. It sends no book text,
+public corpus book IDs (`pv-…`). Referrers retain the origin only. It sends no book text,
 search text, user identities or session recordings. Visitor/device/location metrics
 are resolved by OpenPanel. Verify a live `screen_view` in the project after opening
 xbook, then check library → map navigation appears.
