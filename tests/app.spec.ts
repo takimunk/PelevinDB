@@ -312,6 +312,9 @@ test("map switches 2D/3D, takes any answer as an axis, shows coordinates on hove
   await expect(page.locator(".graph canvas")).toBeVisible();
   await expect(page.locator(".node-label")).toHaveCount(8);
   await expect(page.getByRole("group", { name: "Regions" }).getByRole("button")).toHaveCount(2);
+  const desktopLegend = (await page.locator(".graph-regions").boundingBox())!;
+  const desktopCanvas = (await page.locator(".graph canvas").boundingBox())!;
+  expect(desktopLegend.y).toBeGreaterThanOrEqual(desktopCanvas.y + desktopCanvas.height - 1);
 
   const walden = page.locator('.node-label[data-node="pg-900"]');
   await expect(walden).toHaveAttribute("style", /translate/);
@@ -511,6 +514,14 @@ test.describe("phone workflows", () => {
       await page.getByRole("link", { name: "Map", exact: true }).tap();
       await expect(page.locator(".graph canvas")).toBeVisible();
       await expect(page.locator(".graph-touch-help")).toBeVisible();
+      const legend = page.getByRole("group", { name: "Regions" });
+      await expect(legend.getByRole("button")).toHaveCount(2);
+      const legendBox = (await legend.boundingBox())!;
+      const mapBox = (await page.locator(".graph canvas").boundingBox())!;
+      expect(legendBox.y).toBeGreaterThanOrEqual(mapBox.y + mapBox.height);
+      await expect(page.locator(".graph-regions")).toHaveCSS("position", "static");
+      await legend.getByRole("button").first().tap();
+      await expect(legend.getByRole("button").first()).toHaveClass(/on/);
       await page.getByRole("button", { name: "Zoom in", exact: true }).tap();
       await page.getByRole("button", { name: "Reset map view" }).tap();
       await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
@@ -552,6 +563,10 @@ test.describe("phone workflows", () => {
       await page.getByRole("button", { name: "Close reader" }).tap();
       await fits();
       await page.goto("/#/map");
+      await expect(page.locator(".graph-regions")).toBeVisible();
+      const landscapeLegend = (await page.locator(".graph-regions").boundingBox())!;
+      const landscapeCanvas = (await page.locator(".graph canvas").boundingBox())!;
+      expect(landscapeLegend.y).toBeGreaterThanOrEqual(landscapeCanvas.y + landscapeCanvas.height);
       await fits();
     });
   }
