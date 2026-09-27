@@ -638,78 +638,87 @@ export function BookGraph({ stars, embedding, axes, coords, regions, mode, selec
   const hoveredRegion = hovered && showRegions ? regionOf.get(hovered.id) : undefined;
 
   return (
-    <div className="graph" ref={wrap} tabIndex={-1}>
-      <canvas ref={canvas} role="img" aria-label={`${mode === "2d" ? "2D" : "3D"} map of books`} />
-      <div className="graph-overlay" ref={overlay}>
-        {stars.map((s) => (
-          <span key={s.id} data-node={s.id} className={`node-label ${s.kind}`} aria-hidden="true">
-            <span>{s.title}</span>
-          </span>
-        ))}
-      </div>
-      {hovered && hover && (
-        <div
-          className="node-card"
-          style={{
-            left: Math.min(hover.x + 18, (wrap.current?.clientWidth ?? 800) - 330),
-            top: Math.max(8, hover.y - 20),
-          }}
-        >
-          <div className="node-card-title">
-            <b>{hovered.title}</b>
-            <span className="dim"> · {hovered.author}</span>
-          </div>
-          <div className="node-card-meta">
-            {hovered.kind === "library" ? "your book" : hovered.canon?.complete ? `canon · jev read all ${hovered.canon.pages} pages` : `atlas · jev read ${hovered.pagesRead ?? "?"} sampled pages`} ·
-            coverage {Math.round(hovered.fingerprint.coverage * 100)}%
-            {hoveredRegion != null && <span style={{ color: regionColor(hoveredRegion) }}> · {regions[hoveredRegion].name.toLowerCase()}</span>}
-          </div>
-          <PixelStrip values={fingerprintValues(hovered.fingerprint)} size={6} label="fingerprint coordinates" idle="85 coordinates · click to select" />
+    <div className="graph-layout">
+      <div className="graph" ref={wrap} tabIndex={-1}>
+        <canvas ref={canvas} role="img" aria-label={`${mode === "2d" ? "2D" : "3D"} map of books`} />
+        <div className="graph-overlay" ref={overlay}>
+          {stars.map((s) => (
+            <span key={s.id} data-node={s.id} className={`node-label ${s.kind}`} aria-hidden="true">
+              <span>{s.title}</span>
+            </span>
+          ))}
         </div>
-      )}
-      <div className="graph-hud">
-        <span className="graph-desktop-help">
-          <kbd>W</kbd>
-          <kbd>A</kbd>
-          <kbd>S</kbd>
-          <kbd>D</kbd> {mode === "2d" ? "pan" : "move"} <kbd>Q</kbd>
-          <kbd>E</kbd> {mode === "2d" ? "zoom" : "down/up"} · drag {mode === "2d" ? "pan" : "orbit"} · scroll zoom · <kbd>R</kbd> reset
-        </span>
-        <span className="graph-touch-help">Drag to {mode === "2d" ? "pan" : "rotate"} · pinch to zoom · tap a book</span>
-        <span className="graph-legend">
-          <i className="own" /> your book <i className="canon" /> canon, read in full <i className="ref" /> atlas · colour = leading emotion · edge label = similarity
-        </span>
-      </div>
-      <div className="graph-controls" role="group" aria-label="Map camera">
-        <button
-          aria-label="Zoom in"
-          onClick={() => {
-            view.current.distance = Math.max(6, view.current.distance / 1.25);
-            view.current.dirty = true;
-          }}
-        >
-          +
-        </button>
-        <button
-          aria-label="Zoom out"
-          onClick={() => {
-            view.current.distance = Math.min(90, view.current.distance * 1.25);
-            view.current.dirty = true;
-          }}
-        >
-          −
-        </button>
-        <button
-          aria-label="Reset map view"
-          onClick={() => {
-            Object.assign(view.current, mode === "2d" ? HOME_2D : HOME, {
-              goal: new THREE.Vector3(),
-              dirty: true,
-            });
-          }}
-        >
-          Reset
-        </button>
+        {hovered && hover && (
+          <div
+            className="node-card"
+            style={{
+              left: Math.min(hover.x + 18, (wrap.current?.clientWidth ?? 800) - 330),
+              top: Math.max(8, hover.y - 20),
+            }}
+          >
+            <div className="node-card-title">
+              <b>{hovered.title}</b>
+              <span className="dim"> · {hovered.author}</span>
+            </div>
+            <div className="node-card-meta">
+              {hovered.kind === "library" ? "your book" : hovered.canon?.complete ? `canon · jev read all ${hovered.canon.pages} pages` : `atlas · jev read ${hovered.pagesRead ?? "?"} sampled pages`}{" "}
+              · coverage {Math.round(hovered.fingerprint.coverage * 100)}%
+              {hoveredRegion != null && <span style={{ color: regionColor(hoveredRegion) }}> · {regions[hoveredRegion].name.toLowerCase()}</span>}
+            </div>
+            <PixelStrip values={fingerprintValues(hovered.fingerprint)} size={6} label="fingerprint coordinates" idle="85 coordinates · click to select" />
+          </div>
+        )}
+        <div className="graph-hud">
+          <span className="graph-desktop-help">
+            <kbd>W</kbd>
+            <kbd>A</kbd>
+            <kbd>S</kbd>
+            <kbd>D</kbd> {mode === "2d" ? "pan" : "move"} <kbd>Q</kbd>
+            <kbd>E</kbd> {mode === "2d" ? "zoom" : "down/up"} · drag {mode === "2d" ? "pan" : "orbit"} · scroll zoom · <kbd>R</kbd> reset
+          </span>
+          <span className="graph-touch-help">Drag to {mode === "2d" ? "pan" : "rotate"} · pinch to zoom · tap a book</span>
+          <span className="graph-legend">
+            <i className="own" /> your book <i className="canon" /> canon, read in full <i className="ref" /> atlas · colour = leading emotion · edge label = similarity
+          </span>
+        </div>
+        <div className="graph-controls" role="group" aria-label="Map camera">
+          <button
+            aria-label="Zoom in"
+            onClick={() => {
+              view.current.distance = Math.max(6, view.current.distance / 1.25);
+              view.current.dirty = true;
+            }}
+          >
+            +
+          </button>
+          <button
+            aria-label="Zoom out"
+            onClick={() => {
+              view.current.distance = Math.min(90, view.current.distance * 1.25);
+              view.current.dirty = true;
+            }}
+          >
+            −
+          </button>
+          <button
+            aria-label="Reset map view"
+            onClick={() => {
+              Object.assign(view.current, mode === "2d" ? HOME_2D : HOME, {
+                goal: new THREE.Vector3(),
+                dirty: true,
+              });
+            }}
+          >
+            Reset
+          </button>
+        </div>
+        <div className="graph-axes">
+          {axisNames.map((a, i) => (
+            <span key={i}>
+              <b style={{ color: AXIS_COLORS[i] }}>{"xyz"[i]}</b> {a.legend}
+            </span>
+          ))}
+        </div>
       </div>
       {showRegions && regions.length > 0 && (
         <div className="graph-regions" role="group" aria-label="Regions">
@@ -732,13 +741,6 @@ export function BookGraph({ stars, embedding, axes, coords, regions, mode, selec
           ))}
         </div>
       )}
-      <div className="graph-axes">
-        {axisNames.map((a, i) => (
-          <span key={i}>
-            <b style={{ color: AXIS_COLORS[i] }}>{"xyz"[i]}</b> {a.legend}
-          </span>
-        ))}
-      </div>
     </div>
   );
 }
