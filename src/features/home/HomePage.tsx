@@ -39,7 +39,7 @@ const T = {
     start: [
       { label: "Explore the map of every work", path: "/map?view=laugh" },
       { label: "In which book is love strongest?", path: "/library?view=themes&sort=love&dir=-1" },
-      { label: "Explore the most significant moments", path: "/library?tab=pages" },
+      { label: "Explore the most significant moments", path: "/library?tab=lines&dim=joy" },
     ],
   },
   ru: {
@@ -60,7 +60,7 @@ const T = {
     start: [
       { label: "Изучите карту всех произведений", path: "/map?view=laugh" },
       { label: "В какой книге любовь сильнее всего?", path: "/library?view=themes&sort=love&dir=-1" },
-      { label: "Исследуйте наиболее значимые моменты", path: "/library?tab=pages" },
+      { label: "Исследуйте наиболее значимые моменты", path: "/library?tab=lines&dim=joy" },
     ],
   },
 };

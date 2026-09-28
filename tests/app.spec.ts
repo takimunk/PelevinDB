@@ -151,19 +151,14 @@ const topPagesFixture = [
   { emotion: "fear", items: [{ id: "pv-chapaev", title: "Чапаев и Пустота", titleEn: "Chapaev and Void", year: 1996, page: 40, score: 0.99, quote: "Сказать, что я испугался – значит не сказать ничего." }] },
 ];
 
-test("home starting points open the requested map, works and moments views", async ({ page }) => {
+test("home starting points keep the map, works and joyful lines destinations", async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem("pelevindb.lang", "ru"));
   await page.route("**/api/corpus", (route) => route.fulfill({ json: canonList }));
   await page.route("**/atlas.json", (route) => route.fulfill({ json: atlas }));
-  await page.route("**/api/corpus/pages?*", (route) => {
-    const query = new URL(route.request().url()).searchParams;
-    expect(query.get("sort")).toBe("intensity");
-    expect(query.get("dir")).toBe("-1");
-    return route.fulfill({ json: {
-      total: 0, page: 1, pageSize: 25, maxPages: 5, pages: 0, rows: [], books: {},
-      facets: { book: {}, kind: {}, decade: {}, emotion: {}, mood: {}, mode: {}, theme: {} },
-    } });
-  });
+  await page.route("**/api/corpus/lines?*", (route) => route.fulfill({ json: {
+    total: 1, read: 1, page: 1, pageSize: 25, maxPages: 5, pages: 1, rows: [], books: {},
+    facets: { book: {}, kind: {}, decade: {}, flag: {}, act: {} },
+  } }));
 
   await page.goto("/");
   const start = page.getByRole("region", { name: "С чего начать" });
@@ -181,8 +176,8 @@ test("home starting points open the requested map, works and moments views", asy
 
   await page.goto("/#/");
   await start.getByRole("link", { name: "Исследуйте наиболее значимые моменты" }).click();
-  await expect(page).toHaveURL(/#\/library\?tab=pages$/);
-  await expect(page.getByRole("heading", { level: 1, name: "Страницы" })).toBeVisible();
+  await expect(page).toHaveURL(/#\/library\?tab=lines&dim=joy$/);
+  await expect(page.getByRole("radio", { name: "радость" })).toHaveAttribute("aria-checked", "true");
 
   await page.setViewportSize({ width: 320, height: 700 });
   await page.goto("/#/");
