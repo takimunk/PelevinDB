@@ -12,7 +12,7 @@ import { Meter, Swatch } from "../../ui/term.tsx";
 import { Search } from "../search/Search.tsx";
 import { useLocalMode } from "../../services/mode.ts";
 import { axisOptions, buildAxis, DEFAULT_AXES, placeStars, type AxisChoice } from "./axes.ts";
-import { MAP_PRESETS, matchPreset, type MapPreset } from "./presets.ts";
+import { DEFAULT_MAP_VIEW, MAP_PRESETS, matchPreset, type MapPreset } from "./presets.ts";
 import { BookGraph, regionColor, starColor, type ColorBy, type GraphMode } from "./BookGraph.tsx";
 import { starPath, useCorpus, useEmbedding, type Star } from "./corpus.ts";
 import { DECADES, decadeColor, KIND_COLORS, KIND_LABELS } from "./encoding.ts";
@@ -44,15 +44,15 @@ const T = {
     noOwn: "Analyse a book and it joins the map.",
     read: (n: number) => ` ${n} ${plural(n, ["book", "books"])}; each opens as a book page.`,
     rest: (n: number) => ` ${n} ${plural(n, ["book", "books"])} measured only.`,
-    empty: "The map is empty until the corpus has been read.",
-    tooFew: (n: number) => `${n} ${plural(n, ["book has", "books have"])} Jev data; the map needs at least 3. Read the corpus with npm run corpus.`,
+    empty: "The map is empty until the corpus has been analysed.",
+    tooFew: (n: number) => `${n} ${plural(n, ["book is", "books are"])} analysed; the map needs at least 3. Run npm run corpus.`,
     decade: (d: number) => `${d}s`,
     stage: "Book map",
     // star card
     yourBook: "your book",
-    corpusAll: (n: number) => `corpus · Jev read all ${n} pages`,
-    corpusSome: (a: number, n: number) => `corpus · Jev read ${a} of ${n} pages`,
-    atlasCard: (n: string) => `measured · Jev read ${n} sampled pages`,
+    corpusAll: (n: number) => `corpus · all ${n} pages analysed`,
+    corpusSome: (a: number, n: number) => `corpus · ${a} of ${n} pages analysed`,
+    atlasCard: (n: string) => `measured · ${n} sampled pages analysed`,
     close: "Close card",
     region: "region",
     emotion: "emotion",
@@ -81,7 +81,7 @@ const T = {
     weightsNote: "Веса влияют на PCA и связи.",
     compareBy: "Сравнивать по",
     colour: "Цвет",
-    colourBy: { emotion: "эмоция", decade: "десятилетие", kind: "жанр" } as Record<ColorBy, string>,
+    colourBy: { emotion: "эмоция", decade: "десятилетие", kind: "форма" } as Record<ColorBy, string>,
     colourNote: { emotion: "цвет = ведущая эмоция", decade: "цвет = десятилетие первой публикации", kind: "цвет = форма произведения" } as Record<ColorBy, string>,
     layers: "Слои",
     atlas: "только замеры",
@@ -94,14 +94,14 @@ const T = {
     noOwn: "Проанализируйте книгу, и она появится на карте.",
     read: (n: number) => ` ${n} ${plural(n, ["книга", "книги", "книг"])}, каждая открывается страницей книги.`,
     rest: (n: number) => ` ${n} ${plural(n, ["книга", "книги", "книг"])} только с замерами.`,
-    empty: "Карта пуста, пока корпус не прочитан.",
-    tooFew: (n: number) => `Данные Jev есть у ${n} ${plural(n, ["книги", "книг", "книг"])}; карте нужно хотя бы 3. Прочитайте корпус командой npm run corpus.`,
+    empty: "Карта пуста, пока корпус не проанализирован.",
+    tooFew: (n: number) => `Проанализировано книг: ${n}; карте нужно хотя бы 3. Запустите npm run corpus.`,
     decade: (d: number) => `${d}-е`,
     stage: "Карта книг",
     yourBook: "ваша книга",
-    corpusAll: (n: number) => `корпус · Jev прочитал все ${n} стр.`,
-    corpusSome: (a: number, n: number) => `корпус · Jev прочитал ${a} из ${n} стр.`,
-    atlasCard: (n: string) => `замеры · Jev прочитал ${n} стр. выборочно`,
+    corpusAll: (n: number) => `корпус · проанализированы все ${n} стр.`,
+    corpusSome: (a: number, n: number) => `корпус · проанализировано ${a} из ${n} стр.`,
+    atlasCard: (n: string) => `замеры · проанализировано ${n} стр. выборочно`,
     close: "Закрыть карточку",
     region: "область",
     emotion: "эмоция",
@@ -253,7 +253,7 @@ export function MapPage({ focus, initialView }: { focus?: string; initialView?: 
   const local = useLocalMode();
   const lang = useLang();
   const stage = useRef<HTMLElement>(null);
-  const landingView = MAP_PRESETS.find((p) => p.id === initialView) ?? MAP_PRESETS[0];
+  const landingView = MAP_PRESETS.find((p) => p.id === initialView) ?? MAP_PRESETS.find((p) => p.id === DEFAULT_MAP_VIEW) ?? MAP_PRESETS[0];
   const [weights, setWeights] = useState<Weights>(landingView.weights);
   const [includeAtlas, setIncludeAtlas] = useState(true);
   const [labels, setLabels] = useState(false);

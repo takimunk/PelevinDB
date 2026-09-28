@@ -193,7 +193,7 @@ const unit = (v: unknown): v is number =>
 
 function invalid(): never {
   throw new AnalysisError(
-    "Jev returned invalid scores. Resume to retry.",
+    "The model returned invalid scores. Resume to retry.",
   );
 }
 
@@ -228,7 +228,7 @@ function noul(answer: Answer | undefined) {
 
 function envelope(result: RawResult) {
   if (!result || typeof result.model !== "string" || !result.answers)
-    throw new AnalysisError("Jev returned incomplete data. Resume to retry.");
+    throw new AnalysisError("The model returned incomplete data. Resume to retry.");
   return result as Required<Pick<RawResult, "model" | "answers">> & RawResult;
 }
 

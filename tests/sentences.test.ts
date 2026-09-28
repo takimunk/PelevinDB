@@ -10,7 +10,7 @@ import type { FocusAnalysis, SegmentAnalysis, SentenceAnalysis } from "../shared
 import { focusQuestions, parseFocus, parseSentence, sentenceQuestions } from "../server/jev.ts";
 import { corpusBook, pageResponse } from "../server/corpus.ts";
 import { MIGRATIONS, openStore } from "../server/store.ts";
-import { linesQuery, MAX_RESULT_PAGES, peakQuote, peek, queryLines, sentenceQuote } from "../server/sentences.ts";
+import { linesQuery, peakLine, peakQuote, peek, queryLines, sentenceOf, sentenceQuote } from "../server/sentences.ts";
 import { queryPages, pagesQuery } from "../server/pages.ts";
 import { focusWeights, peakSentence } from "../shared/focus.ts";
 import { demoAnalyses } from "./fixtures/synthetic.ts";
@@ -157,7 +157,7 @@ test("pages sorted by an emotion quote the page's peak sentence for it", () => {
   store.close();
 });
 
-test("lines rank sentences by page score × focus, filter by flags and stop at the result-page cap", () => {
+test("lines rank sentences by page score × focus, filter by flags and page without a cap", () => {
   const { store } = sentenceFixture();
   const q = linesQuery({ dim: "ideas" });
   assert.ok("query" in q);
@@ -166,7 +166,13 @@ test("lines rank sentences by page score × focus, filter by flags and stop at t
   assert.equal(result.rows[0].weights.ideas, 0.72);
   assert.equal(result.read, 0);
   assert.equal(queryLines(store, { ...q.query, flag: "aphorism" }).total, 0);
-  assert.ok("error" in linesQuery({ page: String(MAX_RESULT_PAGES + 1) }));
+  // No result-page cap: any later page parses, and past the end it is simply empty.
+  const far = linesQuery({ dim: "ideas", page: "40" });
+  assert.ok("query" in far);
+  assert.equal(queryLines(store, far.query).rows.length, 0);
+  assert.equal(result.pages, Math.ceil(result.total / 25));
+  assert.ok(!("maxPages" in result));
+  assert.ok("error" in linesQuery({ page: "0" }));
   assert.ok("error" in linesQuery({ dim: "anticipation" }));
   assert.equal(sentenceQuote("x".repeat(400)).length, 220);
   assert.equal(sentenceQuote("и дальше.", true), "…и дальше.");
@@ -197,4 +203,48 @@ test("a book link can point at one sentence of a page", async () => {
   const { parseRoute } = await import("../src/app/router.ts");
   assert.deepEqual(parseRoute("#/book/pv-chapaev-i-pustota?page=305&s=2"), { name: "book", id: "pv-chapaev-i-pustota", page: 305, sentence: 2 });
   assert.deepEqual(parseRoute("#/book/pv-t?page=3&s=0"), { name: "book", id: "pv-t", page: 3, sentence: undefined });
+});
+
+test("every quote carries the exact sentence it quotes, as the reader numbers the page's sentences", async () => {
+  // Regression: quote links opened the page and relied on the reader's lens peak for the dimension, which is another
+  // sentence whenever a row was indexed for a different dimension (most rows past the first few hundred), or when the
+  // home quote came from the page text rather than a focus answer. Links now carry `s`, checked here against the page route.
+  const { store } = sentenceFixture();
+  const { topPages } = await import("../server/stats.ts");
+  const { parseRoute, sentencePath } = await import("../src/app/router.ts");
+  const sentenceAt = (id: string, page: number, n: number) => {
+    const res = pageResponse(store, id, String(page), () => ({ ok: true })) as { body: { text: string; sentences: { spans: [number, number][] } } };
+    const [s, e] = res.body.sentences.spans[n - 1];
+    return res.body.text.slice(s, e).replace(/\s+/g, " ").trim();
+  };
+  const holds = (sentence: string, quote: string) => sentence.includes(quote.replace(/^…|…$/g, ""));
+
+  // A row that is not the page's peak for the ranked dimension: page 1's fear sentence ranked by ideas.
+  for (const dim of FOCUS.map((f) => f.id)) {
+    const q = linesQuery({ dim });
+    assert.ok("query" in q);
+    for (const r of queryLines(store, q.query).rows) {
+      assert.ok(r.weights[dim] > 0, "a row without weight in the dimension does not rank for it");
+      assert.ok(holds(sentenceAt(r.id, r.page, r.n), r.text), `${dim}: ${r.text}`);
+      const route = parseRoute(`#${sentencePath(r.id, r.page, r.n)}`);
+      assert.deepEqual(route, { name: "book", id: r.id, page: r.page, sentence: r.n });
+    }
+  }
+  assert.deepEqual(peakLine(store, "pv-x", 0, "fear"), { text: "Страшная тень метнулась к окну и исчезла.", n: 2 });
+  assert.equal(sentenceOf(store, "pv-x", 0, "Он сел."), 3);
+  assert.equal(sentenceOf(store, "pv-x", 0, "Нет такой фразы."), null);
+
+  // Home: a focus quote (fear) and a page-text quote (anticipation has no sentence focus) both name their sentence.
+  for (const col of topPages(store, 2))
+    for (const item of col.items) {
+      assert.ok(item.n != null, `${col.emotion} p${item.page}`);
+      assert.ok(holds(sentenceAt(item.id, item.page, item.n!), item.quote), `${col.emotion}: ${item.quote} vs ${sentenceAt(item.id, item.page, item.n!)}`);
+    }
+  // The Pages tab: the sort's peak sentence, or the indexed quote's sentence.
+  for (const sort of ["fear", "intensity", "valence"]) {
+    const q = pagesQuery({ sort });
+    assert.ok("query" in q);
+    for (const r of queryPages(store, q.query).rows) if (r.n != null) assert.ok(holds(sentenceAt(r.id, r.page, r.n), r.quote), `${sort}: ${r.quote}`);
+  }
+  store.close();
 });

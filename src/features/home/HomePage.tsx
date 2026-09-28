@@ -1,15 +1,21 @@
-import { lazy, Suspense, useEffect, useState, type ComponentType } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ComponentType, type RefObject } from "react";
 import { EMOTIONS, labelOf, type EmotionId } from "../../../shared/catalog.ts";
 import { href, navigate } from "../../app/router.ts";
 import { rememberLens } from "../book/SentenceText.tsx";
 import { useLang, useT, type Lang } from "../../i18n/index.ts";
 import { dec } from "../../ui/format.ts";
 import { Wordmark } from "../../ui/Wordmark.tsx";
+import { Translatable } from "../../ui/Translatable.tsx";
 import { AUTHOR_URL, GitHubMark, REPO_URL, XMark } from "../../ui/Social.tsx";
+import { ContactButton, ContactDialog } from "../../ui/Contact.tsx";
 import { primaryTitle } from "../library/labels.ts";
 import "./home.css";
 
-type SceneModule = { UralScene: ComponentType<{ className?: string; onSign?: () => void }> };
+/** A note let go on the river: `key` changes for each new note. */
+/** The scene's handle (src/ui/UralScene.tsx RiverHandle): a sent note goes onto the river without re-rendering it. */
+type RiverHandle = { addNote: (note: { token?: string; text: string; expiresAt?: string }) => void };
+type SceneProps = { className?: string; onSign?: () => void; onPaper?: (at: { x: number; y: number }) => void; handle?: RefObject<RiverHandle | null> };
+type SceneModule = { UralScene: ComponentType<SceneProps> };
 // The scene is optional: if src/ui/UralScene.tsx is missing the glob is empty and the stage is left out.
 const sceneLoader = Object.values(import.meta.glob<SceneModule>("../../ui/UralScene.tsx"))[0];
 const UralScene = sceneLoader ? lazy(() => sceneLoader().then((m) => ({ default: m.UralScene }))) : null;
@@ -17,12 +23,12 @@ const UralScene = sceneLoader ? lazy(() => sceneLoader().then((m) => ({ default:
 const PER = 5;
 
 /** GET /api/corpus/top-pages (server/stats.ts `TopPages`). */
-type TopPage = { id: string; title: string; titleEn: string | null; year: number | null; page: number; score: number; quote: string };
+type TopPage = { id: string; title: string; titleEn: string | null; year: number | null; page: number; n?: number | null; score: number; quote: string };
 type TopPages = { emotion: EmotionId; items: TopPage[] }[];
 
 const T = {
   en: {
-    description: "An independent research project. A computational reading of Viktor Olegovich’s work.",
+    description: ["An independent research project.", "A computational reading of Viktor Olegovich’s work."],
     github: "Source on GitHub",
     author: "by",
     authorName: "central dogma specialist",
@@ -30,20 +36,21 @@ const T = {
     topTitle: "The most emotional pages",
     topNote: "After Plutchik’s model of eight emotions.",
     loading: "Finding the strongest pages",
-    empty: "The pages have not been read yet. The strongest ones will appear here once the analysis has run.",
+    empty: "The pages have not been analysed yet. The strongest ones will appear here once the analysis has run.",
     failed: "Could not load the pages. Try reloading.",
     open: (title: string, page: number) => `${title}, page ${page}`,
     score: "score",
     fig1: "Fig. 1 — “Ural”, after Chapaev and Void",
+    riverNote: "Leave a note to the river",
     startTitle: "Where to start",
     start: [
       { label: "Explore the map of every work", path: "/map?view=laugh" },
       { label: "In which book is love strongest?", path: "/library?view=themes&sort=love&dir=-1" },
-      { label: "Explore the most significant moments", path: "/library?tab=lines&dim=joy" },
+      { label: "The most joyful quotes", path: "/library?tab=lines&dim=joy" },
     ],
   },
   ru: {
-    description: "Независимый исследовательский проект. Вычислительное прочтение творчества Виктора Олеговича.",
+    description: ["Независимый исследовательский проект.", "Вычислительное прочтение творчества Виктора Олеговича."],
     github: "Исходный код на GitHub",
     author: "автор —",
     authorName: "central dogma specialist",
@@ -51,16 +58,17 @@ const T = {
     topTitle: "Самые эмоциональные страницы",
     topNote: "По модели 8 эмоций Плутчика.",
     loading: "Ищем самые сильные страницы",
-    empty: "Страницы ещё не прочитаны. Самые сильные появятся здесь, когда пройдёт анализ.",
+    empty: "Страницы ещё не проанализированы. Самые сильные появятся здесь, когда пройдёт анализ.",
     failed: "Не удалось загрузить страницы. Попробуйте обновить.",
     open: (title: string, page: number) => `${title}, страница ${page}`,
     score: "оценка",
     fig1: "Рис. 1 — «Урал», по мотивам «Чапаева и Пустоты»",
+    riverNote: "Оставить записку реке",
     startTitle: "С чего начать",
     start: [
       { label: "Изучите карту всех произведений", path: "/map?view=laugh" },
       { label: "В какой книге любовь сильнее всего?", path: "/library?view=themes&sort=love&dir=-1" },
-      { label: "Исследуйте наиболее значимые моменты", path: "/library?tab=lines&dim=joy" },
+      { label: "Самые радостные цитаты", path: "/library?tab=lines&dim=joy" },
     ],
   },
 };
@@ -103,10 +111,8 @@ function Entry({ item, lang, t }: { item: TopPage; lang: Lang; t: Dict }) {
   const title = primaryTitle(item, lang);
   return (
     <li>
-      <a className="top-entry" href={href(`/book/${item.id}?page=${item.page}`)} aria-label={`${t.open(title, item.page)}: ${item.quote}`}>
-        <q className="top-quote" lang="ru">
-          {item.quote}
-        </q>
+      <a className="top-entry" href={href(`/book/${item.id}?page=${item.page}${item.n ? `&s=${item.n}` : ""}`)} aria-label={`${t.open(title, item.page)}: ${item.quote}`}>
+        <Translatable className="top-quote" text={item.quote} refKey={`t:${item.id}:${item.page}`} auto />
         <span className="top-meta">
           <span className="top-book">{title}</span>
           {item.year ? <span> · {item.year}</span> : null}
@@ -178,23 +184,58 @@ function toTheStream() {
 export function HomePage() {
   const t = useT(T);
   const lang = useLang();
+  // The paper by the towel opens a note to the river; once stored, the note rides the river in the scene.
+  // The scene is memoised and its props are stable, so opening the note or sending it never re-renders it.
+  const [paper, setPaper] = useState<{ x: number; y: number } | null>(null);
+  const river = useRef<RiverHandle | null>(null);
+  const onSent = useCallback((text: string, reply: { token?: string; expiresAt?: string }) => river.current?.addNote({ text, ...reply }), []);
+  const onClosePaper = useCallback(() => setPaper(null), []);
+  const onPaper = useCallback((at: { x: number; y: number }) => setPaper(at), []);
   return (
     <div className="home">
       {UralScene && (
-        <div className="stage-frame">
-          <Suspense fallback={null}>
-            <UralScene className="stage-scene" onSign={toTheStream} />
-          </Suspense>
-        </div>
+        <figure className="stage">
+          <div className="stage-frame">
+            <Suspense fallback={null}>
+              <UralScene className="stage-scene" onSign={toTheStream} onPaper={onPaper} handle={river} />
+            </Suspense>
+            {/* The paper in the scene, for the keyboard: shown only when focused. */}
+            <button
+              type="button"
+              className="stage-note"
+              aria-haspopup="dialog"
+              onClick={(e) => {
+                const r = e.currentTarget.getBoundingClientRect();
+                onPaper({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
+              }}
+            >
+              {t.riverNote}
+            </button>
+          </div>
+          <figcaption className="fig-caption stage-caption">{t.fig1}</figcaption>
+        </figure>
       )}
-      {UralScene && <p className="fig-caption stage-caption">{t.fig1}</p>}
+      {UralScene && (
+        <ContactDialog
+          variant="river"
+          open={!!paper}
+          from={paper}
+          onClose={onClosePaper}
+          onSent={onSent}
+        />
+      )}
       <section className="hero">
         <h1 className="hero-wordmark">
           <Wordmark size="hero" />
         </h1>
         <div className="hero-copy">
-          <p className="hero-description">{t.description}</p>
-          <p className="hero-links">
+          <p className="hero-description">
+            {/* Each sentence on its own line. */}
+            {t.description.map((line) => (
+              <span key={line}>{line}</span>
+            ))}
+          </p>
+          <div className="hero-links">
             <External to={REPO_URL} t={t}>
               <GitHubMark />
               {t.github}
@@ -208,7 +249,8 @@ export function HomePage() {
                 </External>
               </span>
             </span>
-          </p>
+            <ContactButton />
+          </div>
         </div>
       </section>
       <section className="home-start" aria-labelledby="home-start-title">
@@ -219,7 +261,10 @@ export function HomePage() {
           {t.start.map((item) => (
             <a className="home-start-link" key={item.path} href={href(item.path)}>
               <span className="home-start-text">{item.label}</span>
-              <span className="home-start-arrow" aria-hidden="true">↗</span>
+              <span className="home-start-arrow" aria-hidden="true">
+                {" "}
+                ↗
+              </span>
             </a>
           ))}
         </div>

@@ -8,7 +8,7 @@ import { createHash } from "node:crypto";
 import { argmax, isParatext } from "../shared/analysis.ts";
 import { EMOTIONS, FOCUS, MODES, MOODS, RUBRIC_VERSION, TEXTURES, THEMES, type EmotionId, type FocusId, type ModeId, type MoodId, type TextureId, type ThemeId } from "../shared/catalog.ts";
 import type { BookKind } from "../shared/types.ts";
-import { peakQuote } from "./sentences.ts";
+import { findSentence, peakLine } from "./sentences.ts";
 import { pageQuote } from "./stats.ts";
 import type { Store } from "./store.ts";
 
@@ -31,6 +31,8 @@ export type PageRow = {
   year: number | null;
   kind: BookKind | null;
   page: number;
+  /** The quoted sentence on the page (1-based, a book link's `s`), null when the page is not split into sentences. */
+  n: number | null;
   quote: string;
   emotion: EmotionId;
   mood: MoodId;
@@ -82,10 +84,15 @@ export function pageIndex(store: Store): Index {
   if (cached?.stamp === stamp) return cached;
 
   const meta = new Map(store.books().map((b) => [b.id, b]));
-  const texts = new Map<string, { text: string | null; segments: Map<number, { start: number; end: number }> }>();
-  const pageText = (id: string, idx: number) => {
+  type Book = { text: string | null; segments: Map<number, { start: number; end: number }>; sentences: Map<number, { start: number; end: number }[]> };
+  const texts = new Map<string, Book>();
+  const book = (id: string) => {
     let t = texts.get(id);
-    if (!t) texts.set(id, (t = { text: store.text(id), segments: new Map(store.segments(id).map((s) => [s.idx, s])) }));
+    if (!t) texts.set(id, (t = { text: store.text(id), segments: new Map(store.segments(id).map((s) => [s.idx, s])), sentences: store.hasSentences ? store.sentences(id) : new Map() }));
+    return t;
+  };
+  const pageText = (id: string, idx: number) => {
+    const t = book(id);
     const s = t.segments.get(idx);
     return t.text != null && s ? t.text.slice(s.start, s.end) : "";
   };
@@ -110,6 +117,7 @@ export function pageIndex(store: Store): Index {
       year,
       kind: b?.kind ?? null,
       page: idx + 1,
+      n: book(bookId).text == null ? null : findSentence(book(bookId).text!, book(bookId).sentences.get(idx), quote),
       quote,
       emotion: argmax(a.emotions),
       mood: argmax(a.mood),
@@ -213,7 +221,8 @@ export function queryPages(store: Store, query: PagesQuery): PagesResult {
       // The quote follows the sort: the page's most frightening sentence when sorted by fear. A text search keeps
       // the indexed quote, so the words searched for stay visible.
       const dim = words.length ? null : quoteDim(query.sort, query.dir, row.emotion);
-      return { ...row, quote: (dim && peakQuote(store, row.id, row.page - 1, dim)) || row.quote };
+      const peak = dim ? peakLine(store, row.id, row.page - 1, dim) : null;
+      return peak ? { ...row, quote: peak.text, n: peak.n } : row;
     }),
     facets,
     books,
@@ -230,5 +239,5 @@ function quoteDim(sort: ScoreKey, dir: 1 | -1, leading: EmotionId): FocusId | nu
 /** A weak ETag for one query against the current store. */
 export function pagesETag(store: Store, query: PagesQuery) {
   const key = JSON.stringify([pageIndex(store).stamp, query]);
-  return `W/"${createHash("sha1").update(`pages2|${key}`).digest("base64url")}"`;
+  return `W/"${createHash("sha1").update(`pages3|${key}`).digest("base64url")}"`;
 }

@@ -1,9 +1,8 @@
 // Sentence-level views of the stored answers, shaped for the browser: the peak sentence of a page (sharper quotes),
 // the sentences of the page open in the reader, and the corpus-wide "Lines" ranking.
 //
-// Copyright guard, as for pages: the reader gets sentence offsets into the one page it already holds; the Lines tab
-// returns at most PAGE_SIZE sentences per result page and MAX_RESULT_PAGES result pages; a book payload carries
-// at most BOOK_LINES sentences.
+// Copyright guard: the reader gets sentence offsets into the one page it already holds; the Lines tab returns at most
+// PAGE_SIZE sentences per result page (rate limited per client); a book payload carries at most BOOK_LINES sentences.
 import { createHash } from "node:crypto";
 import { argmax, isParatext } from "../shared/analysis.ts";
 import {
@@ -14,18 +13,23 @@ import {
   SENTENCE_FLAGS,
   SENTENCE_RUBRIC,
   SENTENCE_SCALES,
+  THEMES,
+  type EmotionId,
   type FocusId,
+  type MoodId,
+  type ThemeId,
 } from "../shared/catalog.ts";
 import type { BookKind, BookLine, FocusAnalysis, PageSentences, SegmentAnalysis, SentenceAnalysis, SentenceRead } from "../shared/types.ts";
 import { focusWeights, peakSentence } from "../shared/focus.ts";
 import type { Store } from "./store.ts";
 
 export const PAGE_SIZE = 25;
-export const MAX_RESULT_PAGES = 5;
 /** Per book and dimension, how many of its strongest sentences enter the Lines index. */
 export const LINES_PER_BOOK = 60;
 /** A flag counts as present from this Noul probability up. */
 export const FLAG_PRESENT = 0.5;
+/** A page theme is shown on a line from this Jev score up (as in the Pages tab). */
+export const THEME_PRESENT = 0.5;
 const QUOTE_MIN = 20;
 const QUOTE_MAX = 220;
 const MAX_QUERY = 100;
@@ -104,6 +108,11 @@ export function pageSentences(store: Store, id: string, page: number, pageStart:
  * sentence, or the sentence is too short to stand as a quote (then callers keep their own quote).
  */
 export function peakQuote(store: Store, id: string, page: number, dim: FocusId, minLength = QUOTE_MIN): string | null {
+  return peakLine(store, id, page, dim, minLength)?.text ?? null;
+}
+
+/** peakQuote with the sentence's place on the page (`n`, 1-based, as a book link's `s` takes it). */
+export function peakLine(store: Store, id: string, page: number, dim: FocusId, minLength = QUOTE_MIN): { text: string; n: number } | null {
   const b = bookData(store, id);
   const f = b?.focus.get(page);
   const list = b?.sentences.get(page);
@@ -113,7 +122,24 @@ export function peakQuote(store: Store, id: string, page: number, dim: FocusId, 
   const s = list[peak];
   const text = b.text.slice(s.start, s.end);
   if (clean(text).replace(/^[—–-]\s*/, "").length < minLength) return null;
-  return sentenceQuote(text, peak === 0);
+  return { text: sentenceQuote(text, peak === 0), n: peak + 1 };
+}
+
+/**
+ * The stored sentence (1-based on the page) a quote was taken from, for quotes cut from the page text by other rules
+ * (pageQuote): the first sentence that holds the quote's opening words. Null when the page is not split or nothing holds it.
+ */
+export function sentenceOf(store: Store, id: string, page: number, quote: string): number | null {
+  const b = bookData(store, id);
+  return b ? findSentence(b.text, b.sentences.get(page), quote) : null;
+}
+
+/** sentenceOf over a book's text and one page's sentence spans (absolute offsets). */
+export function findSentence(text: string, list: { start: number; end: number }[] | undefined, quote: string): number | null {
+  const head = clean(quote).replace(/^…/, "").replace(/…$/, "").slice(0, 40);
+  if (!list?.length || !head) return null;
+  const i = list.findIndex((s) => clean(text.slice(s.start, s.end)).includes(head));
+  return i < 0 ? null : i + 1;
 }
 
 /**
@@ -189,6 +215,10 @@ export type LineRow = {
   /** Page score × the probability that this sentence carries the dimension most, per focus dimension. */
   weights: Record<FocusId, number>;
   read: SentenceRead | null;
+  /** From the page analysis: its leading emotion, mood and up to three themes scored ≥ THEME_PRESENT, strongest first. */
+  emotion: EmotionId;
+  mood: MoodId;
+  themes: ThemeId[];
 };
 
 export type LinesQuery = { q: string; dim: FocusId; book: string | null; kind: string | null; decade: string | null; flag: string | null; act: string | null; page: number };
@@ -197,7 +227,6 @@ export type LinesResult = {
   page: number;
   pageSize: number;
   pages: number;
-  maxPages: number;
   rows: LineRow[];
   facets: Record<LineFacet, Record<string, number>>;
   books: Record<string, { title: string; titleEn: string | null; year: number | null }>;
@@ -260,6 +289,7 @@ export function lineIndex(store: Store): LineIndex {
         const w = weightsOf.get(page)!;
         const quote = sentenceQuote(text.slice(s.start, s.end), idx === 0);
         const a = read.get(key);
+        const pa = pages.get(page)!;
         rows.push({
           id: meta.id,
           title: meta.title,
@@ -271,6 +301,12 @@ export function lineIndex(store: Store): LineIndex {
           text: quote,
           weights: Object.fromEntries(FOCUS.map((d) => [d.id, r3(w[d.id][idx])])) as Record<FocusId, number>,
           read: a ? compactRead(a) : null,
+          emotion: argmax(pa.emotions),
+          mood: argmax(pa.mood),
+          themes: THEMES.map((t) => t.id)
+            .filter((id) => pa.themes[id] >= THEME_PRESENT)
+            .sort((x, y) => pa.themes[y] - pa.themes[x])
+            .slice(0, 3),
           decade: year == null ? null : String(Math.floor(year / 10) * 10),
           search: norm(`${meta.title} ${meta.titleEn ?? ""} ${quote}`),
         });
@@ -297,7 +333,6 @@ export function linesQuery(raw: Record<string, unknown>): { query: LinesQuery } 
   const pageRaw = str("page") ?? "1";
   const page = /^\d{1,4}$/.test(pageRaw) ? Number(pageRaw) : NaN;
   if (!Number.isInteger(page) || page < 1) return { error: "Result page must be a whole number from 1." };
-  if (page > MAX_RESULT_PAGES) return { error: `Results stop after page ${MAX_RESULT_PAGES} to respect copyright. Narrow the filters to see other lines.` };
   return {
     query: {
       q,
@@ -327,7 +362,9 @@ export function queryLines(store: Store, query: LinesQuery): LinesResult {
   const facets = Object.fromEntries(LINE_FACETS.map((f) => [f, {} as Record<string, number>])) as LinesResult["facets"];
   const matched: LineIndexRow[] = [];
   for (const r of rows) {
-    if (!words.every((w) => r.search.includes(w))) continue;
+    // The index holds each book's strongest sentences for every dimension; one with no weight in this dimension
+    // does not rank for it.
+    if (!(r.weights[query.dim] > 0) || !words.every((w) => r.search.includes(w))) continue;
     const fails = active.filter((f) => !lineFacetOf[f](r).includes(query[f]!));
     if (!fails.length) matched.push(r);
     for (const f of LINE_FACETS) {
@@ -352,8 +389,7 @@ export function queryLines(store: Store, query: LinesQuery): LinesResult {
     total: matched.length,
     page: query.page,
     pageSize: PAGE_SIZE,
-    pages: Math.min(MAX_RESULT_PAGES, Math.ceil(matched.length / PAGE_SIZE)),
-    maxPages: MAX_RESULT_PAGES,
+    pages: Math.ceil(matched.length / PAGE_SIZE),
     rows: matched.slice(start, start + PAGE_SIZE).map(({ decade: _d, search: _s, ...row }) => row),
     facets,
     books,
@@ -363,5 +399,5 @@ export function queryLines(store: Store, query: LinesQuery): LinesResult {
 
 export function linesETag(store: Store, query: LinesQuery) {
   const key = JSON.stringify([lineIndex(store).stamp, query]);
-  return `W/"${createHash("sha1").update(`lines1|${key}`).digest("base64url")}"`;
+  return `W/"${createHash("sha1").update(`lines3|${key}`).digest("base64url")}"`;
 }

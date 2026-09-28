@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { EMOTIONS, ERAS, FOCUS, type FocusId, GENRES, type EmotionId, highOf, labelOf, lowOf, MODES, MOODS, PROFILE_SCALES, SEGMENT_QUESTION_COUNT, TEXTURES, THEMES } from "../../../shared/catalog.ts";
 import { ARC_SHAPES, argmax, bookStats, moments, series, storyArc, topEntries } from "../../domain/analysis.ts";
 import { spend, tokens, usd } from "../../domain/cost.ts";
@@ -38,18 +38,18 @@ const T = {
     home: "Back to the start",
     opening: "Opening the book…",
     corpus: "PelevinDB corpus",
-    readByJev: "read by Jev",
+    readByJev: "analysed",
     gutenberg: "Project Gutenberg",
     localFile: (f: string) => `Your file · ${f}`,
     rank: (r: number) => `#${r}`,
-    noCharacter: "The book’s character appears once Jev has read it.",
+    noCharacter: "The book’s character appears once it is analysed.",
     arc: "arc",
     pages: "pages",
     chars: "characters",
     reading: "reading time",
     min: (n: number) => `${n} min`,
     hours: (n: number) => `${n} h`,
-    jev: "read by Jev",
+    jev: "analysed",
     complete: "complete",
     tokens: "tokens",
     cost: "cost",
@@ -67,9 +67,9 @@ const T = {
     deleteTitle: "Remove from library",
     confirmDelete: (t: string) => `Delete “${t}” and all its scores?`,
     progress: (d: number, n: number) => `${d} of ${n} pages · ${SEGMENT_QUESTION_COUNT} questions each`,
-    canonNote: (d: string, n: string) => `A read-only corpus book: Jev has read ${d} of ${n} pages so far.`,
-    noKey: "Add TYPESAFE_API_KEY to .env and restart the server so Jev can read the book.",
-    howItWorks: `Each page is one Jev request with ${SEGMENT_QUESTION_COUNT} independent questions, then one request about the whole book. Text is sent to TypeSafe only after you press Analyze.`,
+    canonNote: (d: string, n: string) => `A read-only corpus book: ${d} of ${n} pages analysed so far.`,
+    noKey: "Add TYPESAFE_API_KEY to .env and restart the server to analyse the book.",
+    howItWorks: `Each page is one model request with ${SEGMENT_QUESTION_COUNT} independent questions, then one request about the whole book. Text is sent to TypeSafe only after you press Analyze.`,
     fingerprint: "fingerprint coordinates",
     meanOf: (n: number) => `mean of ${n} other ${plural(n, ["book", "books"])}`,
     dashboard: "Measurements",
@@ -77,7 +77,7 @@ const T = {
       spectrogram: "emotions over the book",
       radar: "star chart",
       pulse: "pulse",
-      quotes: "extreme pages",
+      quotes: "key moments",
       explore: "explore",
       mood: "mood",
       narration: "narration",
@@ -92,8 +92,6 @@ const T = {
       top: "top",
       moodMode: "mood · narration",
       sortBy: "sort",
-      byScore: "score",
-      byPage: "page",
       byYear: "year",
       byOrder: "order",
       byStrength: "strength",
@@ -103,7 +101,7 @@ const T = {
     },
     s: {
       brief: "Brief",
-      quotes: "Extreme pages",
+      quotes: "Key moments",
       insights: "Insights",
       dna: "Plot development",
       spectrogram: "Spectrogram",
@@ -119,22 +117,22 @@ const T = {
     n: {
       briefBy: (m: string) => `written by ${m} from the data below`,
       brief: "a reader’s brief written from everything measured here",
-      extremes: "the most extreme pages, found in code from Jev answers · click to read",
-      lines: "the book’s most quotable, funniest and most abstract sentences · click to read it highlighted",
-      explore: "filter every page by a Jev answer and rank by any score · click to read",
-      insights: "computed from Jev answers · click a page to read",
+      extremes: "the book’s turning points by the page analysis, in reading order · click to read",
+      lines: "the book’s most quotable, funniest and most abstract sentences · click to open it on its page",
+      explore: "filter every page by an analysis answer and rank by any score · click to read",
+      insights: "computed from the page analysis · click a page to read",
       dna: "one column per page range · height = emotional intensity · colour = leading emotion · click to read",
       spectrogram: "Plutchik’s emotions over time · click to read",
-      pulse: "tension, pace, light and interiority · extreme pages marked · click to read",
+      pulse: "tension, pace, light and interiority · key moments marked · click to read",
       mood: "one of 11 per page",
       narration: "one of 9 per page",
       shape: "light curve against Vonnegut’s six arcs",
       texture: "7 bipolar scores · book mean",
-      whole: "one extra Jev request over six sampled pages",
+      whole: "one extra model request over six sampled pages",
       themes: "top 10 of 19 · how likely each page is about the theme · click to read",
       neighbours: "nearest fingerprints · cosine similarity",
     },
-    views: { extremes: "extremes", lines: "lines", explore: "explore" },
+    views: { extremes: "moments", lines: "quotes", explore: "search pages" },
     quotesView: "Quotes view",
     whyRead: "Why read it",
     whoSuits: "Who it suits",
@@ -143,7 +141,7 @@ const T = {
     tokensOut: "out",
     rewriting: "Rewriting…",
     rewrite: "Rewrite",
-    briefWait: "The brief is written once Jev has read the whole book.",
+    briefWait: "The brief is written once the whole book is analysed.",
     briefOtherLang: "No English brief yet, so the Russian one is shown.",
     writeInLang: "Write it in English",
     briefCanon: "No brief is stored for this corpus book yet.",
@@ -154,12 +152,12 @@ const T = {
     error: "Error",
     era: "era",
     confidence: "confidence",
-    profileWait: "The whole-book profile appears once Jev finishes every page.",
+    profileWait: "The whole-book profile appears once every page is analysed.",
     library: "library",
-    noNeighbours: "No other books with Jev data yet.",
+    noNeighbours: "No other analysed books yet.",
     noFingerprint: "Neighbours appear once the book has a fingerprint.",
-    coverage: (d: string, n: string) => `showing ${d} of ${n} pages · charts fill in as Jev reads`,
-    measures: "What Jev measures on each page",
+    coverage: (d: string, n: string) => `showing ${d} of ${n} pages · charts fill in as pages are analysed`,
+    measures: "What is measured on each page",
     preview: [
       ["emotions", "8", "Plutchik’s wheel, scored"],
       ["texture", "7", "pace · tension · interiority · imagery · ideas · humour · light"],
@@ -168,7 +166,7 @@ const T = {
       ["themes", "19", "yes or no each"],
       ["whole book", "1", "genre · era · six scales, once per book"],
     ],
-    previewCanon: "This corpus book has not been read yet.",
+    previewCanon: "This corpus book has not been analysed yet.",
     previewLocal: "Press Analyze to build the dashboard.",
   },
   ru: {
@@ -178,18 +176,18 @@ const T = {
     home: "На главную",
     opening: "Открываем книгу…",
     corpus: "Корпус PelevinDB",
-    readByJev: "прочитано Jev",
+    readByJev: "проанализировано",
     gutenberg: "Проект «Гутенберг»",
     localFile: (f: string) => `Ваш файл · ${f}`,
     rank: (r: number) => `№ ${r}`,
-    noCharacter: "Характер книги появится, когда Jev её прочитает.",
+    noCharacter: "Характер книги появится после анализа.",
     arc: "дуга",
     pages: "страниц",
     chars: "знаков",
     reading: "время чтения",
     min: (n: number) => `${n} мин`,
     hours: (n: number) => `${n} ч`,
-    jev: "прочитано Jev",
+    jev: "проанализировано",
     complete: "полностью",
     tokens: "токены",
     cost: "стоимость",
@@ -207,9 +205,9 @@ const T = {
     deleteTitle: "Убрать из библиотеки",
     confirmDelete: (t: string) => `Удалить «${t}» и все её оценки?`,
     progress: (d: number, n: number) => `${d} из ${n} страниц · по ${SEGMENT_QUESTION_COUNT} вопросов`,
-    canonNote: (d: string, n: string) => `Книга корпуса, только для чтения: Jev прочитал ${d} из ${n} страниц.`,
-    noKey: "Добавьте TYPESAFE_API_KEY в .env и перезапустите сервер, чтобы Jev мог прочитать книгу.",
-    howItWorks: `Каждая страница — один запрос к Jev с ${SEGMENT_QUESTION_COUNT} независимыми вопросами, затем один запрос обо всей книге. Текст уходит в TypeSafe только после нажатия «Анализировать».`,
+    canonNote: (d: string, n: string) => `Книга корпуса, только для чтения: проанализировано ${d} из ${n} страниц.`,
+    noKey: "Добавьте TYPESAFE_API_KEY в .env и перезапустите сервер, чтобы проанализировать книгу.",
+    howItWorks: `Каждая страница — один запрос к модели с ${SEGMENT_QUESTION_COUNT} независимыми вопросами, затем один запрос обо всей книге. Текст уходит в TypeSafe только после нажатия «Анализировать».`,
     fingerprint: "координат отпечатка",
     meanOf: (n: number) => `среднее ${n} ${plural(n, ["другой книги", "других книг", "других книг"])}`,
     dashboard: "Измерения",
@@ -217,7 +215,7 @@ const T = {
       spectrogram: "эмоции по ходу книги",
       radar: "звёздная диаграмма",
       pulse: "пульс",
-      quotes: "крайние страницы",
+      quotes: "ключевые моменты",
       explore: "поиск по страницам",
       mood: "настроение",
       narration: "повествование",
@@ -232,8 +230,6 @@ const T = {
       top: "главное",
       moodMode: "настроение · повествование",
       sortBy: "сортировка",
-      byScore: "сила",
-      byPage: "стр.",
       byYear: "год",
       byOrder: "порядок",
       byStrength: "сила",
@@ -243,7 +239,7 @@ const T = {
     },
     s: {
       brief: "Коротко",
-      quotes: "Крайние страницы",
+      quotes: "Ключевые моменты",
       insights: "Выводы",
       dna: "Развитие сюжета",
       spectrogram: "Спектрограмма",
@@ -259,22 +255,22 @@ const T = {
     n: {
       briefBy: (m: string) => `написано ${m} по данным ниже`,
       brief: "аннотация для читателя по всем измерениям на этой странице",
-      extremes: "самые крайние страницы, найденные в коде по ответам Jev · нажмите, чтобы читать",
-      lines: "самые цитируемые, смешные и отвлечённые фразы книги · нажмите, чтобы прочитать с подсветкой",
-      explore: "отберите страницы по любому ответу Jev и отсортируйте по любой оценке",
-      insights: "вычислено по ответам Jev · нажмите на страницу, чтобы читать",
+      extremes: "поворотные точки книги по разбору страниц, в порядке чтения · нажмите, чтобы читать",
+      lines: "самые цитируемые, смешные и отвлечённые цитаты книги · нажмите, чтобы открыть на странице",
+      explore: "отберите страницы по любому ответу анализа и отсортируйте по любой оценке",
+      insights: "вычислено по разбору страниц · нажмите на страницу, чтобы читать",
       dna: "столбец — диапазон страниц · высота — сила эмоции · цвет — ведущая эмоция",
       spectrogram: "эмоции Плутчика по ходу книги · нажмите, чтобы читать",
-      pulse: "напряжение, темп, свет и внутренний мир · отмечены крайние страницы",
+      pulse: "напряжение, темп, свет и внутренний мир · отмечены ключевые моменты",
       mood: "одно из 11 на страницу",
       narration: "одно из 9 на страницу",
       shape: "кривая света против шести сюжетов Воннегута",
       texture: "7 двухполюсных шкал · среднее по книге",
-      whole: "отдельный запрос к Jev по шести страницам",
+      whole: "отдельный запрос к модели по шести страницам",
       themes: "10 из 19 · вероятность, что страница об этой теме",
       neighbours: "ближайшие отпечатки · косинусное сходство",
     },
-    views: { extremes: "крайние", lines: "фразы", explore: "поиск" },
+    views: { extremes: "моменты", lines: "цитаты", explore: "поиск по страницам" },
     quotesView: "Вид цитат",
     whyRead: "Зачем читать",
     whoSuits: "Кому подойдёт",
@@ -283,7 +279,7 @@ const T = {
     tokensOut: "выход",
     rewriting: "Переписываем…",
     rewrite: "Переписать",
-    briefWait: "Аннотация появится, когда Jev прочитает всю книгу.",
+    briefWait: "Аннотация появится, когда будет проанализирована вся книга.",
     briefOtherLang: "Русской аннотации пока нет, поэтому показана английская.",
     writeInLang: "Написать по-русски",
     briefCanon: "Для этой книги корпуса аннотации пока нет.",
@@ -294,12 +290,12 @@ const T = {
     error: "Ошибка",
     era: "эпоха",
     confidence: "уверенность",
-    profileWait: "Профиль всей книги появится, когда Jev прочитает все страницы.",
+    profileWait: "Профиль всей книги появится, когда будут проанализированы все страницы.",
     library: "библиотека",
-    noNeighbours: "Других книг с данными Jev пока нет.",
+    noNeighbours: "Других проанализированных книг пока нет.",
     noFingerprint: "Соседи появятся, когда у книги будет отпечаток.",
     coverage: (d: string, n: string) => `показано ${d} из ${n} страниц · графики дополняются по мере чтения`,
-    measures: "Что Jev измеряет на каждой странице",
+    measures: "Что измеряется на каждой странице",
     preview: [
       ["эмоции", "8", "колесо Плутчика, оценки"],
       ["фактура", "7", "темп · напряжение · внутренний мир · образность · идеи · юмор · свет"],
@@ -308,7 +304,7 @@ const T = {
       ["темы", "19", "да или нет для каждой"],
       ["вся книга", "1", "жанр · эпоха · шесть шкал, один раз на книгу"],
     ],
-    previewCanon: "Эту книгу корпуса ещё не прочитали.",
+    previewCanon: "Эта книга корпуса ещё не проанализирована.",
     previewLocal: "Нажмите «Анализировать», чтобы построить страницу книги.",
   },
 };
@@ -430,10 +426,38 @@ export function BookPage({ id, page, sentence }: { id: string; page?: number; se
   const fromChart = useCallback(
     (index: number) => {
       const tip = currentTip();
+      // An unfocused preview (no dimension under the pointer) opens the page with every highlight on.
+      if (tip && !tip.dim) {
+        rememberLens(null);
+        return openPage(tip.index);
+      }
       openPointed(tip?.index ?? index, tip?.dim);
     },
-    [openPointed],
+    [openPointed, openPage],
   );
+
+  // Reading: on desktop the page becomes the navigation pane beside the reader. Everything but the title and the
+  // charts that open pages fades out (book.css `.book-page.reading`), so the pane starts at the top; closing the
+  // reader brings the dashboard back at the scroll position it was left at.
+  const reading = selected != null && !!segments[selected];
+  const [wasReading, setWasReading] = useState(false);
+  const scrollBack = useRef<number | null>(null);
+  useLayoutEffect(() => {
+    const wide = matchMedia("(min-width: 961px)").matches;
+    if (reading) {
+      setWasReading(true);
+      if (scrollBack.current == null && wide) {
+        scrollBack.current = window.scrollY;
+        window.scrollTo({ top: 0 });
+      }
+    } else if (scrollBack.current != null) {
+      const y = scrollBack.current;
+      scrollBack.current = null;
+      window.scrollTo({ top: y });
+      // Charts measure themselves after the layout returns; scroll again once they have.
+      requestAnimationFrame(() => requestAnimationFrame(() => window.scrollTo({ top: y })));
+    }
+  }, [reading]);
   const chartPick = useCallback((i: number) => fromChart(view.from + i), [fromChart, view.from]);
   const chartAt = useCallback((p: number) => fromChart(view.from + Math.round(p * Math.max(0, view.analyses.length - 1))), [fromChart, view]);
 
@@ -495,7 +519,8 @@ export function BookPage({ id, page, sentence }: { id: string; page?: number; se
   const signed = (v: number) => `${v >= 0 ? "+" : "−"}${num(lang, Math.abs(v), 2)}`;
   // Relative mode centres every scale on the corpus mean: 0.5 + (book − corpus).
   const rel = (v: number, ref: number | undefined) => (ds.rel && ref != null ? Math.max(0, Math.min(1, 0.5 + v - ref)) : v);
-  const peaksShown = ds.qs === "page" ? [...view.peaks].sort((a, b) => a.index - b.index) : view.peaks;
+  // Key moments always read in book order.
+  const peaksShown = [...view.peaks].sort((a, b) => a.index - b.index);
   const similarShown = ds.ns === "year" ? [...similar].sort((a, b) => (a.star.year ?? 9999) - (b.star.year ?? 9999)) : similar;
   const whole = ds.range[0] === 0 && ds.range[1] === 100;
   const actions = (
@@ -553,8 +578,8 @@ export function BookPage({ id, page, sentence }: { id: string; page?: number; se
   );
 
   return (
-    <PreviewProvider segments={segments} bookId={canon && excerpt ? id : null}>
-      <div className="book-page">
+    <PreviewProvider segments={segments} bookId={canon && excerpt ? id : null} here={reading ? selected : null}>
+      <div className={`book-page ${reading ? "reading" : ""} ${wasReading ? "was-reading" : ""}`}>
         {/* 1. Title block */}
         <header className="book-hero">
           <div className="eyebrow">{source}</div>
@@ -720,7 +745,7 @@ export function BookPage({ id, page, sentence }: { id: string; page?: number; se
           )}
         </Panel>
 
-        {/* 6a. Extreme pages (and explore), readable, above the dashboard */}
+        {/* 6a. Key moments (and page search), readable, above the dashboard */}
         {hasData && view.peaks.length > 0 && (
           <section className="panel extremes-panel">
             <header className="panel-head">
@@ -729,25 +754,24 @@ export function BookPage({ id, page, sentence }: { id: string; page?: number; se
               <span className="cell-controls">
                 <Tabs
                   label={t.quotesView}
+                  className="quote-views"
                   value={quoteView}
                   options={[
                     ["extremes", t.views.extremes],
                     ...(lines.length ? [["lines", t.views.lines] as ["lines", string]] : []),
-                    ["explore", t.views.explore],
+                    [
+                      "explore",
+                      <>
+                        <svg className="quote-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+                          <circle cx="10.5" cy="10.5" r="6" />
+                          <path d="m15 15 5.5 5.5" />
+                        </svg>
+                        {t.views.explore}
+                      </>,
+                    ],
                   ]}
                   onChange={setQuoteView}
                 />
-                {quoteView === "extremes" && (
-                  <Tabs
-                    label={t.c.sortBy}
-                    value={ds.qs}
-                    options={[
-                      ["score", t.c.byScore],
-                      ["page", t.c.byPage],
-                    ]}
-                    onChange={(qs) => setDash({ qs })}
-                  />
-                )}
               </span>
             </header>
             {quoteView === "extremes" ? (
@@ -775,8 +799,9 @@ export function BookPage({ id, page, sentence }: { id: string; page?: number; se
                     <li key={`${l.dim}:${l.page}:${l.n}`}>
                       <button
                         onClick={() => {
-                          rememberLens(l.dim, { point: true });
-                          openPage(l.page - 1);
+                          // The link names the exact sentence; the lens only colours it.
+                          rememberLens(l.dim);
+                          navigate(`${dashPath(l.page)}&s=${l.n}`, { replace: page != null });
                         }}
                       >
                         <span className="quote-label">
@@ -804,14 +829,14 @@ export function BookPage({ id, page, sentence }: { id: string; page?: number; se
             <section className="dash" aria-label={t.dashboard}>
               <DashBar state={ds} set={setDash} matches={view.matches} pages={view.analyses.length} />
 
-              <Cell span={8} title={t.c.spectrogram} keyNote={`${labelOf(vLead, lang).toLowerCase()} ${num(lang, vs.emotions[vLead.id], 2)}`}>
+              <Cell span={8} title={t.c.spectrogram} className="nav-cell" keyNote={`${labelOf(vLead, lang).toLowerCase()} ${num(lang, vs.emotions[vLead.id], 2)}`}>
                 <Spectrogram analyses={view.analyses} emotions={vs.emotions} onPick={chartAt} compact only={ds.emo} smoothing={ds.smooth} marks={view.marks} />
               </Cell>
               <Cell span={4} title={t.c.radar} keyNote={others.length ? t.c.vs(others.length) : undefined} className="cell-radar">
                 {meta.fingerprint && <Radar axes={radarAxes(meta.fingerprint, mean, lang)} color={lead.color} refLabel={t.meanOf(others.length)} />}
               </Cell>
 
-              <Cell span={8} title={t.c.pulse} keyNote={insights.tension != null && whole ? `${t.c.tension} ${insights.tension > 0 ? "↑" : "↓"} r=${num(lang, insights.tension, 2)}` : undefined}>
+              <Cell span={8} title={t.c.pulse} className="nav-cell" keyNote={insights.tension != null && whole ? `${t.c.tension} ${insights.tension > 0 ? "↑" : "↓"} r=${num(lang, insights.tension, 2)}` : undefined}>
                 <PulsePlot analyses={view.analyses} moments={view.peaks} onPick={chartPick} compact smoothing={ds.smooth} highlight={view.marks} />
               </Cell>
               <Cell
@@ -873,7 +898,7 @@ export function BookPage({ id, page, sentence }: { id: string; page?: number; se
                   </p>
                 )}
               </Cell>
-              <Cell span={6} title={t.c.shape} keyNote={bestFit ? `r=${num(lang, bestFit.r, 2)}` : undefined}>
+              <Cell span={6} title={t.c.shape} className="nav-cell" keyNote={bestFit ? `r=${num(lang, bestFit.r, 2)}` : undefined}>
                 <ArcPlot curve={view.arc.curve} shape={view.arc.shape} fits={view.arc.fits} compact pages={view.analyses.length} onPick={chartPick} />
               </Cell>
               <Cell
@@ -960,6 +985,7 @@ export function BookPage({ id, page, sentence }: { id: string; page?: number; se
               <Cell
                 span={12}
                 title={t.c.themes}
+                className="nav-cell"
                 keyNote={
                   topTheme
                     ? `${labelOf(
@@ -1008,8 +1034,19 @@ export function BookPage({ id, page, sentence }: { id: string; page?: number; se
           </Panel>
         )}
 
-        {selected != null && segments[selected] && (
-          <Reader segment={segments[selected]} analysis={analyses[selected] ?? null} total={segments.length} onMove={move} onClose={closeReader} excerpt={excerpt} page={pageText} point={sentence} />
+        {reading && (
+          <Reader
+            bookId={id}
+            title={meta.title}
+            segment={segments[selected!]}
+            analysis={analyses[selected!] ?? null}
+            total={segments.length}
+            onMove={move}
+            onClose={closeReader}
+            excerpt={excerpt}
+            page={pageText}
+            point={sentence}
+          />
         )}
       </div>
     </PreviewProvider>
@@ -1031,9 +1068,9 @@ function Cell({ span, title, keyNote, controls, className = "", children }: { sp
 }
 
 /** A tiny mono segmented control. */
-function Tabs<V extends string>({ label, value, options, onChange }: { label: string; value: V; options: [V, string][]; onChange: (v: V) => void }) {
+function Tabs<V extends string>({ label, value, options, onChange, className }: { label: string; value: V; options: [V, React.ReactNode][]; onChange: (v: V) => void; className?: string }) {
   return (
-    <span className="cell-tabs" role="group" aria-label={label}>
+    <span className={`cell-tabs ${className ?? ""}`} role="group" aria-label={label}>
       {options.map(([v, text]) => (
         <button key={v} className={value === v ? "on" : ""} aria-pressed={value === v} onClick={() => onChange(v)}>
           {text}

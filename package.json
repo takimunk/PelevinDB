@@ -12,7 +12,9 @@
     "pelevin:ingest": "node scripts/ingest-pelevin.ts",
     "pelevin:eda": "python3 scripts/eda-pelevin.py",
     "corpus": "node --env-file-if-exists=.env scripts/analyze-corpus.ts",
-    "sentences": "node --env-file-if-exists=.env scripts/analyze-sentences.ts"
+    "sentences": "node --env-file-if-exists=.env scripts/analyze-sentences.ts",
+    "translate:landing": "node --env-file-if-exists=.env scripts/translate-landing.ts",
+    "messages": "node --env-file-if-exists=.env scripts/messages.ts"
   },
   "dependencies": {
     "@openpanel/web": "^1.4.1",

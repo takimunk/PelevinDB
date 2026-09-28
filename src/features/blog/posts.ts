@@ -20,8 +20,8 @@ export const POSTS: Post[] = [
       ru: "От образа к идее: что 8186 страниц говорят о том, как менялся Пелевин",
     },
     dek: {
-      en: "A model answered 36 questions about every page of Pelevin’s fiction and then reread it sentence by sentence. Across thirty-seven years the pictures thin out, the ideas take over and the narrator steps forward — while the jokes stay exactly where they were. Tested, with figures you can play with.",
-      ru: "Модель ответила на 36 вопросов о каждой странице прозы Пелевина, а потом перечитала её по фразам. За тридцать семь лет картинки редеют, идеи берут верх, рассказчик выходит вперёд — а шутки остаются ровно на месте. С проверкой статистикой и живыми графиками.",
+      en: "A model answered 36 questions about every page of Pelevin’s fiction and then reread it sentence by sentence. Across thirty-seven years the pictures thin out, the ideas take over and the narrator steps forward — while the jokes stay exactly where they were. With statistical tests and interactive figures.",
+      ru: "Модель ответила на 36 вопросов о каждой странице прозы Пелевина, а потом перечитала её по фразам. За тридцать семь лет картинки редеют, идеи берут верх, рассказчик выходит вперёд — а шутки остаются ровно на месте. Со статистическими проверками и интерактивными графиками.",
     },
     minutes: { en: 16, ru: 16 },
     tags: { en: ["Jev", "style over time", "statistics"], ru: ["Jev", "стиль во времени", "статистика"] },
@@ -35,8 +35,8 @@ export const POSTS: Post[] = [
       ru: "Пелевин в цифрах: первый взгляд на тридцать лет прозы",
     },
     dek: {
-      en: "Before a model reads every page, we count. Sentence lengths, lexical richness, the rise and fall of words, semantic fields and a map of the books by vocabulary — with charts you can play with.",
-      ru: "Прежде чем модель прочтёт каждую страницу, мы считаем. Длина фраз, богатство словаря, взлёты и падения слов, семантические поля и карта книг по лексике — с графиками, которые можно крутить.",
+      en: "Before a model reads every page, we count. Sentence lengths, lexical richness, the rise and fall of words, semantic fields and a map of the books by vocabulary, with interactive charts.",
+      ru: "Прежде чем модель прочтёт каждую страницу, мы считаем. Длина фраз, богатство словаря, взлёты и падения слов, семантические поля и карта книг по лексике, с интерактивными графиками.",
     },
     minutes: { en: 14, ru: 14 },
     tags: { en: ["exploratory analysis", "corpus", "style"], ru: ["разведочный анализ", "корпус", "стиль"] },

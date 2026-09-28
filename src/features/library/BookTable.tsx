@@ -7,8 +7,8 @@ import { fmt, pct } from "../../ui/format.ts";
 import { dimLabel } from "./labels.ts";
 
 const T = {
-  en: { table: "Your books", n: "#", title: "title", author: "author", format: "format", pages: "pages", read: "read", mood: "mood", seen: "opened", unknown: "unknown author" },
-  ru: { table: "Ваши книги", n: "№", title: "название", author: "автор", format: "формат", pages: "стр.", read: "прочитано", mood: "настроение", seen: "открыта", unknown: "автор неизвестен" },
+  en: { table: "Your books", n: "#", title: "title", author: "author", format: "format", pages: "pages", read: "analysed", mood: "mood", seen: "opened", unknown: "unknown author" },
+  ru: { table: "Ваши книги", n: "№", title: "название", author: "автор", format: "формат", pages: "стр.", read: "проанализировано", mood: "настроение", seen: "открыта", unknown: "автор неизвестен" },
 };
 
 /** "3 min ago" / "3 мин. назад", in the current language. */

@@ -620,13 +620,17 @@ a.bt-row:focus-visible .pt-quote {
     border-color 0.15s,
     background-color 0.15s;
 }
-.result-pages button:hover {
+.result-pages button:hover:not(:disabled) {
   border-color: var(--ink);
 }
 .result-pages button.on {
   background: var(--ink);
   border-color: var(--ink);
   color: var(--paper);
+}
+.result-pages button:disabled {
+  opacity: 0.35;
+  cursor: default;
 }
 .result-cap {
   max-width: 60ch;
@@ -675,7 +679,7 @@ a.bt-row:focus-visible .pt-quote {
   }
 }
 
-/* ——— Lines: the strongest sentences of the corpus ——— */
+/* ——— Quotes: the strongest sentences of the corpus ——— */
 .lines-dims {
   display: flex;
   flex-wrap: wrap;
@@ -746,32 +750,29 @@ a.bt-row:focus-visible .pt-quote {
   gap: 8px;
   align-items: baseline;
 }
-.lines-weight {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11.5px;
-  color: var(--ink-2);
-}
-.lines-weight i {
-  width: 48px;
-  height: 4px;
-  border-radius: 2px;
-  background: linear-gradient(90deg, var(--c) calc(var(--w) * 100%), var(--line) 0);
-}
-.lt-read {
+.lines-tags {
   display: inline-flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 4px 6px;
-  font-size: 12.5px;
-  color: var(--ink-2);
+  gap: 2px 14px;
+  font: 400 11.5px/1.5 var(--mono);
+  color: var(--muted);
 }
-.lt-read .tag {
-  padding: 0 7px;
-  border: 1px solid var(--line-2);
-  border-radius: 999px;
-  font-size: 11.5px;
+.lines-tags > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.lines-swatch {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.lines-weight i {
+  width: 36px;
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--c) calc(var(--w) * 100%), var(--line) 0);
 }
 @media (max-width: 720px) {
   .lines-list .pt-quote {
