@@ -178,6 +178,13 @@ test("home starting points open the requested map, works and lines views", async
   await start.getByRole("link", { name: "Читать цитаты" }).click();
   await expect(page).toHaveURL(/#\/library\?tab=lines&dim=joy$/);
   await expect(page.getByRole("radio", { name: "радость" })).toHaveAttribute("aria-checked", "true");
+
+  await page.setViewportSize({ width: 320, height: 700 });
+  await page.goto("/#/");
+  const cards = await start.locator(".home-start-card").evaluateAll((items) => items.map((item) => item.getBoundingClientRect()));
+  expect(cards.map((card) => Math.round(card.y))).toEqual([Math.round(cards[0].y), Math.round(cards[0].y), Math.round(cards[0].y)]);
+  expect(Math.max(...cards.map((card) => card.height))).toBeLessThanOrEqual(130);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
 });
 
 test("home shows the wordmark, project links and top pages by emotion; search, language and theme switch", async ({ page }) => {

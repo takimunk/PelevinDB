@@ -95,7 +95,7 @@
 .home-start {
   width: min(1600px, 100%);
   margin: 0 auto;
-  padding: 64px var(--gutter) 0;
+  padding: 48px var(--gutter) 0;
 }
 .home-start-grid {
   display: grid;
@@ -107,32 +107,35 @@
   flex-direction: column;
   align-items: flex-start;
   min-width: 0;
-  padding: 24px;
+  padding: 18px 20px;
 }
 .home-start-card + .home-start-card {
   border-left: 1px solid var(--line-2);
 }
 .home-start-number {
-  margin-bottom: 26px;
+  margin-bottom: 10px;
   font: 400 11px/1 var(--mono);
   color: var(--muted);
 }
+.home-start-hint {
+  display: none;
+}
 .home-start-card h3 {
-  font: 400 clamp(23px, 2.1vw, 30px)/1.15 var(--serif);
+  font: 400 clamp(21px, 1.8vw, 26px)/1.15 var(--serif);
   color: var(--ink);
 }
 .home-start-card p {
   max-width: 36ch;
-  margin: 12px 0 28px;
-  font: 400 14px/1.5 var(--sans);
+  margin: 8px 0 16px;
+  font: 400 12.5px/1.45 var(--sans);
   color: var(--muted);
 }
 .home-start-link {
   margin-top: auto;
   white-space: normal;
 }
-.home-start-link span {
-  margin-left: 8px;
+.home-start-action-short {
+  display: none;
 }
 
 /* ───────── Top pages by emotion ───────── */
@@ -240,17 +243,37 @@
 
 @media (max-width: 860px) {
   .home-start {
-    padding-top: 48px;
+    padding-top: 36px;
   }
   .home-start-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
   .home-start-card + .home-start-card {
-    border-left: 0;
-    border-top: 1px solid var(--line-2);
+    border-left: 1px solid var(--line-2);
   }
-  .home-start-number {
-    margin-bottom: 14px;
+  .home-start-card {
+    padding: 12px 10px;
+  }
+  .home-start-card h3,
+  .home-start-card p,
+  .home-start-action {
+    display: none;
+  }
+  .home-start-hint {
+    display: block;
+    font: 400 10px/1 var(--mono);
+    color: var(--muted);
+  }
+  .home-start-action-short {
+    display: inline;
+  }
+  .home-start-link {
+    width: 100%;
+    min-height: 40px;
+    height: auto;
+    margin-top: 16px;
+    padding: 6px 4px;
+    font-size: 10.5px;
   }
   .hero {
     gap: 20px;

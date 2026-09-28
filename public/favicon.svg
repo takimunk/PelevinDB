@@ -5,6 +5,6 @@
   </style>
   <rect class="ink" x="3" y="14" width="58" height="28" rx="2"/>
   <rect class="paper" x="6" y="17" width="52" height="22"/>
-  <path class="letters" d="M10 22l4 8 4-8m-4 8-2 5M23 35V22h5a4 4 0 0 1 0 8h-5m13 5 5-13 5 13m-8-4h6m5 4 4-13h6v13"/>
+  <path class="letters" d="M10 22l4 8 4-8m-4 8-2 5 M23 35V22h4a4 4 0 0 1 0 8h-4 M35 35l5-13 5 13m-8-4h6 M48 35l4-13h4v13"/>
   <path class="ink" d="M29 42h6v17h-6zM22 59h20v3H22z"/>
 </svg>

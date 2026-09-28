@@ -38,9 +38,9 @@ const T = {
     startTitle: "Where to start",
     startNote: "Three ways into the corpus.",
     start: [
-      { title: "Explore the map", description: "See every work in a simple 2D view: humour across, light up.", action: "Open the map", path: "/map?view=laugh" },
-      { title: "Browse the works", description: "Find the books where love appears most often.", action: "See the works", path: "/library?view=themes&sort=love&dir=-1" },
-      { title: "Read the lines", description: "Discover lines from the works, ranked by joy.", action: "Read the lines", path: "/library?tab=lines&dim=joy" },
+      { title: "Explore the map", description: "See every work in a simple 2D view: humour across, light up.", action: "Open the map", shortAction: "Map", hint: "2D", path: "/map?view=laugh" },
+      { title: "Browse the works", description: "Find the books where love appears most often.", action: "See the works", shortAction: "Works", hint: "love", path: "/library?view=themes&sort=love&dir=-1" },
+      { title: "Read the lines", description: "Discover lines from the works, ranked by joy.", action: "Read the lines", shortAction: "Lines", hint: "joy", path: "/library?tab=lines&dim=joy" },
     ],
   },
   ru: {
@@ -60,9 +60,9 @@ const T = {
     startTitle: "С чего начать",
     startNote: "Три способа исследовать произведения.",
     start: [
-      { title: "Карта произведений", description: "Все произведения на плоской карте: по горизонтали — юмор, по вертикали — свет.", action: "Посмотреть карту", path: "/map?view=laugh" },
-      { title: "Произведения", description: "Найдите произведения, в которых чаще всего встречается тема любви.", action: "Смотреть произведения", path: "/library?view=themes&sort=love&dir=-1" },
-      { title: "Цитаты из произведений", description: "Читайте фразы, отсортированные по силе радости.", action: "Читать цитаты", path: "/library?tab=lines&dim=joy" },
+      { title: "Карта произведений", description: "Все произведения на плоской карте: по горизонтали — юмор, по вертикали — свет.", action: "Посмотреть карту", shortAction: "Карта", hint: "2D", path: "/map?view=laugh" },
+      { title: "Произведения", description: "Найдите произведения, в которых чаще всего встречается тема любви.", action: "Смотреть произведения", shortAction: "Книги", hint: "любовь", path: "/library?view=themes&sort=love&dir=-1" },
+      { title: "Цитаты из произведений", description: "Читайте фразы, отсортированные по силе радости.", action: "Читать цитаты", shortAction: "Цитаты", hint: "радость", path: "/library?tab=lines&dim=joy" },
     ],
   },
 };
@@ -222,10 +222,13 @@ export function HomePage() {
           {t.start.map((item, i) => (
             <article className="home-start-card" key={item.path}>
               <span className="home-start-number" aria-hidden="true">{String(i + 1).padStart(2, "0")}</span>
+              <span className="home-start-hint" aria-hidden="true">{item.hint}</span>
               <h3>{item.title}</h3>
               <p>{item.description}</p>
-              <a className="btn home-start-link" href={href(item.path)}>
-                {item.action} <span aria-hidden="true">→</span>
+              <a className="btn home-start-link" href={href(item.path)} aria-label={item.action}>
+                <span className="home-start-action">{item.action}</span>
+                <span className="home-start-action-short" aria-hidden="true">{item.shortAction}</span>
+                <span aria-hidden="true">→</span>
               </a>
             </article>
           ))}
