@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import { EMOTIONS, labelOf, MOODS, THEMES } from "../../../shared/catalog.ts";
 import { BOOK_KINDS } from "../../../shared/types.ts";
 import { ARC_SHAPES, argmax, topEntries } from "../../domain/analysis.ts";
-import { DEFAULT_WEIGHTS, FEATURE_GROUPS, fingerprintValues, WEIGHT_PRESETS, type Weights } from "../../domain/fingerprint.ts";
+import { FEATURE_GROUPS, fingerprintValues, WEIGHT_PRESETS, type Weights } from "../../domain/fingerprint.ts";
 import { findRegions } from "../../domain/clusters.ts";
 import { neighbours } from "../../domain/pca.ts";
 import { navigate } from "../../app/router.ts";
@@ -248,19 +248,20 @@ function StarCard({
   );
 }
 
-export function MapPage({ focus }: { focus?: string }) {
+export function MapPage({ focus, initialView }: { focus?: string; initialView?: string }) {
   const t = useT(T);
   const local = useLocalMode();
   const lang = useLang();
   const stage = useRef<HTMLElement>(null);
-  const [weights, setWeights] = useState<Weights>(DEFAULT_WEIGHTS);
+  const landingView = MAP_PRESETS.find((p) => p.id === initialView) ?? MAP_PRESETS[0];
+  const [weights, setWeights] = useState<Weights>(landingView.weights);
   const [includeAtlas, setIncludeAtlas] = useState(true);
   const [labels, setLabels] = useState(false);
   const [threads, setThreads] = useState(true);
   const [showRegions, setShowRegions] = useState(true);
   const [filter, setFilter] = useState("");
-  const [mode, setMode] = useState<GraphMode>("3d");
-  const [axisChoice, setAxisChoice] = useState<AxisChoice[]>(DEFAULT_AXES);
+  const [mode, setMode] = useState<GraphMode>(landingView.mode);
+  const [axisChoice, setAxisChoice] = useState<AxisChoice[]>(landingView.axes);
   const [colorBy, setColorBy] = useState<ColorBy>("emotion");
   const selected = focus ?? null;
   const stars = useCorpus({ includeAtlas });
@@ -281,7 +282,11 @@ export function MapPage({ focus }: { focus?: string }) {
   const regions = useMemo(() => findRegions(stars, coords, { weights, axes: axisChoice.slice(0, dims) }), [stars, coords, weights, axisChoice, dims]);
   const regionNames = useMemo(() => regions.map((r) => (lang === "ru" ? r.ru.name : r.name)), [regions, lang]);
   const select = (id: string | null) => {
-    navigate(id ? `/map?focus=${id}` : "/map", { replace: true });
+    const params = new URLSearchParams();
+    const activeView = matchPreset(mode, axisChoice, weights);
+    if (activeView) params.set("view", activeView);
+    if (id) params.set("focus", id);
+    navigate(`/map${params.size ? `?${params}` : ""}`, { replace: true });
     if (id && window.matchMedia("(max-width: 960px)").matches) stage.current?.scrollIntoView({ block: "start" });
   };
   const current = selected ? byId.get(selected) : undefined;

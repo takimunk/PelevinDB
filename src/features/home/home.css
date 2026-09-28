@@ -90,6 +90,51 @@
   text-decoration-color: currentColor;
 }
 
+/* ───────── Three entry points beneath the project introduction ───────── */
+
+.home-start {
+  width: min(1600px, 100%);
+  margin: 0 auto;
+  padding: 64px var(--gutter) 0;
+}
+.home-start-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border: 1px solid var(--line-2);
+}
+.home-start-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  padding: 24px;
+}
+.home-start-card + .home-start-card {
+  border-left: 1px solid var(--line-2);
+}
+.home-start-number {
+  margin-bottom: 26px;
+  font: 400 11px/1 var(--mono);
+  color: var(--muted);
+}
+.home-start-card h3 {
+  font: 400 clamp(23px, 2.1vw, 30px)/1.15 var(--serif);
+  color: var(--ink);
+}
+.home-start-card p {
+  max-width: 36ch;
+  margin: 12px 0 28px;
+  font: 400 14px/1.5 var(--sans);
+  color: var(--muted);
+}
+.home-start-link {
+  margin-top: auto;
+  white-space: normal;
+}
+.home-start-link span {
+  margin-left: 8px;
+}
+
 /* ───────── Top pages by emotion ───────── */
 
 .top-pages {
@@ -194,6 +239,19 @@
 }
 
 @media (max-width: 860px) {
+  .home-start {
+    padding-top: 48px;
+  }
+  .home-start-grid {
+    grid-template-columns: 1fr;
+  }
+  .home-start-card + .home-start-card {
+    border-left: 0;
+    border-top: 1px solid var(--line-2);
+  }
+  .home-start-number {
+    margin-bottom: 14px;
+  }
   .hero {
     gap: 20px;
     padding-top: 28px;

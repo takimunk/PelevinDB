@@ -289,7 +289,7 @@ export default function App() {
         {route.name === "library" && <LibraryPage tab={route.tab} params={route.params} />}
         {route.name === "map" && (
           <Suspense fallback={<Loading label={t.loading.map} />}>
-            <MapPage focus={route.focus} />
+            <MapPage focus={route.focus} initialView={route.view} />
           </Suspense>
         )}
         {route.name === "blog" && (

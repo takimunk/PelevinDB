@@ -151,6 +151,35 @@ const topPagesFixture = [
   { emotion: "fear", items: [{ id: "pv-chapaev", title: "Чапаев и Пустота", titleEn: "Chapaev and Void", year: 1996, page: 40, score: 0.99, quote: "Сказать, что я испугался – значит не сказать ничего." }] },
 ];
 
+test("home starting points open the requested map, works and lines views", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("pelevindb.lang", "ru"));
+  await page.route("**/api/corpus", (route) => route.fulfill({ json: canonList }));
+  await page.route("**/atlas.json", (route) => route.fulfill({ json: atlas }));
+  await page.route("**/api/corpus/lines?*", (route) => route.fulfill({ json: {
+    total: 1, read: 1, page: 1, pageSize: 25, maxPages: 5, pages: 1, rows: [], books: {},
+    facets: { book: {}, kind: {}, decade: {}, flag: {}, act: {} },
+  } }));
+
+  await page.goto("/");
+  const start = page.getByRole("region", { name: "С чего начать" });
+  await expect(start.locator(".home-start-card")).toHaveCount(3);
+  await start.getByRole("link", { name: "Посмотреть карту" }).click();
+  await expect(page).toHaveURL(/#\/map\?view=laugh$/);
+  await expect(page.getByRole("group", { name: "Вид" }).getByRole("button", { name: "2d" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: "Смех в темноте" })).toHaveAttribute("aria-pressed", "true");
+
+  await page.goto("/#/");
+  await start.getByRole("link", { name: "Смотреть произведения" }).click();
+  await expect(page).toHaveURL(/#\/library\?view=themes&sort=love&dir=-1$/);
+  await expect(page.getByRole("group", { name: "Столбцы" }).getByRole("button", { name: "темы" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("table", { name: "Произведения Пелевина" }).getByRole("columnheader", { name: "любовь" })).toHaveAttribute("aria-sort", "descending");
+
+  await page.goto("/#/");
+  await start.getByRole("link", { name: "Читать цитаты" }).click();
+  await expect(page).toHaveURL(/#\/library\?tab=lines&dim=joy$/);
+  await expect(page.getByRole("radio", { name: "радость" })).toHaveAttribute("aria-checked", "true");
+});
+
 test("home shows the wordmark, project links and top pages by emotion; search, language and theme switch", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));

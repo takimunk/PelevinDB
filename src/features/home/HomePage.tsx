@@ -35,6 +35,13 @@ const T = {
     open: (title: string, page: number) => `${title}, page ${page}`,
     score: "score",
     fig1: "Fig. 1 — “Ural”, after Chapaev and Void",
+    startTitle: "Where to start",
+    startNote: "Three ways into the corpus.",
+    start: [
+      { title: "Explore the map", description: "See every work in a simple 2D view: humour across, light up.", action: "Open the map", path: "/map?view=laugh" },
+      { title: "Browse the works", description: "Find the books where love appears most often.", action: "See the works", path: "/library?view=themes&sort=love&dir=-1" },
+      { title: "Read the lines", description: "Discover lines from the works, ranked by joy.", action: "Read the lines", path: "/library?tab=lines&dim=joy" },
+    ],
   },
   ru: {
     description: "Независимый исследовательский проект. Вычислительное прочтение творчества Виктора Олеговича.",
@@ -50,6 +57,13 @@ const T = {
     open: (title: string, page: number) => `${title}, страница ${page}`,
     score: "оценка",
     fig1: "Рис. 1 — «Урал», по мотивам «Чапаева и Пустоты»",
+    startTitle: "С чего начать",
+    startNote: "Три способа исследовать произведения.",
+    start: [
+      { title: "Карта произведений", description: "Все произведения на плоской карте: по горизонтали — юмор, по вертикали — свет.", action: "Посмотреть карту", path: "/map?view=laugh" },
+      { title: "Произведения", description: "Найдите произведения, в которых чаще всего встречается тема любви.", action: "Смотреть произведения", path: "/library?view=themes&sort=love&dir=-1" },
+      { title: "Цитаты из произведений", description: "Читайте фразы, отсортированные по силе радости.", action: "Читать цитаты", path: "/library?tab=lines&dim=joy" },
+    ],
   },
 };
 type Dict = (typeof T)["en"];
@@ -197,6 +211,24 @@ export function HomePage() {
               </span>
             </span>
           </p>
+        </div>
+      </section>
+      <section className="home-start" aria-labelledby="home-start-title">
+        <header className="section-head">
+          <h2 id="home-start-title">{t.startTitle}</h2>
+          <p>{t.startNote}</p>
+        </header>
+        <div className="home-start-grid">
+          {t.start.map((item, i) => (
+            <article className="home-start-card" key={item.path}>
+              <span className="home-start-number" aria-hidden="true">{String(i + 1).padStart(2, "0")}</span>
+              <h3>{item.title}</h3>
+              <p>{item.description}</p>
+              <a className="btn home-start-link" href={href(item.path)}>
+                {item.action} <span aria-hidden="true">→</span>
+              </a>
+            </article>
+          ))}
         </div>
       </section>
       <TopPagesShowcase t={t} lang={lang} />
