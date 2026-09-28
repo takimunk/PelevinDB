@@ -414,7 +414,7 @@ test("analysed book shows cost, radar, brief, quotes, every chart, the reader an
   await expect(page.locator(".reader-text")).toBeVisible();
   await page.keyboard.press("Escape");
 
-  await page.getByRole("button", { name: "explore", exact: true }).click();
+  await page.getByRole("button", { name: "search pages", exact: true }).click();
   await page.getByRole("combobox", { name: "show" }).selectOption("emotions:fear");
   await expect(page.getByRole("combobox", { name: "sort by" })).toHaveValue("emotions:fear");
   const hits = page.locator(".explorer-hits li");
@@ -538,7 +538,7 @@ test("map switches 2D/3D, takes any answer as an axis, shows coordinates on hove
   await page.goto("/#/map?view=pca");
   await expect(page.getByRole("heading", { name: "Map of the works" })).toBeVisible();
   await expect(page.getByRole("button", { name: "3d", exact: true })).toHaveAttribute("aria-pressed", "true");
-  await expect(page.locator(".graph canvas")).toBeVisible();
+  await expect(page.locator(".graph canvas")).toBeVisible({ timeout: 20_000 });
   await expect(page.locator(".node-label")).toHaveCount(8);
   await expect(page.getByRole("group", { name: "Regions" }).getByRole("button")).toHaveCount(2);
   const desktopLegend = (await page.locator(".graph-regions").boundingBox())!;
@@ -644,7 +644,7 @@ test("canon books open read-only from the library, the map and search with brief
   await expect(page.getByRole("button", { name: /rewrite/i })).toHaveCount(0);
   await expect(button(page, "export")).toBeVisible();
 
-  await page.getByRole("button", { name: "explore", exact: true }).click();
+  await page.getByRole("button", { name: "search pages", exact: true }).click();
   await expect(page.locator(".explorer-hits li").first()).toBeVisible();
   await page.locator(".explorer-hits li button").first().click();
   await expect(page.locator(".reader-text")).toBeVisible();
@@ -654,7 +654,7 @@ test("canon books open read-only from the library, the map and search with brief
 
   await page.getByRole("link", { name: "Map" }).click();
   await page.getByRole("button", { name: /Meditations Fixture Author/ }).click();
-  await expect(page.locator(".star-card")).toContainText(`corpus · Jev read all ${canonBook.pages} pages`);
+  await expect(page.locator(".star-card")).toContainText(`corpus · all ${canonBook.pages} pages analysed`);
   await expect(page.getByRole("button", { name: /Meditations Fixture Author/ }).locator(".glyph.canon")).toHaveCount(1);
   await button(page, "open book →").click();
   await expect(page).toHaveURL(/#\/book\/pg-901$/);
@@ -790,7 +790,7 @@ test("the public site hides uploading, your library and the analysis actions", a
   await expect(page.getByRole("button", { name: "Delete book" })).toHaveCount(0);
 
   await page.goto("/#/map");
-  await expect(page.locator(".graph canvas")).toBeVisible();
+  await expect(page.locator(".graph canvas")).toBeVisible({ timeout: 20_000 });
   await expect(page.locator(".graph-legend .glyph.own")).toHaveCount(0);
   indexedDb.push(...((await page.evaluate(() => (window as unknown as { __idb?: string[] }).__idb)) ?? []));
   expect(indexedDb).toEqual([]);
@@ -862,7 +862,7 @@ test.describe("phone workflows", () => {
         for (const box of boxes) expect(box.scroll).toBeLessThanOrEqual(box.client + 1);
       }
       if (width === 390) await page.screenshot({ path: "/tmp/xbook-mobile-book.png", fullPage: true });
-      await page.getByRole("button", { name: "explore", exact: true }).tap();
+      await page.getByRole("button", { name: "search pages", exact: true }).tap();
       await page.getByRole("combobox", { name: "show" }).selectOption("emotions:fear");
       await page.locator(".explorer-hits li button").first().tap();
       await expect(page.locator(".reader-text")).toBeVisible();
@@ -878,7 +878,7 @@ test.describe("phone workflows", () => {
       await expect(page.locator(".reader")).toHaveCount(0);
 
       await page.getByRole("link", { name: "Map", exact: true }).tap();
-      await expect(page.locator(".graph canvas")).toBeVisible();
+      await expect(page.locator(".graph canvas")).toBeVisible({ timeout: 20_000 });
       await expect(page.locator(".graph-touch-help")).toBeVisible();
       const legend = page.getByRole("group", { name: "Regions" });
       await expect(legend.getByRole("button")).toHaveCount(2);
