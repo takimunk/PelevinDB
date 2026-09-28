@@ -1,6 +1,7 @@
-// The reader's page text split into its sentences, tinted by one focus dimension: how much of the page's score each
-// sentence carries (page score × the focus probability, relative to the page's peak sentence). Click a sentence to
-// see what Jev answered about it on its own, when it has read it.
+// The reader's page text split into its sentences. With no lens chosen ("all"), each dimension's peak sentence takes
+// that dimension's colour. A lens narrows to one focus dimension: how much of the page's score each sentence carries
+// (page score × the focus probability, relative to the page's peak sentence). Click a sentence to see its own
+// sentence-level analysis, when it has one.
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import {
   FOCUS,
@@ -22,21 +23,21 @@ import { useLang, useT } from "../../i18n/index.ts";
 const T = {
   en: {
     lens: "Highlight sentences",
-    off: "off",
+    all: "all",
     peak: "peak",
     sentence: (n: number) => `Sentence ${n}`,
-    reads: "Read alone",
-    none: "Jev finds no sentence on this page that carries it.",
+    reads: "On its own",
+    none: "No sentence on this page carries it.",
     pending: "Sentence analysis has not reached this page yet.",
   },
   ru: {
-    lens: "Подсветка фраз",
-    off: "нет",
+    lens: "Подсветка предложений",
+    all: "все",
     peak: "пик",
-    sentence: (n: number) => `Фраза ${n}`,
+    sentence: (n: number) => `Предложение ${n}`,
     reads: "Отдельно",
-    none: "Jev не находит на этой странице фразы, которая это несёт.",
-    pending: "Разбор по фразам до этой страницы ещё не дошёл.",
+    none: "На этой странице нет предложения, которое это несёт.",
+    pending: "Разбор по предложениям до этой страницы ещё не дошёл.",
   },
 };
 
@@ -113,7 +114,7 @@ export function LensBar({
         className={lens == null ? "on" : ""}
         onClick={() => onLens(null)}
       >
-        {t.off}
+        {t.all}
       </button>
       {FOCUS.map((f) => (
         <button
@@ -123,7 +124,8 @@ export function LensBar({
           className={lens === f.id ? "on" : ""}
           disabled={disabled}
           style={{ "--c": f.color } as CSSProperties}
-          onClick={() => onLens(f.id)}
+          // Choosing the chosen lens again returns to every highlight.
+          onClick={() => onLens(lens === f.id ? null : f.id)}
         >
           <i aria-hidden="true" />
           {labelOf(f, lang).toLowerCase()}
@@ -148,6 +150,32 @@ export function lensWeights(
   return { weights: p.map((v) => (score * v) / max), peak: p.indexOf(max) };
 }
 
+/**
+ * The "all" view: per sentence, the dimension whose peak it is (when Jev names one over "none"), weighted by the page
+ * score. A sentence that is the peak of several takes the one with the strongest page score; quotable, which has no
+ * page score, only when no scored dimension claims the sentence.
+ */
+export function allPeaks(sentences: PageSentences, analysis: SegmentAnalysis | null) {
+  const f = sentences.focus;
+  if (!f) return null;
+  const out: ({ ids: FocusId[]; id: FocusId; w: number } | null)[] = sentences.spans.map(() => null);
+  for (const d of FOCUS) {
+    const p = f.focus[d.id];
+    if (!p?.length) continue;
+    const max = Math.max(...p);
+    if (!(max > (f.none[d.id] ?? 0))) continue;
+    const i = p.indexOf(max);
+    const w = d.source ? pageScore(analysis, d.id) : 0;
+    const cur = out[i];
+    if (!cur) out[i] = { ids: [d.id], id: d.id, w };
+    else {
+      cur.ids.push(d.id);
+      if (w > cur.w) Object.assign(cur, { id: d.id, w });
+    }
+  }
+  return out;
+}
+
 export function SentenceText({
   text,
   sentences,
@@ -155,9 +183,12 @@ export function SentenceText({
   lens,
   jump = 0,
   point,
+  display,
 }: {
   text: string;
   sentences: PageSentences;
+  /** Visible text per sentence index (a translation); highlights stay keyed by index, gaps come from `text`. */
+  display?: string[];
   analysis: SegmentAnalysis | null;
   lens: FocusId | null;
   /** Bumped when the reader points at a dimension: scrolls to its peak sentence again and flashes it. */
@@ -193,27 +224,35 @@ export function SentenceText({
   }, [text, point]);
   const color = lens ? FOCUS.find((f) => f.id === lens)!.color : undefined;
   const lensed = lens ? lensWeights(sentences, analysis, lens) : null;
+  const all = lens ? null : allPeaks(sentences, analysis);
   const parts: React.ReactNode[] = [];
   let at = 0;
   sentences.spans.forEach(([start, end], i) => {
     if (start > at) parts.push(text.slice(at, start));
     const w = lensed?.weights[i] ?? 0;
     const read = sentences.read[i];
-    const body = text.slice(start, end);
-    // Only sentences Jev read on their own are highlighted and open a card. Without a lens the tint is the
-    // sentence's leading emotion, its opacity the sentence's intensity (with a faint floor, so calm ones still show).
+    const body = display?.[i] ?? text.slice(start, end);
+    // With a lens, every sentence takes its share of the dimension. With all, each peak sentence takes its dimension's
+    // colour (a floor keeps weak pages visible). A page without focus answers falls back to the sentences read on
+    // their own: the tint is the sentence's leading emotion, its opacity the sentence's intensity.
+    const peakOf = all?.[i];
     const style = lensed
       ? ({ "--w": Math.sqrt(w).toFixed(3), "--c": color } as CSSProperties)
-      : read
+      : all
+        ? peakOf
+          ? ({ "--w": (0.35 + 0.65 * Math.sqrt(peakOf.w)).toFixed(3), "--c": FOCUS.find((f) => f.id === peakOf.id)!.color } as CSSProperties)
+          : undefined
+        : read
         ? ({
             "--w": (0.12 + 0.88 * read.scales.arousal).toFixed(3),
             "--c": SENTENCE_EMOTIONS.find((e) => e.id === read.emotion)!.color,
           } as CSSProperties)
         : undefined;
-    const peak = `${lensed && i === lensed.peak ? "peak" : ""} ${point === i ? "pointed" : ""}`;
+    const peak = `${lensed && i === lensed.peak ? "peak" : ""} ${peakOf ? "tinted" : ""} ${point === i ? "pointed" : ""}`;
+    const title = peakOf ? peakOf.ids.map((id) => labelOf(FOCUS.find((f) => f.id === id)!, lang).toLowerCase()).join(" · ") : undefined;
     if (!read) {
       parts.push(
-        <span key={i} className={`sent ${peak}`} style={style}>
+        <span key={i} className={`sent ${peak}`} style={style} title={title}>
           {body}
         </span>,
       );
@@ -226,6 +265,7 @@ export function SentenceText({
         key={i}
         className={`sent read ${peak} ${open === i ? "open" : ""}`}
         style={style}
+        title={title}
         role="button"
         tabIndex={0}
         aria-expanded={open === i}
@@ -261,7 +301,7 @@ export function SentenceText({
       {lens && lensed && lensed.peak < 0 && (
         <span className="reader-lens-note">{t.none}</span>
       )}
-      <span ref={root} className={`sent-text ${lensed ? "lensed" : "felt"}`}>
+      <span ref={root} className={`sent-text ${lensed ? "lensed" : all ? "all" : "felt"}`}>
         {parts}
       </span>
     </>

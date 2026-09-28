@@ -21,9 +21,9 @@ const regionFont = (px: number) => `italic 700 ${px}px "Literata", Georgia, seri
 const T = {
   en: {
     yourBook: "your book",
-    corpusAll: (n: number) => `corpus · Jev read all ${n} pages`,
-    corpusSome: (a: number, n: number) => `corpus · Jev read ${a} of ${n} pages`,
-    atlas: (n: string) => `atlas · Jev read ${n} sampled pages`,
+    corpusAll: (n: number) => `corpus · all ${n} pages analysed`,
+    corpusSome: (a: number, n: number) => `corpus · ${a} of ${n} pages analysed`,
+    atlas: (n: string) => `atlas · ${n} sampled pages analysed`,
     coverage: "coverage",
     coords: "85 coordinates · click to select",
     fingerprint: "fingerprint coordinates",
@@ -52,9 +52,9 @@ const T = {
   },
   ru: {
     yourBook: "ваша книга",
-    corpusAll: (n: number) => `корпус · Jev прочитал все ${n} стр.`,
-    corpusSome: (a: number, n: number) => `корпус · Jev прочитал ${a} из ${n} стр.`,
-    atlas: (n: string) => `атлас · Jev прочитал ${n} стр. выборочно`,
+    corpusAll: (n: number) => `корпус · проанализированы все ${n} стр.`,
+    corpusSome: (a: number, n: number) => `корпус · проанализировано ${a} из ${n} стр.`,
+    atlas: (n: string) => `атлас · проанализировано ${n} стр. выборочно`,
     coverage: "охват",
     coords: "85 координат · нажмите, чтобы выбрать",
     fingerprint: "координат отпечатка",

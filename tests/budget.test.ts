@@ -127,7 +127,8 @@ test("unexpected excess cost blocks further spending and missing costs never mea
   assert.equal(store.summary("openrouter").remaining, 0);
   store.close();
 });
-test("OpenRouter requests reserve full context, enforce price ceilings and settle actual cost", async () => {
+const micros = (n: number) => Math.ceil(n);
+test("OpenRouter requests reserve the prompt bytes (capped by context), enforce price ceilings and settle actual cost", async () => {
   const store = new BudgetStore(":memory:");
   let calls = 0;
   const run = meteredFetch(
@@ -150,13 +151,14 @@ test("OpenRouter requests reserve full context, enforce price ceilings and settl
         completion: 10,
         request: 0,
       });
-      assert.equal(store.summary("openrouter").reserved, 0.12);
+      // 1,030 bytes of messages at the $1/M prompt ceiling + 2,000 output tokens at $10/M.
+      assert.equal(store.summary("openrouter").reserved, micros(1030 + 20_000) / 1e6);
       return Response.json({ usage: { cost: 0.005 } });
     },
   );
   await run("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
-    body: JSON.stringify({ model: "test/brief", max_tokens: 2000 }),
+    body: JSON.stringify({ model: "test/brief", max_tokens: 2000, messages: [{ role: "user", content: "ж".repeat(500) }] }),
   });
   assert.equal(calls, 1);
   assert.equal(store.summary("openrouter").used, 0.005);

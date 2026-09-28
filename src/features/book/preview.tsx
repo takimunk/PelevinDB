@@ -1,9 +1,10 @@
 // One shared page-preview tooltip for every chart on the book page that maps to a page:
-// page number and position, the hovered metric, and a sentence. For a corpus book with sentence analysis the sentence
-// is the one that carries the hovered dimension most (GET /api/corpus/:id/peek/:n, one sentence, fetched once the
-// pointer rests and cached); until then, and for your own books, the page's first sentence from the loaded text.
+// page number and position, the hovered metric, and a sentence. When the pointer is on a dimension (an emotion ridge, a
+// theme, a pulse line, a DNA column's leading emotion) and the book is a corpus book with sentence analysis, the
+// sentence is the one that carries that dimension most (GET /api/corpus/:id/peek/:n?dim=, one sentence, fetched once
+// the pointer rests and cached). Without a dimension, and for your own books, it is the page's first sentence.
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
-import { FOCUS, type FocusId } from "../../../shared/catalog.ts";
+import { FOCUS, labelOf, type FocusId, type ThemeId } from "../../../shared/catalog.ts";
 import type { Segment } from "../../domain/text.ts";
 import { useLang } from "../../i18n/index.ts";
 import { pageRef, pct } from "./i18n.ts";
@@ -23,7 +24,7 @@ export function previewSentence(page: string): string {
   return `${(word > MAX * 0.5 ? window.slice(0, word) : window).replace(/[\s,;:—–-]+$/u, "")}…`;
 }
 
-type Tip = { x: number; y: number; index: number; metric?: ReactNode; dim?: FocusId | null } | null;
+type Tip = { x: number; y: number; index: number; metric?: ReactNode; dim?: FocusId | null; source?: string } | null;
 let tip: Tip = null;
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach((l) => l());
@@ -32,13 +33,53 @@ const subscribe = (l: () => void) => {
   return () => listeners.delete(l);
 };
 
-type Scope = { segments: Segment[]; offset: number; bookId: string | null };
-const ScopeContext = createContext<Scope>({ segments: [], offset: 0, bookId: null });
+/** `here`: the page open in the reader (global 0-based index), which every chart marks; null when none is open. */
+type Scope = { segments: Segment[]; offset: number; bookId: string | null; here: number | null };
+const ScopeContext = createContext<Scope>({ segments: [], offset: 0, bookId: null, here: null });
 
 // ───────── Peak sentences, fetched one at a time ─────────
 
 /** A chart's own id (an emotion, a texture) as a focus dimension, when there is one. */
 export const asFocus = (id: string): FocusId | null => (FOCUS.some((f) => f.id === id) ? (id as FocusId) : null);
+
+/**
+ * Themes have no sentence focus question: Jev answers them per page only. The preview quotes a theme by the focus
+ * dimension closest to what the theme is about, and says so in the tooltip ("sentence by ideas"). This is a proxy for
+ * locating a sentence, not a theme score: the weight shown is always the page's own theme probability.
+ */
+export const THEME_FOCUS: Record<ThemeId, FocusId> = {
+  love: "trust",
+  family: "trust",
+  friendship: "trust",
+  home: "trust",
+  death: "dark",
+  loneliness: "sadness",
+  war: "tension",
+  crime: "tension",
+  power: "ideas",
+  money: "ideas",
+  faith: "ideas",
+  freedom: "ideas",
+  science: "ideas",
+  nature: "imagery",
+  journey: "imagery",
+  art: "imagery",
+  memory: "interiority",
+  identity: "interiority",
+  supernatural: "surprise",
+};
+
+/**
+ * The focus dimension a chart series is quoted by: its own when it is one; anticipation (not placeable on a sentence,
+ * see shared/catalog.ts FOCUS) and pace by tension, the closest question; light by brightest or darkest by the value;
+ * a theme by THEME_FOCUS. Null for anything else: the preview then shows the page's first sentence.
+ */
+export function focusFor(id: string, value?: number): FocusId | null {
+  if (id === "anticipation" || id === "pace") return "tension";
+  if (id === "valence") return (value ?? 0.5) >= 0.5 ? "light" : "dark";
+  if (id in THEME_FOCUS) return THEME_FOCUS[id as ThemeId];
+  return asFocus(id);
+}
 
 /** The focus dimension of each extreme-page moment (src/domain/analysis.ts `moments`); "still" has none. */
 export const MOMENT_FOCUS: Record<string, FocusId | null> = { climax: "tension", still: null, light: "light", dark: "dark", wonder: "surprise", inner: "interiority" };
@@ -108,9 +149,12 @@ export function PeakQuote({ bookId, page, dim, fallback }: { bookId: string | nu
   return <q>{peak ?? fallback}</q>;
 }
 
-/** Provides the book's segments (global page order) to the tooltip and every chart below. `bookId`: a corpus book. */
-export function PreviewProvider({ segments, bookId = null, children }: { segments: Segment[]; bookId?: string | null; children: ReactNode }) {
-  const value = useMemo(() => ({ segments, offset: 0, bookId }), [segments, bookId]);
+/**
+ * Provides the book's segments (global page order) to the tooltip and every chart below. `bookId`: a corpus book;
+ * `here`: the page open in the reader (0-based), marked on every chart.
+ */
+export function PreviewProvider({ segments, bookId = null, here = null, children }: { segments: Segment[]; bookId?: string | null; here?: number | null; children: ReactNode }) {
+  const value = useMemo(() => ({ segments, offset: 0, bookId, here }), [segments, bookId, here]);
   return (
     <ScopeContext.Provider value={value}>
       {children}
@@ -126,14 +170,28 @@ export function PreviewOffset({ offset, children }: { offset: number; children: 
   return <ScopeContext.Provider value={value}>{children}</ScopeContext.Provider>;
 }
 
+/**
+ * The page open in the reader: `index` local to the chart's slice of `pages`, `page` its 1-based number in the book;
+ * null when none is open or it lies outside the slice.
+ */
+export function useHere(pages: number): { index: number; page: number } | null {
+  const { here, offset } = useContext(ScopeContext);
+  if (here == null) return null;
+  const index = here - offset;
+  return index >= 0 && index < pages ? { index, page: here + 1 } : null;
+}
+
 /** Show the preview for a page (index local to the chart's slice) at the pointer, or hide it. */
 export function usePreview() {
   const { offset } = useContext(ScopeContext);
   return useMemo(
     () => ({
-      /** `dim`: the dimension the pointer is on, so the preview quotes the sentence that carries it. */
-      show(e: { clientX: number; clientY: number }, index: number, metric?: ReactNode, dim?: FocusId | null) {
-        tip = { x: e.clientX, y: e.clientY, index: offset + index, metric, dim };
+      /**
+       * `dim`: the focus dimension the pointer is on, so the preview quotes the sentence that carries it; `source`: the
+       * chart's own series id (a theme, say), so the tooltip can say when the quote was chosen by another dimension.
+       */
+      show(e: { clientX: number; clientY: number }, index: number, metric?: ReactNode, dim?: FocusId | null, source?: string) {
+        tip = { x: e.clientX, y: e.clientY, index: offset + index, metric, dim, source: source ?? dim ?? undefined };
         emit();
       },
       hide() {
@@ -154,8 +212,9 @@ function PageTooltip() {
     () => tip,
     () => null,
   );
-  // Ask for the peak sentence only once the pointer rests on a page and dimension for a moment.
-  const key = bookId && current ? peekKey(bookId, current.index + 1, current.dim) : null;
+  // Ask for the peak sentence only once the pointer rests on a page and a dimension for a moment. An unfocused hover
+  // asks for nothing: it quotes the page's first sentence.
+  const key = bookId && current?.dim ? peekKey(bookId, current.index + 1, current.dim) : null;
   const [tried, setTried] = useState<string | null>(null);
   useEffect(() => {
     if (!key || !bookId || !current || peeks.has(key)) return;
@@ -181,10 +240,14 @@ function PageTooltip() {
   if (!current || !segments[current.index]) return null;
   const n = segments.length;
   const fallback = previewSentence(segments[current.index].text);
-  // undefined: not fetched yet (the first sentence shows, faded); null: Jev names no sentence (the first sentence shows).
-  const peak = key != null && peeks.has(key) ? peeks.get(key)!.text : undefined;
-  const sentence = peak ?? fallback;
-  const pending = key != null && peak === undefined && tried !== key;
+  // undefined: not fetched yet (an ellipsis shows, so the first sentence never passes for the dimension's quote);
+  // null: the page has no sentence analysis yet, or the request failed (the first sentence shows).
+  const got = key != null ? peeks.get(key) : undefined;
+  const pending = key != null && !got && tried !== key;
+  const sentence = got?.text ?? (pending ? "…" : fallback);
+  // The quote was chosen by another dimension than the hovered one: a theme's proxy, or the page's leading emotion
+  // when no sentence carries the hovered one.
+  const via = got?.text && got.dim && got.dim !== current.source ? FOCUS.find((f) => f.id === got.dim) : null;
   return (
     <div
       ref={ref}
@@ -201,6 +264,12 @@ function PageTooltip() {
         {current.metric != null && <span className="page-tip-metric"> · {current.metric}</span>}
       </p>
       {sentence && <p className={`page-tip-text ${pending ? "pending" : ""}`}>{sentence}</p>}
+      {via && (
+        <p className="page-tip-via num">
+          {lang === "ru" ? "предложение по: " : "sentence by "}
+          {labelOf(via, lang).toLowerCase()}
+        </p>
+      )}
     </div>
   );
 }

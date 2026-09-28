@@ -9,6 +9,7 @@ import { clearImportError, importFile, openFilePicker, registerPicker, useImport
 import { useLocalMode } from "../services/mode.ts";
 import { href, navigate, useRoute } from "./router.ts";
 import { AUTHOR_URL, GitHubMark, REPO_URL, XMark } from "../ui/Social.tsx";
+import { ContactButton } from "../ui/Contact.tsx";
 import { Wordmark } from "../ui/Wordmark.tsx";
 
 const MapPage = lazy(() => import("../features/map/MapPage.tsx").then((m) => ({ default: m.MapPage })));
@@ -280,6 +281,7 @@ export default function App() {
             <a className="btn icon" href={AUTHOR_URL} target="_blank" rel="noopener" aria-label={t.x} title={t.x}>
               <XMark />
             </a>
+            <ContactButton variant="icon" />
           </span>
         </div>
       </header>

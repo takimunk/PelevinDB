@@ -1,7 +1,7 @@
 // Canon-wide aggregates over every stored page. Derived on read from the raw answers, cached until the store changes.
 import { argmax, isParatext } from "../shared/analysis.ts";
 import { EMOTIONS, FOCUS, RUBRIC_VERSION, type EmotionId, type FocusId } from "../shared/catalog.ts";
-import { peakQuote } from "./sentences.ts";
+import { peakLine, sentenceOf } from "./sentences.ts";
 import type { CorpusStats, PageRef, SegmentAnalysis } from "../shared/types.ts";
 import type { Store } from "./store.ts";
 
@@ -109,7 +109,8 @@ export function corpusStats(store: Store): CorpusStats {
 
 // ───────── Top pages per emotion (the home page showcase) ─────────
 
-export type TopPage = { id: string; title: string; titleEn: string | null; year: number | null; page: number; score: number; quote: string };
+/** `n`: the quoted sentence on the page (1-based, a book link's `s`), null when the page is not split into sentences. */
+export type TopPage = { id: string; title: string; titleEn: string | null; year: number | null; page: number; n: number | null; score: number; quote: string };
 export type TopPages = { emotion: EmotionId; items: TopPage[] }[];
 
 export const TOP_PAGES_MAX = 10;
@@ -138,7 +139,7 @@ export function pageQuote(page: string): string {
 const topCache = new WeakMap<Store, Map<string, TopPages>>();
 
 /** The version of the top-pages payload, part of its ETag. */
-export const topPagesStamp = (store: Store, per: number) => `top2|${per}|${store.totals().stamp}`;
+export const topPagesStamp = (store: Store, per: number) => `top3|${per}|${store.totals().stamp}`;
 
 /**
  * For every Plutchik emotion, the `per` story pages of the whole corpus with the highest Jev score, highest first.
@@ -203,14 +204,17 @@ export function topPages(store: Store, per = 3): TopPages {
       .sort((x, y) => y.score - x.score || y.confidence - x.confidence)
       .map((c) => {
         const b = meta.get(c.bookId);
+        const peak = FOCUS.some((f) => f.id === e.id) ? peakLine(store, c.bookId, c.idx, e.id as FocusId) : null;
+        const quote = peak?.text ?? pageQuote(pageText(c.bookId, c.idx));
         return {
           id: c.bookId,
           title: b?.title ?? "",
           titleEn: b?.titleEn ?? null,
           year: b?.year ?? null,
           page: c.idx + 1,
+          n: peak?.n ?? sentenceOf(store, c.bookId, c.idx, quote),
           score: Math.round(c.score * 1000) / 1000,
-          quote: (FOCUS.some((f) => f.id === e.id) && peakQuote(store, c.bookId, c.idx, e.id as FocusId)) || pageQuote(pageText(c.bookId, c.idx)),
+          quote,
         };
       }),
   }));

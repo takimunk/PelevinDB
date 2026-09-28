@@ -36,6 +36,19 @@ unless `LOCAL_MODE=1`). Each provider has a separate, application-wide **$10 lif
 In local mode the paid endpoints are open to anyone who can reach the server, sharing this allowance. Search, reading, maps and saved
 results continue to work when the allowance is exhausted.
 
+Exception: quote translation (`POST /api/corpus/translate`, English UI) is public. It answers
+from `translations.db`, created next to `xbook.db` on the volume (`XBOOK_TRANSLATIONS_DB`
+overrides), and seeded on startup from the committed `server/translations.seed.json`, so the
+home page quotes are in English with no key. Translating other quotes (the Lines tab) needs
+`OPENROUTER_API_KEY` on the public site, which charges the OpenRouter $10 ledger (model
+`TRANSLATE_MODEL`, default `google/gemini-3.1-flash-lite`; `TRANSLATE_PER_MINUTE` and
+`TRANSLATE_NEW_PER_HOUR` limit each client). Without the key those toggles answer 503. The
+reader's "Translate page" also uses it and allows each client address 10 different pages per
+rolling 24 hours (counted in `translations.db`, even when a page comes from the cache). Client
+addresses come from `req.ip`: in production the server trusts one proxy hop (the Coolify proxy;
+`TRUST_PROXY` overrides it), otherwise every visitor would share one address and one allowance. After
+the corpus changes, run `npm run translate:landing` locally and commit the new seed.
+
 Set `XBOOK_BUDGET_DB=/app/data/spending.db` on the persistent volume and keep
 `XBOOK_BUDGET_PERIOD=lifetime`. The directory must be writable by UID 1000.
 Never delete or replace this ledger during deployments. Every HTTP attempt reserves

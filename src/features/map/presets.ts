@@ -91,6 +91,9 @@ export const MAP_PRESETS: MapPreset[] = [
   },
 ];
 
+/** The view the map opens on when the link names none (`/map` without `?view=`). */
+export const DEFAULT_MAP_VIEW = "ending";
+
 const same = (a: AxisChoice[], b: AxisChoice[], n: number) => a.slice(0, n).every((c, i) => c === b[i]);
 
 export const matchPreset = (mode: GraphMode, axes: AxisChoice[], w: Weights) =>

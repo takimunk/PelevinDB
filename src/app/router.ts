@@ -53,3 +53,6 @@ export function navigate(path: string, { replace = false } = {}) {
 }
 
 export const href = (path: string) => `#${path}`;
+
+/** A book page in the reader, pointed at one sentence (`n`, 1-based on that page) when it is known. */
+export const sentencePath = (id: string, page: number, n?: number | null) => `/book/${id}?page=${page}${n ? `&s=${n}` : ""}`;

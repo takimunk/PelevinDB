@@ -110,7 +110,7 @@ export const FEATURE_GROUPS: { id: FeatureGroupId; label: string; hint: string; 
   {
     id: "themes",
     label: "Themes",
-    hint: "Love, death, journey...",
+    hint: "Love, death, journey…",
     ru: "Темы",
     hintRu: "Любовь, смерть, путь…",
     features: THEMES.map((t) => ({ group: "themes", key: t.id, label: t.label, ru: t.ru, read: (f) => f.themes[t.id] })),

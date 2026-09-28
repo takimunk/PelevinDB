@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { EMOTIONS, labelOf, MODES, MOODS, TEXTURES, THEMES } from "../../../shared/catalog.ts";
 import type { FacetKey, PageRow, PagesResult, ScoreKey } from "../../../server/pages.ts";
-import { href, navigate } from "../../app/router.ts";
+import { href, navigate, sentencePath } from "../../app/router.ts";
 import { plural, useLang, useT, type Lang } from "../../i18n/index.ts";
 import { dec, fmt } from "../../ui/format.ts";
 import { kindLabel, primaryTitle } from "./labels.ts";
@@ -70,7 +70,7 @@ const T = {
     results: "Result pages",
     resultPage: (n: number) => `Result page ${n}`,
     cap: "Beyond this, narrow the filters: this keeps us within copyright.",
-    loading: "Reading the index",
+    loading: "Loading",
     empty: "No pages match these filters.",
     failed: "Could not load the pages. Try again in a minute.",
     unavailable: "The corpus is not on this server yet.",
@@ -115,7 +115,7 @@ const T = {
     results: "Страницы результатов",
     resultPage: (n: number) => `Страница результатов ${n}`,
     cap: "Дальше — только через фильтры: так мы бережём авторские права.",
-    loading: "Читаем указатель",
+    loading: "Загрузка",
     empty: "Под эти фильтры ничего не подходит.",
     failed: "Не удалось загрузить страницы. Попробуйте через минуту.",
     unavailable: "Корпуса на этом сервере пока нет.",
@@ -377,7 +377,7 @@ export function PagesShelf({ params }: { params: Record<string, string> }) {
                 ))}
               </div>
               {data.rows.map((r) => (
-                <a key={`${r.id}:${r.page}`} className="bt-row" role="row" href={href(`/book/${r.id}?page=${r.page}`)} style={grid} aria-label={t.open(primaryTitle(r, lang), r.page)}>
+                <a key={`${r.id}:${r.page}`} className="bt-row" role="row" href={href(sentencePath(r.id, r.page, r.n))} style={grid} aria-label={t.open(primaryTitle(r, lang), r.page)}>
                   <q className="pt-quote" role="cell" lang="ru">
                     {r.quote}
                   </q>
@@ -416,7 +416,7 @@ export function PagesShelf({ params }: { params: Record<string, string> }) {
 function PageCard({ r, lang, t, sort }: { r: PageRow; lang: Lang; t: Dict; sort: ScoreKey }) {
   const emotion = EMOTIONS.find((e) => e.id === r.emotion);
   return (
-    <a className="page-card" href={href(`/book/${r.id}?page=${r.page}`)} aria-label={t.open(primaryTitle(r, lang), r.page)}>
+    <a className="page-card" href={href(sentencePath(r.id, r.page, r.n))} aria-label={t.open(primaryTitle(r, lang), r.page)}>
       <q className="pt-quote" lang="ru">
         {r.quote}
       </q>

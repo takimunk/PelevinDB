@@ -1,5 +1,5 @@
 // Dashboard filter and sort state, kept in the URL query next to `page` so a view can be shared:
-// #/book/pv-omon-ra?range=0-33&emo=fear,anger&hl=mood:grim&smooth=0&rel=1&qs=page&ns=year&ts=appearance&xs=diff
+// #/book/pv-omon-ra?range=0-33&emo=fear,anger&hl=mood:grim&smooth=0&rel=1&ns=year&ts=appearance&xs=diff
 import { useCallback, useSyncExternalStore } from "react";
 import { EMOTIONS, MODES, MOODS, type EmotionId } from "../../../shared/catalog.ts";
 import { navigate } from "../../app/router.ts";
@@ -14,13 +14,12 @@ export type DashState = {
   smooth: boolean;
   /** Texture and whole-book scales relative to the corpus mean instead of absolute. */
   rel: boolean;
-  qs: "score" | "page";
   ns: "similarity" | "year";
   ts: "strength" | "appearance";
   xs: "value" | "diff";
 };
 
-export const DEFAULT_DASH: DashState = { range: [0, 100], emo: [], hl: null, smooth: true, rel: false, qs: "score", ns: "similarity", ts: "strength", xs: "value" };
+export const DEFAULT_DASH: DashState = { range: [0, 100], emo: [], hl: null, smooth: true, rel: false, ns: "similarity", ts: "strength", xs: "value" };
 
 const pick = <T extends string>(v: string | null, allowed: readonly T[], fallback: T): T => (v && (allowed as readonly string[]).includes(v) ? (v as T) : fallback);
 const HIGHLIGHTS = new Set([...MOODS.map((m) => `mood:${m.id}`), ...MODES.map((m) => `mode:${m.id}`)]);
@@ -37,7 +36,6 @@ export function parseDash(query: string): DashState {
     hl: HIGHLIGHTS.has(p.get("hl") ?? "") ? p.get("hl") : null,
     smooth: p.get("smooth") !== "0",
     rel: p.get("rel") === "1",
-    qs: pick(p.get("qs"), ["score", "page"] as const, "score"),
     ns: pick(p.get("ns"), ["similarity", "year"] as const, "similarity"),
     ts: pick(p.get("ts"), ["strength", "appearance"] as const, "strength"),
     xs: pick(p.get("xs"), ["value", "diff"] as const, "value"),
@@ -52,7 +50,7 @@ export function dashQuery(s: DashState): URLSearchParams {
   if (s.hl) p.set("hl", s.hl);
   if (!s.smooth) p.set("smooth", "0");
   if (s.rel) p.set("rel", "1");
-  for (const k of ["qs", "ns", "ts", "xs"] as const) if (s[k] !== DEFAULT_DASH[k]) p.set(k, s[k]);
+  for (const k of ["ns", "ts", "xs"] as const) if (s[k] !== DEFAULT_DASH[k]) p.set(k, s[k]);
   return p;
 }
 

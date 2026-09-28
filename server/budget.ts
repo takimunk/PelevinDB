@@ -220,9 +220,11 @@ export function meteredFetch(
         max_price: ROUTER_MAX_PRICE,
         require_parameters: true,
       };
-      // Reserve the entire published context, not a guessed token count. Outputs are separately capped.
+      // Reserve a hard bound, not a guessed token count: no tokenizer emits more tokens than the prompt has UTF-8
+      // bytes, and never more than the published context. Outputs are separately capped.
+      const prompt = Math.min(context, Buffer.byteLength(JSON.stringify(body.messages ?? body)));
       reserve = micros(
-        (context * ROUTER_MAX_PRICE.prompt +
+        (prompt * ROUTER_MAX_PRICE.prompt +
           2000 * ROUTER_MAX_PRICE.completion) /
           1e6,
       );

@@ -6,9 +6,12 @@ import { DEFAULT_BRIEF_MODEL, writeBrief } from "./brief.ts";
 import { AnalysisError, analyzeProfile, analyzeSegment } from "./jev.ts";
 import { corpusETag, corpusList, corpusStore, fullTextEnabled, packCorpusBook, pageResponse, rateLimiter, type Encoding } from "./corpus.ts";
 import { localMode } from "./mode.ts";
+import { handleContact, messageStore, scoreRiverNote } from "./messages.ts";
+import { notifyTelegram } from "./telegram.ts";
 import { corpusStats, topPages, topPagesStamp } from "./stats.ts";
 import { pagesETag, pagesQuery, queryPages } from "./pages.ts";
 import { linesETag, linesQuery, peek, queryLines } from "./sentences.ts";
+import { pageQuotaFor, translateHandler } from "./translate.ts";
 import { FOCUS, FOCUS_RUBRIC, RUBRIC_VERSION, type FocusId } from "../shared/catalog.ts";
 import { createHash as hashOf } from "node:crypto";
 import { briefInput, corpusId, excerptsInput, pageInput, pageNumber, type Parsed } from "./validate.ts";
@@ -20,6 +23,9 @@ const MAX_ACTIVE = 6;
 
 const app = express();
 app.disable("x-powered-by");
+// In production the container is reachable only through the Coolify proxy (Traefik), one hop: without this every
+// visitor shares the proxy's address, and so every per-IP limit. TRUST_PROXY overrides the hop count (0 turns it off).
+app.set("trust proxy", Number(process.env.TRUST_PROXY ?? (process.env.NODE_ENV === "production" ? 1 : 0)));
 app.use(express.json({ limit: "96kb" }));
 
 app.get("/api/health", (_req, res) => {
@@ -270,6 +276,21 @@ app.get("/api/corpus/:id/peek/:n", (req, res) => {
   res.json(out);
 });
 
+// Russian → English quote translation, public: the client names quotes (showcase or Lines references), never sends
+// text; answers come from a durable cache, and new ones are rate limited and charged to the OpenRouter ledger.
+const translate = translateHandler();
+app.get("/api/corpus/translate/quota", (req, res) => {
+  res.set("Cache-Control", "no-store").json(pageQuotaFor(req.ip || "unknown"));
+});
+app.post("/api/corpus/translate", async (req, res) => {
+  // A reader who leaves mid-call does not abort it: the answer is paid for either way, so it is finished and cached
+  // (an aborted call would also keep its whole ledger reservation).
+  const out = await translate(corpusStore(), req.body, req.ip || "unknown", new AbortController().signal);
+  res.set("Cache-Control", "no-store");
+  if (out.retryAfter) res.set("Retry-After", String(out.retryAfter));
+  if (!res.destroyed) res.status(out.status).json(out.body);
+});
+
 app.get("/api/corpus/:id", async (req, res) => {
   const id = corpusId(req.params.id);
   if ("error" in id) {
@@ -311,6 +332,71 @@ if (atlasFile)
       if (error && !res.headersSent) res.status(404).json({ books: [] });
     });
   });
+
+// Messages from readers (the contact form and notes to the river), stored in messages.db beside the corpus.
+// Per client, and a ceiling for everyone together so the file cannot be flooded.
+const contactLimit = rateLimiter(Number(process.env.CONTACT_PER_TEN_MINUTES) || 8, 600_000);
+const contactCeiling = rateLimiter(Number(process.env.CONTACT_PER_HOUR_TOTAL) || 300, 3_600_000);
+let riverScoring = 0; // Jev readings in flight; beyond two, notes wait for `npm run messages -- --score`.
+app.post("/api/contact", (req, res) => {
+  res.set("Cache-Control", "no-store");
+  const out = handleContact(req.body, {
+    origin: req.headers.origin,
+    expectedOrigin: process.env.APP_ORIGIN || `${req.protocol}://${req.headers.host}`,
+    allow: () => {
+      const own = contactLimit(req.ip || "unknown");
+      return own.ok ? contactCeiling("all") : own;
+    },
+    store: messageStore,
+    // Every message is forwarded to the owner on Telegram. River notes are read by Jev first (moderation and
+    // emotions), so the forward carries the verdict; the reply to the reader never waits for either.
+    onSaved: (id, m) => {
+      if (m.kind !== "river") return void notifyTelegram({ ...m, id });
+      if (riverScoring >= 2) return void notifyTelegram({ ...m, id, verdict: "not read yet (busy)" });
+      riverScoring++;
+      void scoreRiverNote(messageStore(), id, m.text)
+        .then((verdict) => {
+          const emotions = messageStore().get(id)?.score?.emotions;
+          const emotion = emotions ? Object.entries(emotions).sort((a, b) => b[1] - a[1])[0][0] : null;
+          return notifyTelegram({ ...m, id, verdict, emotion });
+        })
+        .finally(() => riverScoring--);
+    },
+  });
+  if (out.retryAfter) res.set("Retry-After", String(out.retryAfter));
+  res.status(out.status).json(out.body);
+});
+
+// A few approved river notes, in random order, for the Ural scene to surface now and then.
+const riverLimit = rateLimiter(Number(process.env.RIVER_PER_MINUTE) || 30);
+app.get("/api/river", (req, res) => {
+  res.set("Cache-Control", "no-store");
+  if (!riverLimit(req.ip || "unknown").ok) {
+    res.status(429).json({ notes: [] });
+    return;
+  }
+  try {
+    res.json({ notes: messageStore().riverSample(12) });
+  } catch {
+    res.json({ notes: [] });
+  }
+});
+
+// How Jev read the visitor's own note, by the token POST /api/contact gave them: emotion only, never moderation.
+app.get("/api/river/note/:token", (req, res) => {
+  res.set("Cache-Control", "no-store");
+  if (!/^[0-9a-f-]{36}$/.test(req.params.token) || !riverLimit(req.ip || "unknown").ok) {
+    res.status(404).json({ error: "No such note." });
+    return;
+  }
+  try {
+    const reading = messageStore().reading(req.params.token);
+    if (reading) res.json(reading);
+    else res.status(404).json({ error: "No such note." });
+  } catch {
+    res.status(404).json({ error: "No such note." });
+  }
+});
 
 app.use("/api", (_req, res) => {
   res.status(404).json({ error: "Unknown API endpoint." });

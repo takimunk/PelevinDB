@@ -7,7 +7,7 @@
 // no carved details: it is drawn in outline). Particles are sampled on each part and projected onto the blended surface, so the
 // body has no seams; clothing, folds, hair and features are decided per particle from the same fields.
 
-export const KIND = { ground: 0, towel: 1, body: 2, sign: 3, river: 4 } as const;
+export const KIND = { ground: 0, towel: 1, body: 2, sign: 3, river: 4, paper: 5, mote: 6 } as const;
 
 /** He sits on a low, flat-topped rise of sand. */
 export const LIFT = 0.2;
@@ -25,6 +25,12 @@ export const SUN: [number, number, number] = (() => {
 /** Ground area covered by the shadow mask: x0, z0, x1, z1. */
 export const SHADOW_BOX: [number, number, number, number] = [-3.2, -1.6, 5.2, 5.6];
 export const SIGN = { x: 3.9, z: 1.45, width: 1.24, height: 0.42, bottom: 1.68 };
+/**
+ * A sheet of paper lying flat on the sand beside the towel, on the side facing the camera (−x), by his
+ * outstretched right leg. Clicking it opens a note to the river. x, z: centre; w × l: the sheet; yaw: turn
+ * about y. It lies on the rise, so its height is LIFT.
+ */
+export const PAPER = { x: -0.84, z: 0.36, w: 0.26, l: 0.34, yaw: 0.42, y: LIFT };
 
 type V = [number, number, number];
 
@@ -481,6 +487,49 @@ function towel(B: Builder, n: number) {
   }
 }
 
+/** A single sheet of paper lying flat on the sand beside the towel, and a few motes that rise from it (see PAPER). */
+function paper(B: Builder) {
+  const { x, z, w, l, yaw } = PAPER;
+  const c = Math.cos(yaw);
+  const s = Math.sin(yaw);
+  const at = (u: number, v: number): V => [x + u * c + v * s, 0.006, z - u * s + v * c];
+  // the edge, a clean ruled outline
+  const P = 2 * (w + l);
+  for (let k = 0; k < 1600; k++) {
+    let d = B.rand() * P;
+    const j = B.gauss() * 0.0012;
+    let u: number, v: number;
+    if (d < w) (u = -w / 2 + d), (v = -l / 2 + j);
+    else if ((d -= w) < l) (u = w / 2 + j), (v = -l / 2 + d);
+    else if ((d -= l) < w) (u = w / 2 - d), (v = l / 2 + j);
+    else (u = -w / 2 + j), (v = l / 2 - (d - w));
+    B.push(at(u, v), UP, KIND.paper, 0.85, 0, 0, 1);
+  }
+  // the paper itself: a faint, even fill, lighter than the towel
+  for (let k = 0; k < 500; k++) B.push(at((B.rand() - 0.5) * w, (B.rand() - 0.5) * l), UP, KIND.paper, 0.1, 0, 0, 1);
+  // a few lines of handwriting: short strokes with gaps between words, the last line shorter
+  const lines = 7;
+  for (let r = 0; r < lines; r++) {
+    const v = -l / 2 + 0.05 + (r * (l - 0.1)) / (lines - 1);
+    const end = r === lines - 1 ? 0.35 : 0.8 + B.rand() * 0.2;
+    let u = 0;
+    while (u < end) {
+      const word = 0.05 + B.rand() * 0.14;
+      for (let k = 0; k < word * 600; k++) {
+        const q = u + B.rand() * Math.min(word, end - u);
+        B.push(at(-w / 2 + 0.03 + q * (w - 0.06), v + Math.sin(q * 90 + r) * 0.0025 + B.gauss() * 0.001), UP, KIND.paper, 0.45, 0, 0, 1);
+      }
+      u += word + 0.03 + B.rand() * 0.03;
+    }
+  }
+  // Motes: they rise slowly from the sheet and fade (the shader moves them). normal = (unused, spread, rise height).
+  for (let k = 0; k < 90; k++) {
+    const a = B.rand() * TAU;
+    const r = Math.sqrt(B.rand()) * 0.26;
+    B.push([x + Math.cos(a) * r, 0.01, z + Math.sin(a) * r * 1.2], [0, r, 0.18 + B.rand() * 0.3], KIND.mote, 0.5 + B.rand() * 0.5, 0, 0, 1);
+  }
+}
+
 /** Extra sand where shadows can fall (around him and the sign); drawn only inside the shadow mask. */
 function shadowSand(B: Builder, n: number) {
   const areas: [number, number, number, number, number][] = [
@@ -619,6 +668,7 @@ export function buildScene(opts: { signFacing: number; density?: number; riverDe
   // The figure and towel sit on the rise: build them on flat ground, then lift.
   const from = B.sd.length;
   towel(B, Math.round(9000 * k));
+  paper(B);
   const prims = man(B, Math.round(62000 * k));
   for (let i = from; i < B.sd.length; i++) B.pos[i * 3 + 1] += LIFT;
   const lift = (v: V): V => [v[0], v[1] + LIFT, v[2]];

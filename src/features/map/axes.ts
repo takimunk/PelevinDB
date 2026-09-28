@@ -10,7 +10,7 @@ const T = {
     needs: "needs at least 2 books",
     more: (l: string) => `more ${l}`,
     less: (l: string) => `less ${l}`,
-    raw: (l: string, lo: string, hi: string, mean: string) => `${l} · raw Jev value ${lo} → ${hi} · centred on the mean ${mean}`,
+    raw: (l: string, lo: string, hi: string, mean: string) => `${l} · raw model score ${lo} → ${hi} · centred on the mean ${mean}`,
   },
   ru: {
     pcs: "главные компоненты",
@@ -18,7 +18,7 @@ const T = {
     needs: "нужно хотя бы 2 книги",
     more: (l: string) => `больше: ${l}`,
     less: (l: string) => `меньше: ${l}`,
-    raw: (l: string, lo: string, hi: string, mean: string) => `${l} · ответ Jev от ${lo} до ${hi} · центр — среднее ${mean}`,
+    raw: (l: string, lo: string, hi: string, mean: string) => `${l} · оценка модели от ${lo} до ${hi} · центр — среднее ${mean}`,
   },
 };
 const nameOf = (f: { label: string; ru?: string }, lang: Lang) => ((lang === "ru" && f.ru) || f.label).toLowerCase();

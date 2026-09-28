@@ -115,7 +115,7 @@ const section = (page: Page, title: string) => page.getByRole("heading", { name:
 /** A dashboard cell by its tiny title (upper-cased only by CSS). */
 const cell = (page: Page, title: string) => page.locator(".cell").filter({ has: page.locator(".cell-head h3", { hasText: new RegExp(`^${title}$`) }) });
 
-/** The book page order: title and actions, compact fingerprint, facts, plot development, brief, extreme pages, one dashboard of cells, insights last. */
+/** The book page order: title and actions, compact fingerprint, facts, plot development, brief, key moments, one dashboard of cells, insights last. */
 async function expectBookLayout(page: Page) {
   await expect(page.locator(".hero-strip .pixels i")).toHaveCount(85);
   const titles = ["emotions over the book", "star chart", "pulse", "neighbours", "mood · narration", "story shape", "texture vs corpus", "whole book", "themes over the book"];
@@ -123,7 +123,7 @@ async function expectBookLayout(page: Page) {
   const y = async (sel: string) => (await page.locator(sel).first().boundingBox())!.y;
   const order = [await y(".book-title"), await y(".title-actions"), await y(".hero-strip"), await y(".book-facts"), await y(".dna-panel"), await y(".brief-panel"), await y(".extremes-panel"), await y(".dash"), await y(".insights")];
   expect(order).toEqual([...order].sort((a, b) => a - b));
-  await expect(page.locator(".panel-head h3")).toHaveText(["Plot development", "Brief", "Extreme pages", "Insights"]);
+  await expect(page.locator(".panel-head h3")).toHaveText(["Plot development", "Brief", "Key moments", "Insights"]);
   await expect(page.locator(".extremes-panel .quotes li")).toHaveCount(6);
   await expect(page.locator(".dash .quotes")).toHaveCount(0);
   const brief = (await page.locator(".brief-panel").boundingBox())!;
@@ -175,15 +175,17 @@ test("home starting points keep the map, works and joyful lines destinations", a
   await expect(page.getByRole("table", { name: "Произведения Пелевина" }).getByRole("columnheader", { name: "любовь" })).toHaveAttribute("aria-sort", "descending");
 
   await page.goto("/#/");
-  await start.getByRole("link", { name: "Исследуйте наиболее значимые моменты" }).click();
+  await start.getByRole("link", { name: "Самые радостные цитаты" }).click();
   await expect(page).toHaveURL(/#\/library\?tab=lines&dim=joy$/);
   await expect(page.getByRole("radio", { name: "радость" })).toHaveAttribute("aria-checked", "true");
 
   await page.setViewportSize({ width: 320, height: 700 });
   await page.goto("/#/");
   const columns = await start.getByRole("link").evaluateAll((items) => items.map((item) => item.getBoundingClientRect()));
-  expect(columns.map((column) => Math.round(column.y))).toEqual([Math.round(columns[0].y), Math.round(columns[0].y), Math.round(columns[0].y)]);
-  expect(Math.max(...columns.map((column) => column.height))).toBeLessThanOrEqual(150);
+  // Phones: the three links stack, one short row each.
+  expect(columns[1].y).toBeGreaterThan(columns[0].y);
+  expect(columns[2].y).toBeGreaterThan(columns[1].y);
+  expect(Math.max(...columns.map((column) => column.height))).toBeLessThanOrEqual(60);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
 });
 
@@ -256,7 +258,7 @@ test("home shows the wordmark, project links and top pages by emotion; search, l
 test("home says so when the corpus has not been read yet", async ({ page }) => {
   await page.route("**/api/corpus/top-pages?*", (route) => route.fulfill({ status: 404, json: { error: "No corpus yet" } }));
   await page.goto("/");
-  await expect(page.getByText("The pages have not been read yet.", { exact: false })).toBeVisible();
+  await expect(page.getByText("The pages have not been analysed yet.", { exact: false })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
@@ -428,7 +430,7 @@ test("analysed book shows cost, radar, brief, quotes, every chart, the reader an
 
   await openReader(page, 3);
   await expect(page.locator(".reader-page")).toContainText("3");
-  await expect(page.locator(".reader .pixels i")).toHaveCount(54);
+  await expect(page.locator(".reader-emotions > *")).toHaveCount(8);
   await page.getByRole("button", { name: "Next page" }).click();
   await expect(page.locator(".reader-page")).toContainText("4");
   await page.keyboard.press("Escape");
@@ -453,7 +455,7 @@ test("TXT import has no invented scores; blank and unsupported files fail clearl
   await expect(button(page, "analyze")).toBeDisabled();
   await expect(page.locator(".analysis-note")).toContainText("TYPESAFE_API_KEY");
   await expect(page.locator(".data-badge")).toContainText("0%");
-  await expect(page.locator(".preview")).toContainText("What Jev measures on each page");
+  await expect(page.locator(".preview")).toContainText("What is measured on each page");
   await openReader(page);
   await expect(page.locator(".reader-text")).toContainText("A calm morning.");
 
@@ -532,7 +534,8 @@ test("map switches 2D/3D, takes any answer as an axis, shows coordinates on hove
   page.on("pageerror", (e) => errors.push(e.message));
   await page.route("**/atlas.json", (route) => route.fulfill({ json: atlas }));
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto("/#/map");
+  // Without ?view= the map opens on "Ending vs opening" (2D); this test starts from the 3D overview.
+  await page.goto("/#/map?view=pca");
   await expect(page.getByRole("heading", { name: "Map of the works" })).toBeVisible();
   await expect(page.getByRole("button", { name: "3d", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator(".graph canvas")).toBeVisible();

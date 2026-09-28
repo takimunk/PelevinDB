@@ -1,5 +1,17 @@
+/* ───────── Rhythm for the top of the page ─────────
+   One gap between the wordmark and its copy and between the start links, and one vertical step between
+   the scene, the hero, "Where to start" and the top pages. */
+
+.home {
+  --home-gap: clamp(32px, 4vw, 56px);
+  --home-space: clamp(36px, 4.2vw, 60px);
+}
+
 /* ───────── Scene: full bleed, a wide stage a little under the old 70vh ───────── */
 
+.stage {
+  margin: 0;
+}
 .stage-frame {
   position: relative;
   width: 100%;
@@ -16,20 +28,84 @@
   height: 100%;
 }
 
+.stage-note {
+  position: absolute;
+  left: var(--gutter);
+  bottom: 16px;
+  z-index: 1;
+  padding: 6px 12px;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius);
+  background: var(--paper);
+  font: 400 12.5px/1.4 var(--mono);
+  color: var(--ink);
+  opacity: 0;
+  pointer-events: none;
+}
+.stage-note:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 /* Small figure captions: mono, muted, on the content column. */
 .fig-caption {
-  font: 400 11.5px/1.5 var(--mono);
+  /* A book's figure caption: set in the book face. */
+  font: italic 400 14px/1.45 var(--serif);
   color: var(--muted);
 }
+/* Hangs just under the scene's rule, on the grid's left edge. */
 .stage-caption {
   width: min(1600px, 100%);
-  margin: 10px auto 0;
-  padding: 0 var(--gutter);
+  margin: 0 auto;
+  padding: 8px var(--gutter) 0;
 }
 .top-pages .fig-caption {
   margin-top: 28px;
   padding-top: 10px;
   border-top: 1px solid var(--line);
+}
+
+/* ───────── Wordmark, description and links under the scene ─────────
+   The copy sits right beside the wordmark, one gap away, its first line on the wordmark's top edge. */
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 604px) minmax(0, 1fr);
+  align-items: start;
+  column-gap: var(--home-gap);
+  width: min(1600px, 100%);
+  margin: 0 auto;
+  padding: var(--home-space) var(--gutter) 0;
+}
+.hero-wordmark {
+  margin: 0;
+  font-weight: 400;
+}
+.hero-copy {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  /* EB Garamond's half-leading: the first line's capitals start on the wordmark's top edge. */
+  margin-top: -0.32em;
+  font-size: clamp(18px, 1.4vw, 20px);
+}
+.hero-description {
+  max-width: 56ch;
+  margin: 0;
+  font: 400 1em / 1.45 var(--serif);
+  color: var(--ink-2);
+}
+.hero-description span {
+  display: block;
+}
+.hero-links {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px 20px;
+  font: 400 13px/1.5 var(--sans);
+  color: var(--muted);
+  white-space: nowrap;
 }
 .hero-link,
 .hero-author {
@@ -42,40 +118,6 @@
   width: 15px;
   height: 15px;
   color: var(--ink);
-}
-
-/* ───────── Wordmark, description and links under the scene ───────── */
-
-.hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
-  align-items: end;
-  gap: 24px 64px;
-  width: min(1600px, 100%);
-  margin: 0 auto;
-  padding: 40px var(--gutter) 0;
-}
-.hero-wordmark {
-  margin: 0;
-  max-width: 760px;
-  font-weight: 400;
-}
-.hero-copy {
-  display: grid;
-  gap: 16px;
-  min-width: 0;
-}
-.hero-description {
-  max-width: 40ch;
-  font: 400 clamp(18px, 1.5vw, 21px) / 1.45 var(--serif);
-  color: var(--ink-2);
-}
-.hero-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 22px;
-  font: 400 13px/1.5 var(--sans);
-  color: var(--muted);
 }
 .hero-link {
   color: var(--ink);
@@ -95,27 +137,30 @@
 .home-start {
   width: min(1600px, 100%);
   margin: 0 auto;
-  padding: 48px var(--gutter) 0;
+  padding: var(--home-space) var(--gutter) 0;
+}
+.home-start .section-head {
+  margin-bottom: 12px;
+  padding-top: 14px;
+}
+.home-start .section-head h2 {
+  font-size: clamp(18px, 1.5vw, 20px);
 }
 .home-start-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: clamp(16px, 3vw, 48px);
+  gap: 8px var(--home-gap);
 }
 .home-start-link {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 16px;
   min-width: 0;
+  font: 400 16px / 1.4 var(--serif);
   color: var(--ink);
-}
-.home-start-text {
-  font: 400 clamp(21px, 1.9vw, 28px)/1.15 var(--serif);
+  overflow-wrap: break-word;
 }
 .home-start-arrow {
-  align-self: flex-end;
-  font: 400 18px/1 var(--mono);
+  font: 400 0.8em/1 var(--mono);
+  color: var(--muted);
+  white-space: nowrap;
 }
 .home-start-link:hover .home-start-text,
 .home-start-link:focus-visible .home-start-text {
@@ -123,13 +168,16 @@
   text-decoration-thickness: 1px;
   text-underline-offset: 3px;
 }
+.home-start-link:hover .home-start-arrow {
+  color: var(--ink);
+}
 
 /* ───────── Top pages by emotion ───────── */
 
 .top-pages {
   width: min(1600px, 100%);
   margin: 0 auto;
-  padding: 72px var(--gutter) 24px;
+  padding: var(--home-space) var(--gutter) 24px;
 }
 .top-state {
   max-width: 60ch;
@@ -215,9 +263,18 @@
 
 /* ───────── Responsive ───────── */
 
-@media (max-width: 1000px) {
+/* Tablets and phones: the wordmark over the copy, both on the full width of the grid. */
+/* Below this the copy column is too narrow for the links on one line: the copy goes under the wordmark. */
+@media (max-width: 1240px) {
   .hero {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: minmax(0, 604px);
+    row-gap: 20px;
+  }
+  .hero-copy {
+    margin-top: 0;
+  }
+  .hero-description {
+    max-width: 52ch;
   }
 }
 
@@ -228,25 +285,17 @@
 }
 
 @media (max-width: 860px) {
-  .home-start {
-    padding-top: 36px;
+  .home {
+    --home-space: 32px;
   }
+  /* Phones: the start links stack, one short line each. */
   .home-start-grid {
+    grid-template-columns: minmax(0, 1fr);
     gap: 10px;
   }
-  .home-start-link {
-    gap: 8px;
-  }
-  .home-start-text {
-    font-size: clamp(15px, 3.8vw, 18px);
-    line-height: 1.15;
-  }
-  .home-start-arrow {
-    font-size: 14px;
-  }
-  .hero {
-    gap: 20px;
-    padding-top: 28px;
+  .hero-links {
+    flex-wrap: wrap;
+    white-space: normal;
   }
   /* Phones and small tablets: a 16:9 strip, full width; the scene reframes itself for it. */
   .stage-frame {
@@ -256,6 +305,9 @@
   }
   .top-pages {
     padding-top: 48px;
+  }
+  .stage-caption {
+    padding-top: 6px;
   }
   /* A row of columns that snaps; the page itself never scrolls sideways. */
   .top-grid {
@@ -274,5 +326,100 @@
   }
   .top-quote {
     font-size: 15px;
+  }
+}
+
+/* ───────── Notes on the river (drawn by src/ui/UralScene.tsx) ─────────
+   A small label tied to one river particle (the dot) by a hairline; it rides the particle downstream and
+   fades. Set like the quotes below. The only colour is the dot: the note's leading emotion, once known. */
+
+.ural-note {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  pointer-events: none;
+  will-change: transform;
+}
+.ural-note-dot {
+  position: absolute;
+  top: -2.5px;
+  left: -2.5px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--note-accent, var(--ink));
+  opacity: 0;
+  transition: opacity 0.9s ease;
+}
+.ural-note-bubble {
+  position: absolute;
+  bottom: 9px;
+  left: -10px;
+  width: max-content;
+  max-width: min(220px, 56vw);
+  padding: 3px 8px 4px;
+  border: 1px solid var(--line-2);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--paper) 78%, transparent);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  opacity: 0;
+  transform: translateY(3px) scale(0.96);
+  transform-origin: 10px 100%;
+  transition:
+    opacity 0.9s ease,
+    transform 0.9s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+/* The hairline from the label down to its particle. */
+.ural-note-bubble::after {
+  content: "";
+  position: absolute;
+  bottom: -9px;
+  left: 9px;
+  width: 1px;
+  height: 8px;
+  background: var(--line-2);
+}
+.ural-note.shown .ural-note-bubble,
+.ural-note.shown .ural-note-dot {
+  opacity: 1;
+}
+.ural-note.shown .ural-note-bubble {
+  transform: none;
+}
+.ural-note.fading .ural-note-bubble,
+.ural-note.fading .ural-note-dot {
+  opacity: 0;
+  transition-duration: 1.6s;
+}
+.ural-note.fading .ural-note-bubble {
+  transform: translateY(-4px) scale(0.97);
+}
+.ural-note-text {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  font: italic 400 13.5px/1.3 var(--serif);
+  color: var(--ink);
+  /* Like the quotes below: Russian guillemets in either UI language. */
+  quotes: "«" "»";
+}
+@media (max-width: 560px) {
+  .ural-note-bubble {
+    max-width: min(180px, 52vw);
+  }
+  .ural-note-text {
+    font-size: 12.5px;
+  }
+}
+/* Reduced motion: no drift and no scale, only a plain fade in place. */
+@media (prefers-reduced-motion: reduce) {
+  .ural-note-bubble,
+  .ural-note-dot {
+    transform: none !important;
+    transition: opacity 1.2s ease !important;
   }
 }

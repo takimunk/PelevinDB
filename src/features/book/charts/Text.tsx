@@ -9,7 +9,7 @@ import { useLang, useT, type Lang } from "../../../i18n/index.ts";
 import { Meter, Swatch, Track } from "../../../ui/term.tsx";
 import { useSize } from "../../../ui/useSize.ts";
 import { num, pageRef, pct } from "../i18n.ts";
-import { asFocus, MOMENT_FOCUS, usePreview } from "../preview.tsx";
+import { focusFor, MOMENT_FOCUS, useHere, usePreview } from "../preview.tsx";
 
 const CALM = "#5aa6d6";
 const INTENSE = "#d93b30";
@@ -39,13 +39,13 @@ const T = {
     bookMean: "book mean",
     spectrogram: "Emotion spectrogram",
     intensity: "intensity",
-    specIdle: "height = how strongly Jev reads the emotion on the page, 0 → 1 · dashed = 0.5 · right = book mean",
+    specIdle: "height = the emotion’s score on the page, 0 → 1 · dashed = 0.5 · right = book mean",
     themes: "Themes across the book",
     likely: "likely the subject",
     themesIdle: "height = how likely a page is about the theme · dashed = 50% · right = share of the book",
     pulse: "Pulse of the book",
     pulseLines: { tension: "tension", pace: "pace", valence: "light", interiority: "interiority" },
-    pulseIdle: "smoothed scores, 0 → 1 · vertical marks = extreme pages, found in code from Jev answers",
+    pulseIdle: "smoothed scores, 0 → 1 · vertical marks = key moments, from the page scores",
     tags: { climax: "climax", still: "stillest", light: "brightest", dark: "darkest", wonder: "surprise", inner: "interiority" } as Record<string, string>,
     match: "match",
     flat: "flat line",
@@ -68,7 +68,7 @@ const T = {
     bookAvg: "среднее по книге",
     click: "нажмите, чтобы читать",
     paratext: "паратекст, не учитывается",
-    pending: "ещё не прочитано",
+    pending: "ещё не проанализировано",
     dnaIdle: (n: number, bins: number) => `${n} стр. в ${bins} столбцах · высота = сила эмоции · цвет = ведущая эмоция · полосы = настроение, повествование`,
     rows: { emotion: "эмоция", mood: "настроение", narration: "повествование", leads: "ведёт", stretch: "отрезки" },
     dnaLabel: "Развитие сюжета",
@@ -80,13 +80,13 @@ const T = {
     bookMean: "среднее по книге",
     spectrogram: "Спектрограмма эмоций",
     intensity: "сила",
-    specIdle: "высота = насколько сильно Jev видит эмоцию на странице, 0 → 1 · пунктир = 0,5 · справа = среднее по книге",
+    specIdle: "высота = оценка эмоции на странице, 0 → 1 · пунктир = 0,5 · справа = среднее по книге",
     themes: "Темы по ходу книги",
     likely: "вероятность темы",
     themesIdle: "высота = вероятность, что страница об этой теме · пунктир = 50 % · справа = доля книги",
     pulse: "Пульс книги",
     pulseLines: { tension: "напряжение", pace: "темп", valence: "свет", interiority: "внутренний мир" },
-    pulseIdle: "сглаженные оценки, 0 → 1 · вертикальные метки = крайние страницы, найденные в коде по ответам Jev",
+    pulseIdle: "сглаженные оценки, 0 → 1 · вертикальные метки = ключевые моменты по оценкам страниц",
     tags: { climax: "кульминация", still: "тишина", light: "свет", dark: "тьма", wonder: "удивление", inner: "внутрь" } as Record<string, string>,
     match: "похоже на",
     flat: "ровная линия",
@@ -134,6 +134,25 @@ function markBands(marks: boolean[] | undefined, width: number): [number, number
   return out;
 }
 
+/**
+ * "You are here": the page open in the reader, as a solid ink line with its page number (the hover is dashed). It
+ * slides to the next page with a CSS transform (book.css `.chart-here`), so it moves smoothly unless motion is reduced.
+ * `band`: an optional emphasis rect around the line, [left, width] relative to `x`.
+ */
+function HereMark({ x, y1, y2, label, flip = false, band }: { x: number; y1: number; y2: number; label?: string; flip?: boolean; band?: [number, number] }) {
+  return (
+    <g className="chart-here" style={{ transform: `translateX(${x}px)` }} aria-hidden="true">
+      {band && <rect x={band[0]} y={y1} width={band[1]} height={y2 - y1} className="chart-here-band" />}
+      <line x1={0} x2={0} y1={y1} y2={y2} />
+      {label && (
+        <text x={flip ? -4 : 4} y={y1 + 9} textAnchor={flip ? "end" : "start"}>
+          {label}
+        </text>
+      )}
+    </g>
+  );
+}
+
 /** The book as a strip of columns: one per page range, height = intensity, colour = leading emotion; mood and narration run underneath. */
 export function Dna({ analyses, insights, onPick }: { analyses: Analyses; insights: DnaInsights; onPick: (index: number) => void }) {
   const t = useT(T);
@@ -150,7 +169,9 @@ export function Dna({ analyses, insights, onPick }: { analyses: Analyses; insigh
     const pages = analyses.slice(from, to);
     const known = pages.filter((a): a is SegmentAnalysis => !!a && !isParatext(a));
     const best = known.reduce<SegmentAnalysis | null>((m, a) => (!m || intensity(a) > intensity(m) ? a : m), null);
-    return { from, to: to - 1, best, paratext: pages.some((a) => a && isParatext(a)) && !known.length };
+    // The page the column's height and colour come from: the preview quotes it by its leading emotion.
+    const at = best ? from + pages.indexOf(best) : from;
+    return { from, to: to - 1, best, at, paratext: pages.some((a) => a && isParatext(a)) && !known.length };
   });
   const cw = plotW / bins;
   const xOf = (page: number) => gutter + ((page + 0.5) / Math.max(1, n)) * plotW;
@@ -172,6 +193,8 @@ export function Dna({ analyses, insights, onPick }: { analyses: Analyses; insigh
     return c >= 0 && c < bins ? c : null;
   };
   const h = hover != null ? cols[hover] : null;
+  const here = useHere(n);
+  const hereCol = here ? cols.findIndex((c) => here.index >= c.from && here.index <= c.to) : -1;
   const preview = usePreview();
   const dnaMetric = (c: (typeof cols)[number]) =>
     c.best ? (
@@ -195,7 +218,11 @@ export function Dna({ analyses, insights, onPick }: { analyses: Analyses; insigh
   const showCol = (c: number | null, e: { clientX: number; clientY: number }) => {
     setHover(c);
     if (c == null) preview.hide();
-    else preview.show(e, cols[c].from, dnaMetric(cols[c]));
+    else {
+      const col = cols[c];
+      const lead = col.best ? dominantEmotion(col.best) : null;
+      preview.show(e, col.at, dnaMetric(col), lead ? focusFor(lead) : null, lead ?? undefined);
+    }
   };
   // Keyboard: arrows move along the columns and show the preview, Enter opens the page.
   const svgRef = useRef<SVGSVGElement>(null);
@@ -243,6 +270,16 @@ export function Dna({ analyses, insights, onPick }: { analyses: Analyses; insigh
         {rowLabel(TOP + H / 2, hasData ? t.rows.emotion : "")}
         {hasData && <line x1={gutter} x2={gutter + plotW} y1={base - insights.mean * H} y2={base - insights.mean * H} className="chart-ref" />}
         {h && <rect x={gutter + hover! * cw} y={TOP} width={Math.max(1, cw)} height={modeY + 8 - TOP} className="chart-hover-band" />}
+        {here && hereCol >= 0 && (
+          <HereMark
+            x={xOf(here.index)}
+            y1={2}
+            y2={modeY + 8}
+            label={pageRef(lang, here.page)}
+            flip={xOf(here.index) > gutter + plotW - 48}
+            band={[gutter + hereCol * cw - xOf(here.index), Math.max(1, cw)]}
+          />
+        )}
         {cols.map((c, i) => {
           const x = gutter + i * cw;
           if (!c.best) return <rect key={i} x={x + cw * 0.15} y={base - 2} width={Math.max(0.6, cw * 0.7)} height={2} className={c.paratext ? "chart-empty paratext" : "chart-empty"} />;
@@ -430,6 +467,8 @@ function Ridgeline({
     return Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
   };
   const preview = usePreview();
+  const here = useHere(analyses.length);
+  const hereP = here ? (here.index + 0.5) / Math.max(1, analyses.length) : null;
   return (
     <div ref={ref}>
       <div
@@ -456,13 +495,23 @@ function Ridgeline({
                 const p = at(e);
                 setHover({ k, p });
                 const b = Math.min(n - 1, Math.floor(p * n));
+                // A bar is a bin of pages: the preview shows the bin's page where this row is strongest, so its
+                // quote carries the hovered emotion or theme rather than the one of a neighbouring page.
+                const from = Math.floor((b / n) * analyses.length),
+                  to = Math.max(from + 1, Math.floor(((b + 1) / n) * analyses.length));
+                let page = Math.min(analyses.length - 1, Math.round(p * Math.max(0, analyses.length - 1)));
+                for (let i = from, top = -1; i < to; i++) {
+                  const a = analyses[i];
+                  if (a && !isParatext(a) && r.pick(a) > top) (top = r.pick(a)), (page = i);
+                }
                 preview.show(
                   e,
-                  Math.round(p * Math.max(0, analyses.length - 1)),
+                  page,
                   <>
                     {r.label.toLowerCase()} <b>{value(data[k][b] ?? 0)}</b>
                   </>,
-                  asFocus(r.id),
+                  focusFor(r.id),
+                  r.id,
                 );
               }}
               onClick={(e) => onPick(at(e))}
@@ -477,6 +526,11 @@ function Ridgeline({
                   ),
                 )}
               </g>
+              {hereP != null && (
+                <g className="chart-here" style={{ transform: `translateX(${hereP * plotW}px)` }} aria-hidden="true">
+                  <line x1={0} x2={0} y1={0} y2={H} vectorEffect="non-scaling-stroke" />
+                </g>
+              )}
               {hover && <line x1={hover.p * plotW} x2={hover.p * plotW} y1={0} y2={H} className="cursor-line" vectorEffect="non-scaling-stroke" />}
             </svg>
             <span className="ridge-share">
@@ -487,7 +541,14 @@ function Ridgeline({
         ))}
         <div className="ridge-row ridge-axis">
           <span />
-          <span>{t.beginning}</span>
+          <span>
+            {t.beginning}
+            {here && hereP != null && (
+              <span className={`ridge-here num ${hereP > 0.85 ? "flip" : ""}`} style={{ left: `${hereP * 100}%` }} aria-hidden="true">
+                {pageRef(lang, here.page)}
+              </span>
+            )}
+          </span>
           <span>{t.end}</span>
         </div>
       </div>
@@ -658,6 +719,7 @@ export function PulsePlot({
     return e.clientX - r.left;
   };
   const cur = hover != null ? { bin: Math.round(((hover - L) / plotW) * (bins - 1)) } : null;
+  const here = useHere(analyses.length);
   const preview = usePreview();
   return (
     <div ref={ref}>
@@ -683,6 +745,11 @@ export function PulsePlot({
           if (!inside) return preview.hide();
           const m = near(x);
           const b = Math.round(((x - L) / plotW) * (bins - 1));
+          // Off a moment, the preview quotes by the visible line nearest the pointer.
+          const py = e.clientY - e.currentTarget.getBoundingClientRect().top;
+          const line = PULSE_LINES.map((l, k) => ({ l, v: data[k][b] }))
+            .filter((x): x is { l: (typeof PULSE_LINES)[number]; v: number } => x.v != null && !off.has(x.l.id))
+            .sort((p, q) => Math.abs(y(p.v) - py) - Math.abs(y(q.v) - py))[0];
           preview.show(
             e,
             m ? m.index : Math.round(((x - L) / plotW) * last),
@@ -699,7 +766,8 @@ export function PulsePlot({
                 </span>
               ))
             ),
-            m ? MOMENT_FOCUS[m.id] : "tension",
+            m ? MOMENT_FOCUS[m.id] : line ? focusFor(line.l.id, line.v) : null,
+            m ? m.id : line?.l.id,
           );
         }}
         onMouseLeave={() => {
@@ -738,6 +806,7 @@ export function PulsePlot({
           </g>
         ))}
         {PULSE_LINES.map((l, k) => (off.has(l.id) ? null : <path key={l.id} d={line(data[k])} fill="none" stroke={l.color} strokeWidth={1.6} strokeLinejoin="round" />))}
+        {here && <HereMark x={xPage(here.index)} y1={TOP} y2={TOP + PH} label={pageRef(lang, here.page)} flip={xPage(here.index) > L + plotW - 48} />}
         {cur && hover != null && (
           <g>
             <line x1={hover} x2={hover} y1={TOP} y2={TOP + PH} className="cursor-line" />
@@ -798,6 +867,8 @@ export function ArcPlot({
   const t = useT(T);
   const lang = useLang();
   const [ref, { width }] = useSize<HTMLDivElement>();
+  const [hoverX, setHoverX] = useState<number | null>(null);
+  const here = useHere(pages);
   const lo = Math.min(...curve),
     hi = Math.max(...curve);
   const norm = curve.map((v) => (hi - lo > 1e-6 ? (v - lo) / (hi - lo) : 0.5));
@@ -834,9 +905,13 @@ export function ArcPlot({
           const r = e.currentTarget.getBoundingClientRect();
           const p = clamp01((e.clientX - r.left - L) / plotW);
           const i = Math.round(p * (norm.length - 1));
+          setHoverX(L + p * plotW);
           preview.show(e, Math.round(p * (pages - 1)), `${t.light} ${num(lang, norm[i] ?? 0, 2)}`, (norm[i] ?? 0.5) >= 0.5 ? "light" : "dark");
         }}
-        onMouseLeave={() => preview.hide()}
+        onMouseLeave={() => {
+          setHoverX(null);
+          preview.hide();
+        }}
         onClick={(e) => {
           if (!pages || !onPick) return;
           const r = e.currentTarget.getBoundingClientRect();
@@ -853,6 +928,10 @@ export function ArcPlot({
         </text>
         {template && <path d={path(template)} fill="none" className="chart-template" />}
         <path d={path(norm)} fill="none" stroke="var(--d1)" strokeWidth={1.8} strokeLinejoin="round" />
+        {here && pages > 1 && (
+          <HereMark x={L + (here.index / (pages - 1)) * plotW} y1={TOP} y2={TOP + H} label={pageRef(lang, here.page)} flip={here.index / (pages - 1) > 0.85} />
+        )}
+        {hoverX != null && <line x1={hoverX} x2={hoverX} y1={TOP} y2={TOP + H} className="cursor-line" />}
       </svg>
       <div className="fits">
         {ARC_SHAPES.map((a) => {
