@@ -151,39 +151,44 @@ const topPagesFixture = [
   { emotion: "fear", items: [{ id: "pv-chapaev", title: "Чапаев и Пустота", titleEn: "Chapaev and Void", year: 1996, page: 40, score: 0.99, quote: "Сказать, что я испугался – значит не сказать ничего." }] },
 ];
 
-test("home starting points open the requested map, works and lines views", async ({ page }) => {
+test("home starting points open the requested map, works and moments views", async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem("pelevindb.lang", "ru"));
   await page.route("**/api/corpus", (route) => route.fulfill({ json: canonList }));
   await page.route("**/atlas.json", (route) => route.fulfill({ json: atlas }));
-  await page.route("**/api/corpus/lines?*", (route) => route.fulfill({ json: {
-    total: 1, read: 1, page: 1, pageSize: 25, maxPages: 5, pages: 1, rows: [], books: {},
-    facets: { book: {}, kind: {}, decade: {}, flag: {}, act: {} },
-  } }));
+  await page.route("**/api/corpus/pages?*", (route) => {
+    const query = new URL(route.request().url()).searchParams;
+    expect(query.get("sort")).toBe("intensity");
+    expect(query.get("dir")).toBe("-1");
+    return route.fulfill({ json: {
+      total: 0, page: 1, pageSize: 25, maxPages: 5, pages: 0, rows: [], books: {},
+      facets: { book: {}, kind: {}, decade: {}, emotion: {}, mood: {}, mode: {}, theme: {} },
+    } });
+  });
 
   await page.goto("/");
   const start = page.getByRole("region", { name: "С чего начать" });
-  await expect(start.locator(".home-start-card")).toHaveCount(3);
-  await start.getByRole("link", { name: "Посмотреть карту" }).click();
+  await expect(start.getByRole("link")).toHaveCount(3);
+  await start.getByRole("link", { name: "Изучите карту всех произведений" }).click();
   await expect(page).toHaveURL(/#\/map\?view=laugh$/);
   await expect(page.getByRole("group", { name: "Вид" }).getByRole("button", { name: "2d" })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("button", { name: "Смех в темноте" })).toHaveAttribute("aria-pressed", "true");
 
   await page.goto("/#/");
-  await start.getByRole("link", { name: "Смотреть произведения" }).click();
+  await start.getByRole("link", { name: "В какой книге любовь сильнее всего?" }).click();
   await expect(page).toHaveURL(/#\/library\?view=themes&sort=love&dir=-1$/);
   await expect(page.getByRole("group", { name: "Столбцы" }).getByRole("button", { name: "темы" })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("table", { name: "Произведения Пелевина" }).getByRole("columnheader", { name: "любовь" })).toHaveAttribute("aria-sort", "descending");
 
   await page.goto("/#/");
-  await start.getByRole("link", { name: "Читать цитаты" }).click();
-  await expect(page).toHaveURL(/#\/library\?tab=lines&dim=joy$/);
-  await expect(page.getByRole("radio", { name: "радость" })).toHaveAttribute("aria-checked", "true");
+  await start.getByRole("link", { name: "Исследуйте наиболее значимые моменты" }).click();
+  await expect(page).toHaveURL(/#\/library\?tab=pages$/);
+  await expect(page.getByRole("heading", { level: 1, name: "Страницы" })).toBeVisible();
 
   await page.setViewportSize({ width: 320, height: 700 });
   await page.goto("/#/");
-  const cards = await start.locator(".home-start-card").evaluateAll((items) => items.map((item) => item.getBoundingClientRect()));
-  expect(cards.map((card) => Math.round(card.y))).toEqual([Math.round(cards[0].y), Math.round(cards[0].y), Math.round(cards[0].y)]);
-  expect(Math.max(...cards.map((card) => card.height))).toBeLessThanOrEqual(130);
+  const columns = await start.getByRole("link").evaluateAll((items) => items.map((item) => item.getBoundingClientRect()));
+  expect(columns.map((column) => Math.round(column.y))).toEqual([Math.round(columns[0].y), Math.round(columns[0].y), Math.round(columns[0].y)]);
+  expect(Math.max(...columns.map((column) => column.height))).toBeLessThanOrEqual(150);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
 });
 
