@@ -1,0 +1,1035 @@
+PELEVINDB — DURABLE LITERARY RESEARCH HARNESS
+Architecture proposal v1 · 29 September 2026
+
+Status: design for implementation, not an implemented service.
+Repository baseline: origin/main fffe5df.
+Audience: product owner and the engineer/agent implementing the next feature.
+Assumption: initially only the owner starts paid sessions; selected reports can
+be shared publicly. Multi-user research is a later deployment option.
+No paid literary analysis was run to produce this document. The worked example
+specifies a method and expected deliverable, not conclusions about the novel.
+
+CONTENTS
+01  Recommendation and product contract
+02  What already exists in this repository
+03  System layout and framework decision
+04  Corpus identity, structure and citations
+05  Research workflow and coverage
+06  Agent roles, permissions and tool contracts
+07  Durable sessions, recovery and context management
+08  Persistent data model and APIs
+09  Interactive JavaScript artifacts
+10  Worked example: the two volumes of Смотритель
+11  Linguistic and emotion research
+12  Budgets, access, deployment and observability
+13  Evaluation and acceptance criteria
+14  Implementation sequence and remaining decisions
+15  Sources and implementation starting points
+
+
+01. RECOMMENDATION AND PRODUCT CONTRACT
+=======================================
+
+Build a research workspace alongside the existing library and blog. A session
+contains a question, a research plan, an evidence notebook, versioned reports,
+and interactive figures. It survives browser closure, worker restarts, and days
+between follow-up questions. The agent can revise its plan and seek missing
+evidence within explicit work and spending limits.
+
+Recommended initial stack:
+
+- Existing React/Vite UI and Express API.
+- LangGraph.js for explicit research stages, branching and checkpoints.
+- A separate Node research worker, supervised by the deployment platform.
+- PostgreSQL for research records, persistent graph checkpoints and durable jobs.
+- The existing SQLite corpus mounted read-only as a versioned snapshot.
+- TypeSafe/Jev for bounded semantic judgments; a configurable reasoning model
+  for planning, interpretation, synthesis and custom visualization code.
+- Existing React/SVG chart conventions for standard interactive figures.
+- An isolated build/render service for optional generated JavaScript figures.
+
+Use one coordinator with bounded specialist tasks. Start sequentially; allow
+two or three independent readers when the evidence can be partitioned. An agent
+role is a prompt, tool allowlist and typed output contract, not necessarily a
+different model or a permanently running process.
+
+The important product promise is traceability:
+
+  question -> corpus selection -> passages -> observations -> claims
+           -> reproducible dataset -> report and interactive figure
+
+Every quotation is copied by code from a versioned source span. Every substantive
+literary claim references evidence. Every plotted value names its source and
+method. A plausible narrative or attractive chart cannot bypass these rules.
+
+Research modes:
+
+Quick: relevant passages, bounded interpretation, explicitly incomplete coverage.
+Deep: systematic coverage of selected works, contextual reading, counterevidence.
+Corpus study: defined population, measurements, statistical analysis and caveats.
+
+For “how did X change throughout the novel?”, recommend Deep. A keyword search
+alone cannot support a claim about an entire character arc.
+
+The user sees scope, progress, cost, evidence and results, with pause/cancel and
+follow-up controls. Ordinary read-only tools execute within the session's budget
+without repeated approvals. Ask only when ambiguity materially changes scope,
+the authorized budget must increase, or a separate publication action is needed.
+
+
+02. WHAT ALREADY EXISTS IN THIS REPOSITORY
+=========================================
+
+Verified from code and the local corpus, rather than assumed from a generic RAG
+template:
+
+- React 19, Vite 8, Express 5 and TypeScript; native Node SQLite corpus storage.
+- 94 works and 8,612 application pages in the inspected local database.
+- books, segments, analyses, profiles, briefs, sentences, sentence_analyses and
+  legacy analysis runs in server/store.ts. Corpus server access is read-only.
+- Stored source text, exact page boundaries and sentence offsets. Page-level
+  emotion, texture, narration and theme judgments; sentence focus and selected
+  sentence analyses. Sentence analysis is not an exhaustive annotation layer.
+- Title search in src/features/search/Search.tsx. Existing page/line browsing
+  and filters in server/pages.ts and server/sentences.ts are useful retrieval
+  inputs, but do not constitute exhaustive semantic search of the full text.
+- Existing Lines results are capped and biased toward focus-selected sentences.
+  They are unsuitable as the sole evidence population for a deep study.
+- Russian lemmatization with pymorphy3 exists in scripts/eda-pelevin.py. Its EDA
+  token policies are task-specific; e.g. removing negation would be inappropriate
+  for stance analysis. Reuse machinery with explicit research-specific policies.
+- Blog figures are authored React components using SVG, chart helpers, local
+  interaction state, ru/en strings and derived JSON datasets. They are not an
+  existing general-purpose runtime for executing model-generated components.
+- src/app/router.ts already supports #/book/{id}?page={n}&s={sentenceNumber}.
+- server/budget.ts implements persistent atomic spending reservations. Existing
+  application limits are $10 per provider, with uncertain requests retaining
+  their reservations. These are current code policies, not a new research budget.
+- Public analysis routes are disabled outside local mode; public translation is
+  a separately guarded exception. New research requires its own authenticated
+  entry point rather than enabling LOCAL_MODE for the public application.
+- Coolify runs the container with persistent storage. Trusted codex/ pushes
+  deploy a shared preview; main deploys production after checks.
+
+Specific corpus records for the example:
+
+Reading order  ID                       Title                         Pages
+1              pv-orden-zheltogo-flaga   Орден желтого флага            184
+2              pv-zheleznaya-bezdna      Железная бездна                207
+
+Both titles carry the “Смотритель.” prefix in the catalog. The JSON catalog lists
+volume 2 before volume 1; do not infer reading order from rank, year or array order.
+Combined size: 391 application pages, 700,382 stored character units. Database
+source_ref values inspected: 748930f5e6ce4dfe and 6f8b73249306a5b1 respectively.
+Compute a stronger full text digest for new research snapshot identity.
+
+Missing building blocks: research authentication, durable execution, full passage
+retrieval, series metadata, evidence/claim records, query-specific annotations,
+artifact validation and a session UI. None requires replacing existing dashboards.
+
+
+03. SYSTEM LAYOUT AND FRAMEWORK DECISION
+=======================================
+
+  Browser: research session / report / evidence drawer / interactive figure
+      | REST commands                      ^ SSE progress + saved results
+      v                                    |
+  Express research API -- authorization, validation, request idempotency
+      |
+      +--> Research PostgreSQL: sessions, jobs, evidence, claims, events
+      |                         graph checkpoints, artifact manifests
+      |
+      +--> Durable job dispatcher --> Node research worker / LangGraph
+                                      |
+                                      +--> scoped corpus tools
+                                      |      read-only xbook snapshot
+                                      |      versioned passage/lemma index
+                                      +--> model gateway + budget ledger
+                                      +--> deterministic analysis functions
+                                      +--> isolated code/build/render service
+                                      +--> private artifact storage
+
+The API acknowledges a submitted job and returns its ID. A browser connection
+never owns the lifetime of the job. Worker availability and database persistence,
+not an open HTTP request or an in-memory promise, determine whether it continues.
+
+Framework shortlist (official documentation checked on the date above):
+
+LangGraph.js — recommended default.
+  Provides graph state persistence, thread-scoped checkpoints and explicit
+  workflow control. Fits a research process with coverage and verification gates.
+  A persistent checkpointer is necessary; an in-memory saver is insufficient.
+  We still own worker scheduling, access, evidence storage and spend protection.
+  References [1,2].
+
+Mastra — credible TypeScript alternative.
+  Workflows support persisted suspension snapshots and resumption with typed
+  input. Worth choosing if an integrated agent development environment is more
+  valuable than our explicit graph approach. Do not adopt both orchestration
+  frameworks for the same workflow. Reference [3].
+
+OpenAI Agents SDK — good for an application-owned agent loop.
+  Supplies agents, tools and handoffs. The application owns deployment and storage.
+  Persistent conversation state is only one part of our recovery requirements;
+  keep a scheduler, task ledger and replay-safe tools around it. Reference [4].
+
+OpenAI Agents API — managed-harness alternative, distinct from the SDK.
+  Current documentation describes managed sessions, orchestration, compaction
+  and recovery. This could remove substantial runtime work. Run an account-level
+  feasibility spike before choosing it: verify access, scoped tools, cancellation,
+  spending controls, export and data-retention behavior. Do not assume credentials
+  for the existing OpenRouter integration enable it. Reference [5].
+
+Trigger.dev / Temporal — execution infrastructure alternatives.
+  Trigger.dev documents task idempotency; Temporal offers a TypeScript workflow
+  runtime. Evaluate one if durable dispatch, timers and fleet operations outgrow
+  a small PostgreSQL job dispatcher. Neither supplies literary evidence semantics.
+  Avoid stacking multiple retry owners without an explicit responsibility map.
+  References [6,7].
+
+Decision rationale: local corpus integration, custom evidence contracts and
+provider flexibility favor a self-hosted TypeScript graph. This is an engineering
+recommendation, not a benchmark result. Before implementation commitment, test
+the chosen framework on a five-step fake research run with worker termination,
+tool replay, user interruption and a restarted server. Pin tested versions.
+
+Keep domain tools independent of LangGraph. Use runtime schemas for their JSON
+inputs/outputs; expose them as local functions initially and optionally MCP later.
+Do not put framework message objects into canonical evidence records.
+
+For a local-only prototype, SQLite research storage is possible, but it is a
+separate deployment profile with one host and limited concurrency. The production
+design above uses PostgreSQL; it does not depend on sharing SQLite over a network.
+
+
+04. CORPUS IDENTITY, STRUCTURE AND CITATIONS
+===========================================
+
+Add explicit bibliographic structure:
+
+- Work: intellectual work ID, titles, aliases, author and optional series ID.
+- Series member: work ID, volume number, reading order, relationship provenance.
+- Edition/source: import identity, source_ref, normalization version, text SHA-256.
+- Structure: chapter/section spans when recovered from EPUB headings; otherwise
+  explicit unknown chapter, never an invented label.
+- Passage: stable span within a particular normalized source version.
+
+The authoritative citation address is:
+
+  { workId, corpusVersion, textSha256, startUtf16, endUtf16 }
+
+Use half-open offsets [start,end), matching JavaScript String.slice. Python
+code-point offsets and byte offsets are different; convert at the tool boundary
+and test with Cyrillic, combining characters and non-BMP characters. Search
+normalization (lowercase, ё/е, lemmas) must retain a map to original source spans.
+
+Additional display locators:
+
+  { volume, chapterId?, pageStart, pageEnd, sentenceIndices?, readerUrl }
+
+Page numbers in the existing API/UI are 1-based. Stored sentence indices are
+0-based; the reader's s parameter is 1-based. Make conversion explicit.
+
+Existing pages are generated at up to roughly 1,800 characters, not print pages.
+Display “страница PelevinDB” or a chapter/position label. Printed page references
+require an edition-specific page map that does not currently exist. Never present
+the application page number as a physical edition citation.
+
+Quotes are extracted by the citation service, not authored by a model. Store exact
+quote hash and raw span; derive whitespace-folded or shortened previews separately.
+Ellipses mark omissions. Translations remain linked derivatives, not exact quotes.
+Cross-page evidence uses an absolute span plus all intersecting page locators.
+
+Versioning matters because the current corpus schema can replace text/answers.
+At run start pin an immutable snapshot manifest containing text, segmentation,
+annotation, index and rubric versions. Keep that snapshot available for the run
+and retained reports. A new import never silently retargets old evidence.
+Reader links currently lack version selection: add a research citation resolver
+that opens the pinned snapshot or reports its absence rather than showing a wrong
+highlight in a changed book. The normal reader URL remains a convenience link.
+
+Corpus tools read the server-side source directly; do not scrape the public page
+API or bypass its limits through a public research endpoint. Public report payloads
+contain only selected, policy-checked excerpts and derived data, never the source
+book, bulk passage index or full internal notebook.
+
+
+05. RESEARCH WORKFLOW AND COVERAGE
+=================================
+
+Graph outline:
+
+  interpret question -> resolve works -> plan and budget -> retrieve
+        -> contextual reading -> build observations -> coverage audit
+               ^                                      |
+               +---- targeted gap/counterevidence search+
+        -> synthesize claims -> verify -> compute dataset -> build figure
+        -> validate report/artifacts -> deliver versioned result
+
+Any stage can pause for missing input or budget. Retryable infrastructure failure
+does not become “no evidence.” Verification can reopen retrieval with a bounded
+repair count. Exhausting the count yields a clearly labeled partial result.
+
+Interpretation produces a typed ResearchQuestion:
+  original wording, normalized wording, language, candidate works, target entity,
+  phenomenon, requested temporal scope, research mode, requested outputs,
+  assumptions, alternative readings and explicit exclusions.
+
+For the example, normalize the slightly ambiguous wording to: “Как менялось
+отношение главного героя «Смотрителя» к собственному призрачному существованию
+на протяжении двух томов?” Preserve the original and mark this as an interpretation
+of the request. Treat “он призрак” as a premise to investigate, not a fact the
+system must confirm. Full-novel analysis permits ending spoilers within this scope.
+
+Retrieval has two complementary paths:
+
+A. Discovery
+  - Resolve titles, aliases, English translations and series relationships first.
+  - Search original tokens/phrases and Russian lemma forms; expand concepts with
+    the query planner (e.g. призрак, призрачный, привидение, нереальность,
+    существование, “я”, identity and embodiment vocabulary).
+  - Add multilingual semantic passage search when tested embeddings are available.
+    Exact/lemma search plus systematic reading can deliver the first slice without
+    a vector database. Semantic search is a recall improvement, not evidence itself.
+  - Combine result lists with a specified rank-fusion rule; keep lexical, semantic
+    and annotation relevance scores separate. Deduplicate overlapping spans.
+  - Use existing interiority/identity/supernatural annotations as extra signals,
+    not hard filters. Relevant realizations can occur in dialogue or action.
+  - Rerank bounded candidates against the actual question using Jev or a selected
+    reasoning model. Record the rubric and candidate coverage. Reference [8].
+  - Read surrounding paragraphs and cross-page neighbors before making claims.
+
+B. Coverage
+  - Partition selected works into chapters where known, otherwise contiguous
+    windows with known overlap and full original offsets.
+  - Screen every window for a Deep run; save even negative and uncertain results.
+  - Closely read positives, uncertain passages, possible turning points and a
+    predeclared sample of negatives. Resolve pronouns and speakers with context.
+  - Record unseen, screened, closely_read, reviewed_negative, relevant, uncertain
+    and failed units separately. “100% screened” does not mean “100% closely read”
+    or “all relevant evidence found.”
+  - If a negative audit reveals missed relevant evidence, broaden the rubric and
+    rescreen affected regions. Report residual sampling limitations.
+  - Retrieve counterexamples: apparent acceptance followed by fear, a claim by
+    another speaker, irony, retrospective narration or a metaphor about someone else.
+
+Proposed initial caps (configuration defaults to evaluate, not measured optima):
+  discovery result page <= 50; context batch <= 12 passages / 24K input tokens;
+  overlapping windows around 3-5 application pages; up to 3 readers; at most
+  3 evidence-gap repair rounds and 2 artifact repair rounds. A coverage iterator
+  persists its cursor, so these per-call caps do not truncate the study.
+
+Completion requires the declared scope, completed required tasks, validated
+citations, an explicit coverage report, resolved or disclosed contradictions,
+and a passed artifact check. It does not require a predetermined story arc.
+
+
+06. AGENT ROLES, PERMISSIONS AND TOOL CONTRACTS
+==============================================
+
+All tools receive server-injected context: principalId, sessionId, runId,
+planVersion, snapshotId, taskId, budget scope and cancellation signal. Agents
+cannot supply an alternate identity or expand their permitted book set.
+
+Common return envelope:
+  { ok, data?, nextCursor?, truncated, provenance, usage, warnings, error? }
+
+Errors have codes: NOT_FOUND, AMBIGUOUS_SCOPE, VERSION_MISMATCH, NOT_AUTHORIZED,
+BUDGET_EXHAUSTED, CANCELLED, RATE_LIMITED, INVALID_INPUT, RETRYABLE_UPSTREAM.
+An empty successful search is distinguishable from a failed search. Large outputs
+are persisted artifacts with summaries and IDs, not unlimited context dumps.
+
+Roles and tool access:
+
+Coordinator
+  Owns plan, scope and task graph; can resolve works, inspect coverage, delegate
+  bounded tasks, read evidence/claims, request input and assemble the report.
+  Cannot bypass budget, execute arbitrary SQL or mark its own claims verified.
+
+Retriever / bibliographer
+  Catalog, series, structure, search, passage reads and annotation retrieval.
+  Returns candidate spans and scope ambiguities, not a final literary conclusion.
+
+Close reader
+  Assigned passage/context reads, entity observations, evidence registration,
+  annotation batches and requests for more context. Returns Observation records
+  with speaker, textual time, inference type, support and uncertainty.
+
+Analyst
+  Reads versioned evidence/annotations; invokes approved deterministic analyses.
+  Optional isolated Python/JS experiments over materialized datasets. No production
+  database connection or provider credentials inside generated code.
+
+Synthesizer
+  Reads evidence, observations and coverage; drafts atomic claims and narrative.
+  May propose further retrieval. Quotes enter output only through citation IDs.
+
+Verifier
+  Reopens original source, checks quotation fidelity and claim support, audits
+  contrary evidence and coverage. Receives the question and claims independently
+  of the writer's persuasive prose. Verification can disagree or abstain.
+  A model verifier is an additional check, not proof of interpretive correctness.
+
+Visualization author
+  Reads approved datasets, figure examples and the chart API. Can propose a figure
+  spec, create a code artifact, compile and preview it, and repair bounded failures.
+  Cannot alter research observations to make the plot look better.
+
+Concrete tool catalog (proposed application contracts, not existing SDK APIs):
+
+catalog.resolve({query, language})
+  -> candidate work IDs, exact titles, aliases, series links, ambiguity reasons.
+catalog.expandSeries({workIds, relation:"reading_order"})
+  -> ordered members and provenance; missing metadata is explicit.
+corpus.structure({workId, snapshotId})
+  -> source version, chapters if known, page/sentence counts and span bounds.
+corpus.search({workIds, query, modes, filters, cursor, limit})
+  -> span IDs, short previews, retrieval scores and matched forms. Search scope
+     is intersected with the run's authorized scope in server code.
+corpus.read({spans, contextBefore, contextAfter, maxTokens})
+  -> exact source windows, speakers if annotated, page locators and truncation.
+     Expansion can cross page boundaries but cannot escape the selected corpus.
+corpus.annotations({spanIds, rubricIds})
+  -> stored page/focus/sentence answers with missingness and model provenance.
+corpus.concordance({workIds, forms, lemmaPolicy, window, cursor})
+  -> exact keyword-in-context hits and occurrence counts under a fixed token policy.
+coverage.next({scopeId, windowPolicy, cursor})
+  -> next unprocessed units. Deterministic enumeration independent of retrieval.
+coverage.report({runId, partition})
+  -> per-volume/region status, failures and sampling denominator.
+
+judgments.annotate({spanIds, rubricId, entityId?, contextPolicy})
+  -> typed cached judgments and usage. Rubrics define question-specific meaning.
+     Independent Jev questions can share input; dependent questions run later.
+     This writes derived research annotations, never replaces existing corpus data.
+entities.observe({spanId, mentionSpans, candidateEntityIds, attribution})
+  -> evidence-backed entity mention/alias proposal; uncertain coreference retained.
+evidence.register({spanId, observation, entityId?, relevance, interpretationType})
+  -> evidenceId; service copies source quote and validates span bounds/hash.
+evidence.query({filters, cursor})
+  -> bounded notebook records, including contrary and uncertain observations.
+claims.propose({text, supportIds, counterevidenceIds, scope, status})
+  -> claimId, version. Only verifier/controller transitions verification status.
+claims.verify({claimIds})
+  -> exact-match checks, contextual support decisions, gaps and revision requests.
+
+analysis.compute({datasetId, operation, parameters, seed?})
+  -> immutable result dataset, method record and diagnostics. Operations include
+     counts, rates, grouping, position bins, co-occurrence and selected statistics.
+analysis.experiment({datasetIds, language, codeArtifactId, limits})
+  -> isolated execution result and logs. Optional advanced tool; no shell on host.
+datasets.materialize({evidenceIds, annotationIds, columns, transform})
+  -> schema, immutable datasetId/hash, row lineage and authorization label.
+
+figures.compose({datasetId, kind, encodings, controls, caption, claimIds})
+  -> validated declarative FigureSpec and preview request.
+figures.createCode({datasetIds, sourceFiles, entrypoint, dependencies})
+  -> immutable untrusted artifact revision; only pinned allowlisted dependencies.
+figures.validate({artifactId, viewportProfiles})
+  -> schema/build checks, screenshots, interaction and policy results.
+reports.assemble({claimIds, evidenceIds, artifactIds, coverageId, language})
+  -> draft report version; validates every referenced object belongs to this scope.
+reports.export({reportVersion, formats:["txt","json","html"]})
+  -> download artifacts. HTML includes only validated public/private projections.
+
+tasks.delegate({role, question, scope, expectedSchema, tokenCap, costCap})
+  -> persisted taskId. Only the coordinator can call it; children cannot recursively
+     spawn arbitrary agents. Fan-out caps enforced centrally.
+session.requestInput({reason, question, choices?})
+  -> pending input ID and resumable pause. Routine tool use needs no such pause.
+
+Optional later tools: scoped external-source search and retrieval. They record
+URLs/access dates and cannot substitute commentary for primary-text evidence.
+No default general browser, network shell, arbitrary database SQL or auto-publish
+tool is needed for the initial literary workflow.
+
+
+07. DURABLE SESSIONS, RECOVERY AND CONTEXT MANAGEMENT
+====================================================
+
+Session = persistent conversation/workspace. Turn = one user instruction.
+Run = execution of one versioned research plan. Task = bounded step or specialist
+assignment. Attempt = one execution/provider call. Report = immutable result version.
+These identities must not collapse into a single chat ID.
+
+Run states:
+  queued -> running -> completed | completed_partial | failed | cancelled
+                |
+                +-> waiting_input | paused_user | paused_budget | retry_wait
+                         -> queued/running after the appropriate event
+
+Completion quality and execution state are separate: an executed workflow can
+produce a partial report. A failed step cannot be silently relabeled as complete.
+
+Execution protocol:
+1. API transaction writes the input, run and durable job/outbox record.
+2. Dispatcher claims an eligible job with a lease and fencing generation. Enforce
+   at most one active coordinator per run; independent children have distinct IDs.
+3. Worker loads pinned graph/prompt/tool versions and last persistent checkpoint.
+4. Before each bounded step, check cancellation, lease, revision and budget.
+5. Save validated tool results immediately under a stable operation key; checkpoint
+   references their IDs. Append the user-visible event only after committing it.
+6. On process loss, reclaim expired jobs and resume. Reuse persisted step outputs.
+7. Reconcile jobs, checkpoints and domain rows on startup; never assume they were
+   all committed atomically by an external checkpointer.
+
+Operation key example:
+  hash(runId, planVersion, taskId, logicalStep, canonicalArgs, sourceVersion,
+       toolVersion, rubricVersion, requestedModelVersion)
+
+At-least-once execution is the assumption. Unique operation keys prevent duplicate
+evidence, artifacts and report revisions. They do not magically prevent a second
+provider charge after a timeout. Record attempt IDs, provider request IDs and
+uncertain billing; use provider idempotency where supported, otherwise retain
+the reservation and require explicit policy before a potentially duplicate call.
+
+Fence mutations and checkpoint advancement against the current lease generation.
+A stale worker cannot publish results or claim completion. Its already-started
+upstream call might still finish and cost money; record it without allowing stale
+output to advance the run. Test adapter support for this in the runtime spike.
+
+Do not checkpoint an entire book in graph state. Store:
+  scope, plan/task IDs, cursors, evidence/claim IDs, compact working summary,
+  unresolved questions, budget IDs and pending user input.
+
+Context for a reader is a task brief + rubric + relevant entity notes + assigned
+source windows. Context for the synthesizer is a chronological evidence matrix
+with claim candidates, contradictions and representative exact passages. It can
+reopen evidence when needed. Tool outputs and raw notes live in durable storage.
+
+Compact context before it reaches the configured model limit. Compaction preserves
+IDs, assumptions, exclusions, contradictions and unfinished work. Summaries carry
+source references and are not new evidence. Cross-session memory reuses immutable
+annotations and accepted preferences; speculative literary claims remain scoped
+to their reports and are rechecked against current sources.
+
+Follow-ups reuse compatible evidence. “Only the second volume” creates a new plan
+revision with narrower scope. “By ghost I mean social invisibility” changes the
+rubric; previous classifications are stale for this purpose. Do not mutate the
+already delivered report. Mid-run steering is applied at a checkpoint, cancelling
+or superseding affected tasks and visibly recording the revised plan.
+
+SSE events are persisted with monotonically increasing per-session sequence IDs.
+Reconnect uses Last-Event-ID; replay retained events or send a full snapshot if the
+cursor is too old. Closing the browser disconnects observation, not execution.
+Pause stops new calls at a safe boundary; cancel marks the run terminal and aborts
+calls where possible. Both preserve completed evidence and account for in-flight cost.
+
+
+08. PERSISTENT DATA MODEL AND APIs
+==================================
+
+Research PostgreSQL tables (conceptual; exact migrations belong to implementation):
+
+sessions            id, owner_id, title, language, created_at, last_activity
+turns               id, session_id, input, sequence, supersedes_turn_id
+runs                id, turn_id, plan_version, status, snapshot_id, config_hash
+plans               run_id, version, scope, tasks, assumptions, stop_conditions
+jobs                id, run_id, task_id, status, lease_until, fence, available_at
+tasks               id, run_id, role, input_ref, result_ref, dependencies, status
+operations          operation_key UNIQUE, status, result_ref, version_metadata
+attempts            id, operation_key, provider_request_id, budget_reservation_id
+events              session_id, sequence UNIQUE WITH session_id, kind, payload_ref
+corpus_snapshots     id, manifest_hash, source_locations, versions, retention_state
+research_annotations id, span_id, rubric_version, model_version, answer, context_hash
+evidence            id, run_id, span_ref, quote_hash, observation, attribution
+claims              id, run_id, version, text, scope, epistemic_status
+claim_evidence      claim_id, evidence_id, relation(support/contradict/context)
+coverage_units      run_id, unit_id, status, screening_ref, reading_ref, failure
+datasets            id, schema, content_hash, method_ref, storage_ref, access_scope
+dataset_lineage     dataset_id, row_id, evidence_id / annotation_id / transform_ref
+artifacts           id, revision, kind, hashes, dataset_ids, validation, storage_ref
+reports             id, run_id, version, content_ref, coverage_ref, quality_status
+shares              id, report_version, owner_id, visibility, revoked_at
+
+Graph checkpointer tables are owned by its migration tool. Domain tables remain
+application-owned. Store large JSON/code/screenshots as private content-addressed
+files or object storage; manifests stay in the database. Blob creation is staged:
+write, verify hash, commit reference; garbage-collect unreferenced blobs later.
+
+Constraints: all mutable research rows resolve to an owner; all references must
+belong to the permitted snapshot/run or an explicitly reusable authorized cache.
+Unique keys guard logical writes. Citation spans are immutable. Reports pin exact
+artifact/dataset versions. Text and annotations are versioned separately.
+
+Example Evidence contract (illustrative types, no fabricated quote):
+
+  Evidence {
+    id, runId,
+    source: {workId, snapshotId, textSha256, startUtf16, endUtf16},
+    locator: {volume, pageStart, pageEnd, chapterId?, readerUrl},
+    quote: {exactText, sha256},
+    observation: {
+      entityId?, speakerId?, perspective?, narrativeOrder,
+      storyTime?: {label, certainty},
+      kind: "explicit_statement" | "behavior" | "inference" | "counterexample",
+      description, uncertaintyReasons
+    },
+    provenance: {taskId, contextSpanIds, rubricVersion?, modelVersion?, createdAt}
+  }
+
+Public API proposal:
+  POST /api/research/sessions                 create private workspace
+  POST /api/research/sessions/:id/turns       submit question/follow-up; returns 202
+  GET  /api/research/sessions/:id             state and latest saved outputs
+  GET  /api/research/sessions/:id/events      SSE with replay cursor
+  POST /api/research/runs/:id/pause           pause at safe boundary
+  POST /api/research/runs/:id/resume          validated input/budget continuation
+  POST /api/research/runs/:id/cancel          idempotent cancellation
+  GET  /api/research/runs/:id/evidence        authorized, paginated notebook
+  GET  /api/research/citations/:id            resolve pinned quote and reader target
+  GET  /api/research/artifacts/:id            authorized immutable artifact
+  GET  /api/research/reports/:id/export       TXT/JSON/HTML download
+  POST /api/research/reports/:id/share        explicit publication of fixed version
+  DELETE /api/research/shares/:id             revoke share
+
+Mutation requests require authentication, authorization, CSRF/origin protection
+as appropriate and a client idempotency key. Reusing a key with different content
+returns a conflict. SSE, downloads and artifact data enforce the same access rules.
+Agent tools call scoped domain services, not unauthenticated public routes.
+
+
+09. INTERACTIVE JAVASCRIPT ARTIFACTS
+====================================
+
+Match the blog's quality: typography, light/dark themes, Russian/English labels,
+responsive sizing, visible methods and useful interaction. Reuse chart primitives
+from src/features/blog/jev/kit.tsx and the EDA chart kit through a small shared
+module after checking current figure behavior. Keep existing articles stable.
+
+Two rendering paths share one artifact contract:
+
+Path A — trusted component registry (first release).
+  The agent returns a validated FigureSpec selecting an authored React component:
+  evidence timeline, stance matrix, quotation comparison, concordance explorer,
+  frequency trajectory or character/mention graph. Data, labels and control values
+  are generated; executable UI code is shipped and reviewed with the application.
+  This is already interactive JavaScript and covers most research questions.
+
+Path B — generated JavaScript/TSX (advanced release).
+  For a novel interaction, the visualization agent creates a self-contained source
+  bundle against a documented, pinned chart API. An isolated builder compiles it,
+  a disposable browser checks it, and a restricted artifact frame displays it.
+  Do not inject generated TSX into the main React tree, eval it on the server or
+  accept scripts in report Markdown.
+
+Figure artifact manifest:
+  id, revision, kind, title, language, datasetIds/hashes, schemaVersion,
+  rendererVersion, sourceHash?, bundleHash?, method, claimIds,
+  controls, citationBindings, accessibilitySummary, validationReport, previewImage.
+
+Illustrative FigureSpec shape:
+  {
+    kind: "evidence-timeline",
+    datasetId: "<immutable validated dataset>",
+    x: {field: "readingPosition", label: "Положение в двух томах"},
+    lanes: ["awareness", "emotional_response", "acceptance", "agency"],
+    controls: ["volume", "speaker", "explicit_or_inferred", "show_uncertain"],
+    onSelect: {action: "openEvidence", idField: "evidenceId"},
+    showCoverage: true,
+    interpolateMissing: false
+  }
+
+Dataset rows carry IDs, not inline executable expressions. Aggregated rows carry
+lineage to contributing evidence/annotation IDs and denominator metadata. A click
+opens the evidence drawer, then a verified citation opens the source reader.
+Controls filter and recompute approved deterministic views locally without new
+model calls. A requested new interpretation creates a research task instead.
+
+For generated code, the host bridge exposes only:
+  getDataset(authorizedDatasetId), openEvidence(evidenceId),
+  requestResize(boundedHeight), emitSelection(validatedSelection).
+No generic fetch, shell, SQL, application token or arbitrary navigation API.
+
+Isolation requirements are part of the implementation contract:
+- Build/analysis containers have no production secrets, host mounts or unrestricted
+  network; use pinned dependencies, CPU/memory/time/output limits and ephemeral disk.
+- Serve code artifacts from a separate origin without application cookies. Embed
+  with sandbox="allow-scripts" and no same-origin, forms, popup or top-navigation
+  permissions. Apply restrictive CSP and deny network/resource channels except
+  explicitly packaged resources. Use a Permissions-Policy denying device access.
+- Authenticate bridge messages by exact frame window and per-instance channel
+  capability; a sandboxed frame's origin can be opaque, so origin matching alone
+  is insufficient. Validate message schemas, dataset/evidence IDs and size limits.
+- Treat everything delivered to the frame as disclosed to that artifact. Send only
+  the approved dataset projection and selected excerpts, never credentials or the
+  internal notebook. CSP and an iframe alone are not a perfect data-loss boundary.
+- An iframe does not guarantee hard CPU isolation. Bound datasets and animation
+  work, test resource abuse, provide a static fallback, and keep arbitrary-code
+  rendering gated until isolation is verified. Trusted registry figures are the
+  reliable default for shared reports. Reference [12] informs iframe restrictions.
+
+Validation pipeline:
+1. Schema and lineage validation; finite numeric values; nulls remain missing.
+2. Verify every citation/claim/data reference and intended access scope.
+3. For custom code: static dependency/import check and isolated compilation.
+4. Browser screenshots in both themes, mobile/desktop widths and ru/en layouts.
+5. Exercise controls, keyboard focus and an evidence click. Check console errors,
+   overflow, external requests, unauthorized bridge messages and reduced motion.
+6. Verify selected plotted values against the immutable dataset using trusted
+   host tests; a self-reported “passed” from generated code is not sufficient.
+7. At most two repair attempts; retain the report and table/static preview if the
+   custom figure fails. Persist code, dataset, build versions and test results.
+
+Standard figures can be embedded in both research reports and blog pages through
+the shared registry. Publishing a research result as a blog article is a separate
+reviewed action, not an automatic side effect of finishing research.
+
+
+10. WORKED EXAMPLE: THE TWO VOLUMES OF СМОТРИТЕЛЬ
+================================================
+
+Original user question:
+“Как менялось отношение смотрителя главного героя к тому, что он призрак
+на протяжении всего романа?”
+
+Step 1 — Resolve scope.
+Resolve Смотритель / The Watcher, add both known volumes in explicit reading
+order, and identify the protagonist from primary text or curated entity records.
+Do not identify the character solely from the model's memory. State the normalized
+question and the interpretation of “призрак”; proceed if the source resolves it,
+otherwise ask one precise clarification.
+
+Step 2 — Define what “отношение” means before selecting a narrative.
+Track separately:
+  awareness: whether/how the character recognizes the proposition;
+  emotional response: fear, grief, relief, curiosity or another evidenced response;
+  acceptance: resistance, uncertainty, accommodation, explicit acceptance;
+  agency: what the character does because of that understanding.
+Use unknown/ambiguous values and multi-label emotion where appropriate. These are
+proposed interpretive dimensions, not established facts or an obligatory sequence.
+
+Step 3 — Discover and screen.
+Run lexical/lemma searches, semantic retrieval if enabled, and annotation-assisted
+discovery. In parallel with discovery at runtime, a persisted coverage iterator
+screens all 391 pages in contextual windows. Retain page-to-window mapping and
+deduplicate overlap; 391 is the inspected snapshot's page count, not a constant.
+Read context around all likely or uncertain passages, including reported speech.
+
+Step 4 — Build an evidence matrix.
+Rows contain volume, source position, speaker, experiencer, exact span, a concise
+observation, explicit/inferred status, candidate stance labels and uncertainty.
+Distinguish another character calling the protagonist a ghost from the protagonist
+believing it. Distinguish narrator hindsight from what the experiencing character
+knows at that point. Track flashbacks separately from reading order.
+
+Step 5 — Test competing readings.
+Possibilities to test include change toward acceptance, recurring oscillation,
+changing meaning of “ghost,” or insufficient evidence for a simple progression.
+Seek passages that challenge each proposed turning point. Generic page fear or
+interiority is contextual information, not a measurement of this character's stance.
+
+Step 6 — Synthesize only after evidence review.
+Group observations into evidence-supported phases if phases emerge. Each phase
+and transition references source spans; preserve contrary cases. Do not prefill
+“denial -> fear -> acceptance” because it makes a neat story.
+
+Step 7 — Produce the report and figure.
+Russian prose answer, compact phase/evidence table, interactive two-volume
+timeline, coverage/method card, limitations and TXT export with citation locators.
+Start with categorical lanes and event markers. Numeric stance curves are optional
+only after a defined, evaluated rubric; label them as model-coded interpretations.
+
+Timeline interaction:
+  - Select either volume or both.
+  - Toggle direct self-statements versus inferred attitude.
+  - Show other speakers, uncertain attribution and contradictory passages.
+  - Click a marker to read a selected quote and its context/source location.
+  - Display screened/closely-read coverage separately below the evidence lanes.
+
+Use volume + absolute source order as the primary axis. If normalized to 0..1
+across both volumes, compute positions from cumulative source length and show the
+volume boundary. Offer equal-width volume panels as a separately labeled view.
+Do not connect sparse markers with a continuous emotional trajectory by default.
+
+Illustrative result shape, intentionally without invented findings:
+  “В пределах двух томов выделены [N] подтвержденных изменений отношения.
+   [Интерпретация] поддерживается [E1, E2], но [E3] допускает другое прочтение.
+   Проверено [X/Y] окон; подробно прочитано [A/B]; неразрешенные случаи: […].”
+
+Follow-up example: “Покажи только моменты, когда он сам это проговаривает.”
+Reuse speaker/explicitness annotations and the same evidence dataset when valid;
+filter the figure and produce a revised report. Re-read ambiguous speech
+attributions instead of treating the previous filter as unquestionable truth.
+
+
+11. LINGUISTIC AND EMOTION RESEARCH
+===================================
+
+One harness supports different registered research recipes:
+
+Character trajectory
+  Entity/coreference, contextual reading, temporal ordering, stance observations.
+  Best outputs: evidence timeline, competing interpretations, linked quotations.
+
+Lexical or linguistic question
+  Define corpus, tokenization, lemmas, inflection/POS policy, stopwords and unit.
+  Compute concordances, frequencies per fixed token denominator, collocations and
+  distribution by work/chapter. Save actual token matches and normalization maps.
+  Treat existing EDA methods as starting points, not universal linguistics defaults.
+
+Emotion study
+  Distinguish emotion expressed in the text, attributed to a character, narrator
+  stance and expected reader response. Existing page scores answer their original
+  rubric only. A new question can require new judgments rather than relabeling
+  the old scores. Always expose annotation coverage and missingness.
+
+Cross-book comparison
+  Deduplicate works/editions before counting. Fix whether the unit is a sentence,
+  passage, work or author-period. Show both raw counts and normalized rates.
+  A top-quote sample cannot estimate population prevalence without a sampling
+  design. Compare length-weighted and work-weighted results when they differ.
+
+Method rules:
+- Exact counting and arithmetic run in code, not in model prose.
+- Jev Noul is an estimated yes probability, not emotional intensity. Choice
+  distributions compare options; Score needs explicit ordered criteria. Model
+  confidence is not a statistical confidence interval. References [9,10].
+- Missing observations remain null. No mention of the issue does not mean neutral
+  attitude; uncertain attribution does not become a confident negative.
+- Adjacent sentences/pages are correlated. For corpus-level inference prefer
+  work-level resampling; for a within-book descriptive series consider block
+  resampling only with a justified uncertainty target. Do not report a naive
+  sentence-level p-value as independent evidence.
+- Label exploratory analyses, tested hypotheses and multiple-comparison handling.
+  Numeric association alone does not demonstrate causation or literary intention.
+- Preserve seeds, code, denominator, exclusions, annotation/model versions and
+  parameters so charts can be recomputed without rerunning language models.
+
+
+12. BUDGETS, ACCESS, DEPLOYMENT AND OBSERVABILITY
+================================================
+
+Model gateway:
+  Provide typed generation/judgment/embedding interfaces, schema validation,
+  timeout and bounded retries, usage collection, cancellation and content-policy
+  handling. Select models through configuration and a Russian-literature eval,
+  not an unverified “best model” assumption. Store requested and returned versions.
+
+The current brief adapter's output cap and price ceilings were designed for short
+briefs. Do not reuse it unmodified for long research or silently raise its limits.
+The new gateway needs its own explicit configuration while preserving the existing
+global spend protections and usage history.
+
+Cost controls:
+  Owner-approved per-run cap; application/provider cap; optional per-user daily cap;
+  per-task token/output caps; concurrency, retry and elapsed-time limits.
+  Reserve upper-bound cost before dispatching every chargeable attempt, including
+  judgments, embeddings, verification and repairs. Cached compatible results cost
+  no new inference, but record cache hits and any infrastructure charges separately.
+
+Use one authoritative spending ledger for every caller sharing an application
+provider allowance. Initial single-host deployment can extend the existing SQLite
+ledger with research run/user scope and unique operation/attempt identifiers;
+web and worker access the same local volume. Reserve all applicable scopes in one
+transaction. If moving billing to PostgreSQL, migrate legacy endpoints and ledger
+balances together; never start an empty competing ledger or double-count refunds.
+Research PostgreSQL stores ledger references, not a second authoritative balance.
+
+A reservation failure pauses before calling the provider. A lost response keeps
+an uncertain reservation. Resume with a higher cap requires an authorized user
+event; the agent cannot approve its own spending. Provider retries consume the
+same global limits and new attempt reservations where needed.
+
+Estimate costs from measured token counts and verified provider rates. For the
+example, let W be contextual windows and R be closely read windows:
+  total = screening(W) + reader(R) + planning + synthesis + verification
+          + figure generation/repair + optional embeddings + infrastructure.
+Question fan-out and repeated context can increase billed tokens; do not estimate
+Jev cost from source character count alone. Record estimate versus actual after
+each run. This document does not assert a measured dollar cost or completion time.
+
+Access and publication:
+- Owner authentication required even in the first hosted version. Private by
+  default; principal ownership checked on every session and artifact operation.
+- Share an immutable, redacted report snapshot explicitly. Readers of a shared
+  report do not gain access to private notes or the ability to start paid tasks.
+- Keep public excerpt/rate policies centralized across reader, report and exports;
+  a research report must not accidentally become a bulk full-text endpoint.
+- Retrieved books, external commentary and tool results are untrusted data.
+  Text saying “ignore instructions” remains source text, not an executable command.
+- Do not log whole books, sensitive prompts or API keys in third-party analytics.
+  Retain necessary source-linked research records in authorized private storage.
+
+Deployment shape on Coolify:
+  web container + research worker + PostgreSQL + private artifact volume;
+  optional isolated renderer as a separate service with stricter permissions.
+  Web and worker mount a consistent read-only corpus snapshot. Keep one host while
+  the SQLite billing ledger is shared; migrate that ledger before a multi-host fleet.
+  Health distinguishes web readiness, worker heartbeat, queue backlog and snapshot
+  availability. A healthy homepage does not prove research jobs are progressing.
+
+Use separate preview storage and budgets; previews default to fixtures/no paid
+calls. Rollouts drain workers, preserve checkpoints and retain compatible worker
+versions for active runs. Pin graph/prompt versions per run and implement explicit
+state migration; a redeploy must not resume old state under arbitrary new logic.
+
+Back up PostgreSQL, artifact manifests/blobs, corpus snapshots and the spending
+ledger consistently. Test restore by continuing a paused fixture session and
+opening an old citation. Define retention by data class; deletion must remove
+private derived copies and revoke access while retaining required billing records.
+
+Observe stage duration, retries, token/cost usage, queue age, lease recovery,
+coverage by region, citation validity, unsupported claims, missing evidence,
+artifact failures and user corrections. User-facing events explain actions and
+findings concisely; internal model reasoning traces are not a product requirement.
+
+
+13. EVALUATION AND ACCEPTANCE CRITERIA
+======================================
+
+Create a small, reviewed Russian-literature evaluation set before optimizing
+agent count. Include exact quotation lookup, two-volume scope resolution, an
+implicit emotional change, misleading premise, irony, negation, nested quotation,
+speaker confusion, flashback, missing book and cross-work frequency comparison.
+Use permitted fixtures for CI; keep full source text out of the repository.
+
+Quality evaluation:
+- Scope: correct works and reading order, including both Смотритель volumes.
+- Citation fidelity: every delivered quote matches its pinned source span.
+- Retrieval: recall against human-marked relevant spans, reported separately from
+  ranking quality. Evaluate discovery plus coverage, not just top-k retrieval.
+- Attribution: speaker/experiencer and explicit/inferred distinctions.
+- Claims: reviewer-supported, contradicted or unresolved; disagreement is recorded.
+- Coverage: all required units accounted for; no failed unit presented as reviewed.
+- Visuals: data lineage, correct values, working source links and readable controls.
+- Utility: can a reader inspect why the interpretation was made and challenge it?
+
+Proposed launch gates:
+  100% exact-span validity and valid report references on the evaluation set;
+  zero undisclosed task failures or fabricated page/edition labels;
+  all reviewed critical scope/attribution cases pass;
+  human review accepts the worked-example report and its limitations;
+  retrieval/interpretation thresholds calibrated on labeled data before automating
+  quality claims. Do not invent an accuracy percentage without a benchmark.
+
+Recovery and policy tests (required implementation checks):
+  Kill a worker before a call, after a response and before a checkpoint; restart.
+  Deliver duplicate jobs and duplicate user commands.
+  Simulate 429, timeout, invalid model JSON and unavailable corpus snapshot.
+  Race two workers and verify fencing/unique writes.
+  Exhaust budget with parallel attempts; verify no overspend or automatic reset.
+  Pause/cancel with calls in flight; reconnect SSE and replay missed progress.
+  Change a plan mid-run; confirm stale children cannot publish into the new plan.
+  Change source version; old citations still resolve or fail explicitly.
+  Try cross-user IDs and shared-report access to private artifacts.
+  Try untrusted source instructions and malicious custom JS/bridge messages.
+  Validate export and restore a session from backup.
+
+For standard charts: browser tests cover mobile/desktop, both themes, keyboard
+selection, reduced motion, empty data, missing data and citation navigation.
+For custom charts: network isolation, resource limits and trusted numerical checks
+are additional gates. Do not mistake successful compilation for a safe, correct figure.
+
+
+14. IMPLEMENTATION SEQUENCE AND REMAINING DECISIONS
+===================================================
+
+Deliver each phase as a separate codex/ branch and PR from freshly fetched main.
+Run relevant checks and preview validation; production rollout remains explicit.
+
+Phase 0 — runtime and corpus contracts.
+  Confirm owner-only access and operational budget policy; evaluate LangGraph
+  recovery on fixtures; add series ordering, snapshot manifest, span/citation
+  schemas and a source resolver. Exit: both volumes ordered and spans round-trip
+  exactly across Node/Python without any model call.
+
+Phase 1 — durable research vertical slice.
+  Add authenticated session API, job worker, persistent checkpoints, SSE replay,
+  budget integration, lexical/lemma passage search and systematic coverage.
+  Implement sequential coordinator/read/synthesize/verify roles, evidence notebook
+  and TXT report. Exit: one complete two-volume research session survives a restart
+  and yields inspectable citations, coverage and a saved report.
+
+Phase 2 — interactive standard figures.
+  Extract a shared chart kit, implement evidence timeline and stance/evidence table,
+  add dataset lineage, source drawer and immutable report/artifact versions.
+  Exit: the same dataset can render in a research report and a blog-style figure;
+  every marker opens its evidence and no chart requires a live model to interact.
+
+Phase 3 — research breadth and measured quality.
+  Add tested semantic retrieval, query-specific Jev rubrics, entity/coreference
+  notes, negative audits, linguistic recipes and bounded parallel readers.
+  Exit: evaluation demonstrates which additions improve recall/quality per cost.
+
+Phase 4 — custom JavaScript and sharing.
+  Add isolated build/render execution, generated-code artifacts, adversarial tests,
+  public report projections and share revocation. Enable custom code only after
+  containment and rendering checks pass; standard figures remain available.
+
+Phase 5 — multiple users and larger workloads, if needed.
+  Migrate all billing writers together if moving beyond one host; add quotas,
+  fair scheduling, worker scaling and a managed execution runtime if warranted.
+
+Suggested repository additions:
+  shared/research/                  schemas and IDs
+  server/research/                  API, access, persistence, snapshots, citations
+  server/research/tools/            framework-independent domain tools
+  worker/research/                  graph, roles, jobs, recovery
+  src/features/research/            session workspace, report, evidence drawer
+  src/ui/research-figures/           reusable trusted chart registry
+  scripts/research-index/           passage, lemma and optional embedding indexes
+  tests/research/                   fixtures, evaluations and recovery checks
+  renderer/                        isolated generated-artifact service (later)
+
+Remaining product choices, with defaults used in this proposal:
+  Audience: owner-only paid sessions; selected public read-only results.
+  Framework: LangGraph.js; reconsider managed Agents API after a feasibility spike.
+  Hosting: current Coolify host plus research PostgreSQL and a worker.
+  Models: configurable; select on a Russian research evaluation before paid rollout.
+  Budget: owner-defined caps; preserve existing application limits until approved.
+  Citation label: PelevinDB page + exact span; print pages only with an edition map.
+  Custom JS: supported in the architecture, introduced after trusted figures.
+  External web: opt-in supplemental sources, not required for the example.
+
+Suggested first implementation instruction:
+  “Implement Phase 0 and then propose the smallest Phase 1 vertical slice using
+   this document. Preserve the existing read-only corpus and provider ledger.
+   Resolve the two Смотритель volumes in reading order, implement versioned exact
+   spans, and demonstrate a persisted fixture session surviving worker restart.
+   Do not enable public paid research or custom JavaScript execution yet.”
+
+
+15. SOURCES AND IMPLEMENTATION STARTING POINTS
+==============================================
+
+External documentation was checked on 29 September 2026. These references support
+framework capabilities and technical primitives; the proposed contracts, research
+rubrics, limits and architecture are design decisions specific to this project.
+Recheck version-dependent APIs and pin dependencies during implementation.
+
+[1] LangGraph.js persistence (checkpointer versus durable application store):
+https://docs.langchain.com/oss/javascript/langgraph/persistence
+[2] LangGraph.js fault tolerance:
+https://docs.langchain.com/oss/javascript/langgraph/fault-tolerance
+[3] Mastra workflow suspension and resumption:
+https://mastra.ai/docs/workflows/suspend-and-resume
+[4] OpenAI Agents SDK overview:
+https://developers.openai.com/api/docs/guides/agents/sdk
+[5] OpenAI Agents API overview (managed harness):
+https://developers.openai.com/api/docs/guides/agents-api/overview
+[6] Trigger.dev task idempotency:
+https://trigger.dev/docs/idempotency
+[7] Temporal TypeScript SDK documentation:
+https://docs.temporal.io/develop/typescript
+[8] TypeSafe reranking cookbook:
+https://docs.typesafe.ai/cookbooks/rerank_typesafe
+[9] TypeSafe citation checking:
+https://docs.typesafe.ai/cookbooks/citation_check
+[10] TypeSafe confidence semantics:
+https://docs.typesafe.ai/confidence
+[11] TypeSafe documentation index:
+https://docs.typesafe.ai/llms.txt
+[12] MDN iframe sandbox and origin behavior:
+https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/iframe
+
+Local source of truth inspected:
+  package.json; README.md; DEPLOYMENT.md; .github/workflows/ci.yml
+  server/store.ts; server/index.ts; server/budget.ts
+  server/pages.ts; server/sentences.ts; shared/sentences.ts
+  src/domain/text.ts; src/app/router.ts; src/features/search/Search.tsx
+  src/features/blog/jev/kit.tsx; src/features/blog/jev/charts/Arc.tsx
+  scripts/eda-pelevin.py; data/pelevin.json
+  data/xbook.db metadata queried read-only (local, not committed)
+
+End of proposal.
